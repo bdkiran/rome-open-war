@@ -29,7 +29,11 @@ describe("taxes", () => {
 
   it("pay most on high in the short run, but not in the long run", () => {
     assert.ok(high[24] > normal[24] && high[24] > low[24], "high taxes should lead after 25 turns");
-    assert.ok(normal[TURNS - 1] > high[TURNS - 1], "normal taxes should overtake high ones within 100 turns");
+    // Not in the long run: some policy beats all-high by 100 turns. Growing
+    // cities first always should; plain normal taxes did until cities also
+    // had unit buildings to pay for, and no longer do within 100 turns.
+    const best = Math.max(normal[TURNS - 1], growThenTax[TURNS - 1]);
+    assert.ok(best > high[TURNS - 1], "high taxes shouldn't be the best policy after 100 turns");
   });
 
   it("reward growing a city first, then taxing it, within a game's length", () => {

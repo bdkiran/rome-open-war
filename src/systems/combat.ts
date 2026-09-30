@@ -18,7 +18,7 @@ import {
 import { BUILDING_EFFECTS } from "@/data/buildings.js";
 import { COMBAT } from "@/data/combat.js";
 import { TERRAIN } from "@/data/terrain.js";
-import { UNIT_TYPES, UNITS, type UnitType } from "@/data/units.js";
+import { TIERS, UNIT_TYPES, UNITS, type Tier, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import {
   armyHolding,
@@ -42,21 +42,27 @@ export function matchup(unit: UnitType, against: UnitType): number {
   return 1;
 }
 
-/** Anything with a unit type and a soldier count: a regiment, or a hypothetical one. */
+/** Anything with a unit type and a soldier count: a regiment, or a hypothetical one (basic, if no tier is given). */
 export interface Troops {
   unit: UnitType;
   soldiers: number;
+  tier?: Tier;
+}
+
+/** What a regiment's soldiers count for: more for better tiers (an elite soldier fights like 1.6 basic ones). */
+function fighters(t: Troops): number {
+  return t.soldiers * TIERS[t.tier ?? 1].strength;
 }
 
 /**
- * Strength of one side against another. Each regiment's soldiers are
- * multiplied by its matchup against the enemy's mix of unit types, weighted
- * by how many soldiers of each type the enemy has. Against a single-type
- * enemy this is just soldiers × matchup.
+ * Strength of one side against another. Each regiment's soldiers, weighted
+ * by its tier, are multiplied by its matchup against the enemy's mix of unit
+ * types, weighted by how many soldiers of each type the enemy has. Against a
+ * single-type enemy of basic troops this is just soldiers × matchup.
  */
 export function sideStrength(side: readonly Troops[], enemy: readonly Troops[]): number {
   const enemyTotal = enemy.reduce((sum, t) => sum + t.soldiers, 0);
-  if (enemyTotal === 0) return side.reduce((sum, t) => sum + t.soldiers, 0);
+  if (enemyTotal === 0) return side.reduce((sum, t) => sum + fighters(t), 0);
 
   const share = new Map<UnitType, number>();
   for (const type of UNIT_TYPES) share.set(type, 0);
@@ -66,7 +72,7 @@ export function sideStrength(side: readonly Troops[], enemy: readonly Troops[]):
   for (const t of side) {
     let multiplier = 0;
     for (const [type, s] of share) multiplier += s * matchup(t.unit, type);
-    strength += t.soldiers * multiplier;
+    strength += fighters(t) * multiplier;
   }
   return strength;
 }

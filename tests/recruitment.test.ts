@@ -1,13 +1,18 @@
-/** Level-1 cities train militia; the Barracks unlocks spearmen, archers and cavalry, a level at a time. */
+/**
+ * Every city trains militia. Spearmen, archers and cavalry each need their
+ * own building, whose level is the best tier the city can train: basic,
+ * advanced, then elite.
+ */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { GameContext } from "@/core/context.js";
 import { createGame } from "@/core/setup.js";
 import { armyAt, type City, type GameState } from "@/core/state.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
-import { regimentSize } from "@/data/units.js";
+import { regimentSize, TIERS, UNITS } from "@/data/units.js";
+import { mergeRegiments, regimentCost, upkeepFor } from "@/systems/armies.js";
 import { buildingAvailable } from "@/systems/buildings.js";
-import { canRetrain, canTrain, trainableUnits } from "@/systems/recruitment.js";
+import { canRetrain, canTrain, retrainCost, trainableOptions, trainableUnits } from "@/systems/recruitment.js";
 
 function newGame(): GameState {
   const map = ROMAN_WORLD.mapEngine.createMap();
@@ -17,55 +22,90 @@ function newGame(): GameState {
 
 const cityNamed = (state: GameState, name: string) => Object.values(state.cities).find((c) => c.name === name)!;
 const withCity = (state: GameState, city: City): GameState => ({ ...state, cities: { ...state.cities, [city.id]: city } });
+const withBuildings = (city: City, levels: Partial<City["buildings"]>): City => ({ ...city, buildings: { ...city.buildings, ...levels } });
 
 describe("recruitment", () => {
-  it("lets a level-1 city train only militia", () => {
+  it("lets a new city train only militia", () => {
     const state = newGame();
+    for (const city of Object.values(state.cities)) assert.deepEqual(trainableUnits(city), ["militia"], city.name);
     const ariminum = cityNamed(state, "Ariminum");
-    assert.deepEqual(trainableUnits(ariminum), ["militia"]);
     assert.equal(canTrain(state, "rome", ariminum.id, "militia").ok, true);
     const spearmen = canTrain(state, "rome", ariminum.id, "spearmen");
     assert.equal(spearmen.ok, false);
-    assert.match(spearmen.ok ? "" : spearmen.reason, /Barracks/);
+    assert.match(spearmen.ok ? "" : spearmen.reason, /Spear yard/);
   });
 
-  it("starts every city without a Barracks, capitals included: they train militia until they build one", () => {
-    const state = newGame();
-    for (const city of Object.values(state.cities)) assert.equal(city.buildings.barracks, 0, city.name);
-    const roma = cityNamed(state, "Roma");
-    assert.deepEqual(trainableUnits(roma), ["militia"]);
-    assert.deepEqual(trainableUnits({ ...roma, buildings: { ...roma.buildings, barracks: 1 } }), ["militia", "spearmen"]);
+  it("trains basic spearmen with a Spear yard, even in a level-1 city", () => {
+    const ariminum = cityNamed(newGame(), "Ariminum");
+    assert.equal(ariminum.buildings.government, 1);
+    const withYard = withBuildings(ariminum, { spearYard: 1 });
+    assert.deepEqual(trainableOptions(withYard), [
+      { unit: "militia", tier: 1 },
+      { unit: "spearmen", tier: 1 },
+    ]);
   });
 
-  it("unlocks archers with Barracks 2 and cavalry with Barracks 3", () => {
+  it("gives each building its own unit, and each level the next tier", () => {
     const roma = cityNamed(newGame(), "Roma");
-    assert.deepEqual(trainableUnits({ ...roma, buildings: { ...roma.buildings, barracks: 2 } }), ["militia", "spearmen", "archers"]);
-    assert.deepEqual(trainableUnits({ ...roma, buildings: { ...roma.buildings, barracks: 3 } }), ["militia", "spearmen", "archers", "cavalry"]);
+    const built = withBuildings(roma, { spearYard: 3, archeryRange: 2, stables: 1 });
+    assert.deepEqual(trainableOptions(built), [
+      { unit: "militia", tier: 1 },
+      { unit: "spearmen", tier: 1 },
+      { unit: "spearmen", tier: 2 },
+      { unit: "spearmen", tier: 3 },
+      { unit: "archers", tier: 1 },
+      { unit: "archers", tier: 2 },
+      { unit: "cavalry", tier: 1 },
+    ]);
   });
 
-  it("still retrains a regiment in a city without a Barracks", () => {
+  it("charges each tier its gold and upkeep, and the same people", () => {
+    for (const tier of [1, 2, 3] as const) {
+      const cost = regimentCost("spearmen", tier);
+      assert.equal(cost.gold, Math.ceil(regimentSize("spearmen") * UNITS.spearmen.goldPerSoldier * TIERS[tier].cost));
+      assert.equal(cost.population, regimentSize("spearmen"));
+      assert.equal(upkeepFor("spearmen", 180, tier), 180 * UNITS.spearmen.upkeep * TIERS[tier].cost);
+    }
+    assert.equal(regimentCost("spearmen", 3).gold, 378);
+  });
+
+  it("retrains a regiment at its own tier, with no building needed", () => {
     let state = newGame();
     const ariminum = cityNamed(state, "Ariminum");
     const garrison = armyAt(state, ariminum.tile)!;
-    const [spearmen] = garrison.regiments;
-    assert.equal(spearmen.unit, "spearmen");
-    const damaged = { ...spearmen, soldiers: regimentSize("spearmen") / 2 };
-    state = { ...state, armies: { ...state.armies, [garrison.id]: { ...garrison, regiments: [damaged] } } };
-    assert.equal(canRetrain(state, "rome", ariminum.id, [spearmen.id]).ok, true);
+    const elite = { ...garrison.regiments[0], unit: "spearmen" as const, tier: 3 as const, soldiers: 90 };
+    state = { ...state, armies: { ...state.armies, [garrison.id]: { ...garrison, regiments: [elite] } } };
+    assert.equal(canRetrain(state, "rome", ariminum.id, [elite.id]).ok, true);
+    assert.equal(retrainCost(elite), Math.ceil(90 * UNITS.spearmen.goldPerSoldier * TIERS[3].cost));
+  });
+
+  it("merges only regiments of the same unit and tier", () => {
+    let state = newGame();
+    const roma = cityNamed(state, "Roma");
+    const army = armyAt(state, roma.tile)!;
+    const base = army.regiments[0];
+    const regiments = [
+      { ...base, id: "a", unit: "spearmen" as const, tier: 1 as const, soldiers: 100 },
+      { ...base, id: "b", unit: "spearmen" as const, tier: 2 as const, soldiers: 100 },
+      { ...base, id: "c", unit: "spearmen" as const, tier: 2 as const, soldiers: 100 },
+    ];
+    state = { ...state, armies: { ...state.armies, [army.id]: { ...army, regiments } } };
+    const merged = mergeRegiments(state, army.id).armies[army.id].regiments;
+    assert.deepEqual(
+      merged.map((r) => `${r.tier}:${r.soldiers}`).sort(),
+      ["1:100", "2:180", "2:20"],
+    );
   });
 });
 
-describe("the Barracks", () => {
-  it("needs a level-2 city for its first two levels and a level-3 city for the third", () => {
+describe("unit buildings", () => {
+  it("build their first level in any city, and later levels only as the city grows", () => {
     let state = newGame();
     const ariminum = cityNamed(state, "Ariminum"); // level 1
-    assert.equal(buildingAvailable(state, ariminum.id, "barracks"), false);
-
-    const roma = cityNamed(state, "Roma"); // level 2, no Barracks yet
-    assert.equal(buildingAvailable(state, roma.id, "barracks"), true);
-    state = withCity(state, { ...roma, buildings: { ...roma.buildings, barracks: 2 } });
-    assert.equal(buildingAvailable(state, roma.id, "barracks"), false);
-    state = withCity(state, { ...state.cities[roma.id], buildings: { ...roma.buildings, barracks: 2, government: 3 } });
-    assert.equal(buildingAvailable(state, roma.id, "barracks"), true);
+    for (const b of ["spearYard", "archeryRange", "stables"] as const) assert.equal(buildingAvailable(state, ariminum.id, b), true, b);
+    state = withCity(state, withBuildings(ariminum, { spearYard: 1 }));
+    assert.equal(buildingAvailable(state, ariminum.id, "spearYard"), false, "level 2 needs a level-2 city");
+    state = withCity(state, withBuildings(state.cities[ariminum.id], { government: 2 }));
+    assert.equal(buildingAvailable(state, ariminum.id, "spearYard"), true);
   });
 });

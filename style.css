@@ -935,3 +935,17 @@ button.bar-action:hover:not(:disabled) { background: rgba(224, 181, 79, 0.18); }
   --ink: #1b252b;
 }
 .town-card-name { font-size: 12px; font-weight: 600; line-height: 1.2; }
+
+/* Advanced (II) and elite (III) troops: a mark in the box's corner. */
+.tier-mark {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-family: var(--serif);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--brass);
+}
+.tier-mark.tier-3 { color: #f0cd70; text-shadow: 0 0 4px rgba(224, 181, 79, 0.6); }
+.unit-box { position: relative; }

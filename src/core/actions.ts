@@ -8,7 +8,7 @@ import {
   type RegimentId,
 } from "@/core/state.js";
 import { TAX_RATES, type TaxRate } from "@/data/economy.js";
-import type { UnitType } from "@/data/units.js";
+import type { Tier, UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import {
   canMarch,
@@ -40,7 +40,7 @@ import { endTurn } from "@/systems/turn.js";
 export type Action =
   | { type: "endTurn" }
   /** Queues a regiment of 100 for training in a city. It joins the army there when it's done. */
-  | { type: "trainRegiment"; cityId: CityId; unit: UnitType }
+  | { type: "trainRegiment"; cityId: CityId; unit: UnitType; tier?: Tier }
   /** Takes an order out of a city's recruitment queue, refunding it. */
   | { type: "cancelRecruit"; cityId: CityId; index: number }
   /** Moves some or all of an army's regiments. Moving only some splits the army. */
@@ -104,9 +104,10 @@ function perform(ctx: GameContext, state: GameState, factionId: FactionId, actio
     }
 
     case "trainRegiment": {
-      const check = canTrain(state, factionId, action.cityId, action.unit);
+      const tier = action.tier ?? 1;
+      const check = canTrain(state, factionId, action.cityId, action.unit, tier);
       if (!check.ok) return check;
-      return { ok: true, state: queueTraining(state, factionId, action.cityId, action.unit) };
+      return { ok: true, state: queueTraining(state, factionId, action.cityId, action.unit, tier) };
     }
 
     case "cancelRecruit": {

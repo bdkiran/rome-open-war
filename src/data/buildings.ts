@@ -2,7 +2,17 @@
  * City buildings. The government building is the city's level (1 to 3): other
  * buildings can be built up to that level, and advancing it needs people.
  */
-export type BuildingType = "government" | "barracks" | "walls" | "farms" | "market" | "mine" | "port" | "roads";
+export type BuildingType =
+  | "government"
+  | "spearYard"
+  | "archeryRange"
+  | "stables"
+  | "walls"
+  | "farms"
+  | "market"
+  | "mine"
+  | "port"
+  | "roads";
 
 export interface BuildingLevel {
   name: string;
@@ -37,13 +47,31 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { name: "Senate", cost: 1200, turns: 6 },
     ],
   },
-  barracks: {
-    name: "Barracks",
-    purpose: "Trains soldiers beyond militia: each level unlocks spearmen, archers, then cavalry. Needs a level 2 city.",
+  spearYard: {
+    name: "Spear yard",
+    purpose: "Trains spearmen: basic, then advanced, then elite.",
     levels: [
-      { name: "Barracks", cost: 250, turns: 2, cityLevel: 2 },
-      { name: "Drill yard", cost: 400, turns: 3, cityLevel: 2 },
-      { name: "Military academy", cost: 600, turns: 4 },
+      { name: "Spear yard", cost: 150, turns: 2 },
+      { name: "Phalanx school", cost: 300, turns: 3 },
+      { name: "Veterans' hall", cost: 500, turns: 4 },
+    ],
+  },
+  archeryRange: {
+    name: "Archery range",
+    purpose: "Trains archers: basic, then advanced, then elite.",
+    levels: [
+      { name: "Archery range", cost: 200, turns: 2 },
+      { name: "Bowyers' yard", cost: 350, turns: 3 },
+      { name: "Marksmen's school", cost: 550, turns: 4 },
+    ],
+  },
+  stables: {
+    name: "Stables",
+    purpose: "Trains cavalry: basic, then advanced, then elite.",
+    levels: [
+      { name: "Stables", cost: 250, turns: 2 },
+      { name: "Horse farm", cost: 400, turns: 3 },
+      { name: "Riding school", cost: 650, turns: 4 },
     ],
   },
   walls: {
@@ -103,7 +131,18 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
 };
 
 /** The order buildings are shown in. */
-export const BUILDING_ORDER: readonly BuildingType[] = ["government", "barracks", "walls", "farms", "market", "mine", "port", "roads"];
+export const BUILDING_ORDER: readonly BuildingType[] = [
+  "government",
+  "spearYard",
+  "archeryRange",
+  "stables",
+  "walls",
+  "farms",
+  "market",
+  "mine",
+  "port",
+  "roads",
+];
 
 /**
  * The most people a city can hold at each level (index = level), whatever

@@ -14,8 +14,8 @@ import {
   type RegimentId,
 } from "@/core/state.js";
 import { BUILDINGS } from "@/data/buildings.js";
-import { ARMY_RULES, UNIT_TYPES, UNITS, type UnitType, regimentSize } from "@/data/units.js";
-import { placeNewArmy, regimentCost } from "@/systems/armies.js";
+import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, unitName, type Tier, type UnitType } from "@/data/units.js";
+import { placeNewArmy, regimentCost, trainingCost } from "@/systems/armies.js";
 
 /**
  * Each city has a recruitment queue shared by training and retraining. Orders
@@ -27,9 +27,9 @@ import { placeNewArmy, regimentCost } from "@/systems/armies.js";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-/** Gold to bring a regiment back to full strength, rounded up to a whole coin. */
+/** Gold to bring a regiment back to full strength at its own tier, rounded up to a whole coin. */
 export function retrainCost(regiment: Regiment): number {
-  return Math.ceil((regimentSize(regiment.unit) - regiment.soldiers) * UNITS[regiment.unit].goldPerSoldier);
+  return trainingCost(regiment.unit, regimentSize(regiment.unit) - regiment.soldiers, regiment.tier).gold;
 }
 
 function queueCheck(state: GameState, factionId: FactionId, cityId: CityId, orders: number, gold: number): Check {
@@ -44,31 +44,47 @@ function queueCheck(state: GameState, factionId: FactionId, cityId: CityId, orde
   return { ok: true };
 }
 
-/** Whether a city can train a unit type at all: any city trains militia; the rest need its Barracks to be high enough. */
-export function unitUnlocked(city: City, unit: UnitType): boolean {
-  return city.buildings.barracks >= UNITS[unit].barracks;
+/**
+ * Whether a city can train a unit type at a tier: militia anywhere (basic
+ * only); spearmen, archers and cavalry need their building at that level.
+ */
+export function unitUnlocked(city: City, unit: UnitType, tier: Tier = 1): boolean {
+  const building = UNITS[unit].building;
+  return building ? city.buildings[building] >= tier : tier === 1;
 }
 
-/** The unit types a city can train, cheapest first. */
+/** The best tier of a unit type a city can train, or null if it can't train it at all. */
+export function bestTier(city: City, unit: UnitType): Tier | null {
+  return ([3, 2, 1] as const).find((tier) => unitUnlocked(city, unit, tier)) ?? null;
+}
+
+/** The unit types a city can train at all, cheapest first. */
 export function trainableUnits(city: City): UnitType[] {
   return UNIT_TYPES.filter((unit) => unitUnlocked(city, unit));
 }
 
-/** What a city needs to train a unit type it can't yet, e.g. "Needs a Drill yard (Barracks level 2)." */
-export function unlockReason(unit: UnitType): string {
-  const level = UNITS[unit].barracks;
-  return `Needs a ${BUILDINGS.barracks.levels[level - 1].name} (Barracks level ${level}).`;
+/** Every unit type and tier a city can train: cheapest type first, basic first. */
+export function trainableOptions(city: City): { unit: UnitType; tier: Tier }[] {
+  return UNIT_TYPES.flatMap((unit) => ([1, 2, 3] as const).filter((tier) => unitUnlocked(city, unit, tier)).map((tier) => ({ unit, tier })));
+}
+
+/** What a city needs to train a unit at a tier it can't yet, e.g. "Needs a Phalanx school (Spear yard level 2)." */
+export function unlockReason(unit: UnitType, tier: Tier = 1): string {
+  const building = UNITS[unit].building;
+  if (!building) return `${UNITS[unit].name} come in one tier.`;
+  const name = BUILDINGS[building].levels[tier - 1].name;
+  return `Needs ${/^[AEIOU]/.test(name) ? "an" : "a"} ${name} (${BUILDINGS[building].name} level ${tier}).`;
 }
 
 /**
- * Whether a regiment of a unit type can be queued for training in a city.
- * Retraining an existing regiment needs no Barracks: see canRetrain.
+ * Whether a regiment of a unit type and tier can be queued for training in a
+ * city. Retraining an existing regiment needs no building: see canRetrain.
  */
-export function canTrain(state: GameState, factionId: FactionId, cityId: CityId, unit: UnitType): Check {
-  const check = queueCheck(state, factionId, cityId, 1, regimentCost(unit).gold);
+export function canTrain(state: GameState, factionId: FactionId, cityId: CityId, unit: UnitType, tier: Tier = 1): Check {
+  const check = queueCheck(state, factionId, cityId, 1, regimentCost(unit, tier).gold);
   if (!check.ok) return check;
   const city = state.cities[cityId];
-  if (!unitUnlocked(city, unit)) return { ok: false, reason: unlockReason(unit) };
+  if (!unitUnlocked(city, unit, tier)) return { ok: false, reason: unlockReason(unit, tier) };
 
   // Room in the army there, counting regiments already queued for training.
   const stationed = armyAt(state, city.tile);
@@ -85,9 +101,9 @@ export function canTrain(state: GameState, factionId: FactionId, cityId: CityId,
 }
 
 /** Pays for a regiment and queues it. Call canTrain first. */
-export function queueTraining(state: GameState, factionId: FactionId, cityId: CityId, unit: UnitType): GameState {
-  const cost = regimentCost(unit).gold;
-  return addOrders(state, factionId, cityId, [{ kind: "train", unit, cost }], cost);
+export function queueTraining(state: GameState, factionId: FactionId, cityId: CityId, unit: UnitType, tier: Tier = 1): GameState {
+  const cost = regimentCost(unit, tier).gold;
+  return addOrders(state, factionId, cityId, [{ kind: "train", unit, tier, cost }], cost);
 }
 
 /**
@@ -211,15 +227,17 @@ function trainNext(state: GameState, factionId: FactionId, cityId: CityId): Game
     population: city.population - needed,
     recruitQueue: city.recruitQueue.filter((_, i) => i !== index),
   });
+  const tier: Tier = order.kind === "train" ? order.tier : 1;
   const regiment: Regiment = {
     id: `reg${next.nextRegimentNumber}`,
     unit: order.unit,
+    tier,
     soldiers: regimentSize(order.unit),
     movementLeft: 0,
     pinned: false,
   };
   next = { ...next, nextRegimentNumber: next.nextRegimentNumber + 1 };
-  next = addLog(next, `${city.name} trained a regiment of ${UNITS[order.unit].name}.`, {
+  next = addLog(next, `${city.name} trained a regiment of ${unitName(order.unit, tier)}.`, {
     kind: "recruitment",
     factions: [factionId],
   });

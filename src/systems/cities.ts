@@ -40,8 +40,19 @@ export function createCity(
     besiegedBy: null,
     recruitQueue: [],
     taxRate: "normal",
-    // Every city has a council hall; a capital starts with a forum (level 2). None has a barracks yet.
-    buildings: { government: isCapital ? 2 : 1, barracks: 0, walls: 0, farms: 0, market: 0, mine: 0, port: 0, roads: 0 },
+    // Every city has a council hall; a capital starts with a forum (level 2). None can train more than militia yet.
+    buildings: {
+      government: isCapital ? 2 : 1,
+      spearYard: 0,
+      archeryRange: 0,
+      stables: 0,
+      walls: 0,
+      farms: 0,
+      market: 0,
+      mine: 0,
+      port: 0,
+      roads: 0,
+    },
     constructionQueue: [],
     unsettled: false,
     fishingGrounds: tilesWithin(ctx.topology, tile, GAME_SETUP.territoryRadius).filter(

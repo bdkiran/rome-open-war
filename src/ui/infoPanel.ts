@@ -12,7 +12,7 @@ import {
   type RegimentId,
 } from "@/core/state.js";
 import { TERRAIN } from "@/data/terrain.js";
-import { ARMY_RULES, UNIT_TYPES, UNITS, type UnitType, regimentSize } from "@/data/units.js";
+import { ARMY_RULES, LINE_UNITS, TIERS, UNITS, type UnitType, regimentSize, unitName } from "@/data/units.js";
 import { TAX_ORDER, TAX_RATES } from "@/data/economy.js";
 import {
   BUILDING_EFFECTS,
@@ -30,11 +30,11 @@ import type { TileId } from "@/map/topology.js";
 import { formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg } from "@/render/figures.js";
 import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
-import { canRetrain, canTrain, retrainCost, trainableUnits } from "@/systems/recruitment.js";
+import { canRetrain, canTrain, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
 import { cityStats, mineableTiles, type CityStats } from "@/systems/cities.js";
-import { levelPips, regimentBox } from "@/ui/boxes.js";
+import { levelPips, regimentBox, tierMark } from "@/ui/boxes.js";
 import { escapeHtml, ownerLine, signed } from "@/ui/html.js";
 
 /** Which tab of the city panel is showing. Kept between redraws. */
@@ -86,7 +86,7 @@ function armySection(input: InfoPanelInput, army: Army): string {
   const mine = army.owner === humanId;
   const canOrder = mine && playerTurn;
   const count = army.regiments.length;
-  const upkeep = army.regiments.reduce((sum, r) => sum + upkeepFor(r.unit, r.soldiers), 0);
+  const upkeep = army.regiments.reduce((sum, r) => sum + upkeepFor(r.unit, r.soldiers, r.tier), 0);
 
   let html = `
     <h2>${formatNumber(armySoldiers(army))} soldiers</h2>
@@ -332,27 +332,30 @@ function mineSummary(state: GameState, city: City, nextLevelNumber: number | nul
 }
 
 /**
- * A box per unit type the city can train (click one to queue a regiment of
- * it), what its Barracks would unlock next, and the city's recruitment
- * queue, shared with retraining.
+ * A box per unit type and tier the city can train (click one to queue a
+ * regiment of it), what its buildings would unlock next, and the city's
+ * recruitment queue, shared with retraining.
  */
 function recruitmentTab(input: InfoPanelInput, city: City): string {
   const { state, humanId } = input;
   if (!humanId) return "";
   const color = getFaction(state, humanId)?.color ?? "#888888";
-  const units = trainableUnits(city);
+  const options = trainableOptions(city);
 
-  const boxes = units.map((unit) => {
+  const boxes = options.map(({ unit, tier }) => {
     const def = UNITS[unit];
-    const cost = regimentCost(unit);
-    const check = canTrain(state, humanId, city.id, unit);
+    const name = unitName(unit, tier);
+    const cost = regimentCost(unit, tier);
+    const check = canTrain(state, humanId, city.id, unit, tier);
     // Every type beats militia; name the one that matters.
     const beats = def.beats.filter((b) => b !== "militia");
+    const strength = tier > 1 ? ` Each soldier fights like ${TIERS[tier].strength} basic ones.` : "";
     return `
-      <button type="button" class="unit-box" data-train="${unit}" ${check.ok ? "" : "disabled"}
-        title="${escapeHtml(check.ok ? `Queue a regiment of ${def.name}: ${cost.gold} gold, ${cost.population} people, upkeep ${formatUpkeep(upkeepFor(unit, regimentSize(unit)))} a turn` : check.reason)}">
+      <button type="button" class="unit-box" data-train="${unit}" data-tier="${tier}" ${check.ok ? "" : "disabled"}
+        title="${escapeHtml(check.ok ? `Queue a regiment of ${name}: ${cost.gold} gold, ${cost.population} people, upkeep ${formatUpkeep(upkeepFor(unit, regimentSize(unit), tier))} a turn.${strength}` : check.reason)}">
+        ${tierMark(tier)}
         ${figureSvg(unit, color)}
-        <span class="unit-name">${def.name}</span>
+        <span class="unit-name">${escapeHtml(name)}</span>
         <span class="unit-stat">${regimentSize(unit)} soldiers</span>
         <span class="unit-stat">${formatNumber(cost.gold)} gold</span>
         <span class="unit-stat">Move ${def.movement}</span>
@@ -360,12 +363,20 @@ function recruitmentTab(input: InfoPanelInput, city: City): string {
       </button>`;
   }).join("");
 
-  const checks = units.map((u) => canTrain(state, humanId, city.id, u));
+  const checks = options.map(({ unit, tier }) => canTrain(state, humanId, city.id, unit, tier));
   const blocked = checks.find((c) => !c.ok);
   const note = checks.every((c) => !c.ok) && blocked && !blocked.ok ? escapeHtml(blocked.reason) : "";
-  // What the Barracks would unlock next.
-  const locked = UNIT_TYPES.find((u) => !units.includes(u));
-  const next = locked ? `Next: ${UNITS[locked].name.toLowerCase()}, with a ${BUILDINGS.barracks.levels[UNITS[locked].barracks - 1].name}.` : "";
+  // What its buildings would unlock next: the lowest tier it lacks, cheapest unit first.
+  let next = "";
+  for (const tier of [1, 2, 3] as const) {
+    const unit = LINE_UNITS.find((u) => !unitUnlocked(city, u, tier));
+    const building = unit ? UNITS[unit].building : null;
+    if (unit && building) {
+      const name = BUILDINGS[building].levels[tier - 1].name;
+      next = `Next: ${unitName(unit, tier).toLowerCase()}, with ${/^[AEIOU]/.test(name) ? "an" : "a"} ${name}.`;
+      break;
+    }
+  }
 
   return `
     <div class="box-grid units">${boxes}</div>
@@ -397,10 +408,10 @@ function retrainingTab(input: InfoPanelInput, city: City): string {
       return regimentBox(r, color, {
         status: queued.has(r.id) ? "Queued" : damaged(r) ? `${formatNumber(retrainCost(r))} gold` : "Full",
         title: queued.has(r.id)
-          ? `${UNITS[r.unit].name}: queued for retraining`
+          ? `${unitName(r.unit, r.tier)}: queued for retraining`
           : damaged(r)
-            ? `${UNITS[r.unit].name}: ${r.soldiers} of ${regimentSize(r.unit)}. ${chosen.has(r.id) ? "Click to leave it out." : "Click to choose it for retraining."}`
-            : `${UNITS[r.unit].name}: at full strength`,
+            ? `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)}. ${chosen.has(r.id) ? "Click to leave it out." : "Click to choose it for retraining."}`
+            : `${unitName(r.unit, r.tier)}: at full strength`,
         attr: choosable ? `data-retrain="${r.id}"` : "",
         pressed: choosable ? chosen.has(r.id) : null,
         dim: !choosable,
@@ -448,9 +459,10 @@ function recruitQueue(city: City, color: string): string {
       when = people > spare ? "Waiting for people" : trainingAhead === 0 ? "Next turn" : `In ${trainingAhead + 1} turns`;
       trainingAhead++;
     }
-    const label = order.kind === "train" ? UNITS[order.unit].name : `+${order.soldiers} ${UNITS[order.unit].name}`;
+    const name = order.kind === "train" ? unitName(order.unit, order.tier) : UNITS[order.unit].name;
+    const label = order.kind === "train" ? name : `+${order.soldiers} ${name}`;
     return `
-      <div class="queue-entry" title="${escapeHtml(`${order.kind === "train" ? "Training" : "Retraining"} ${UNITS[order.unit].name}: ${formatNumber(order.cost)} gold. Cancel to refund it.`)}">
+      <div class="queue-entry" title="${escapeHtml(`${order.kind === "train" ? "Training" : "Retraining"} ${name}: ${formatNumber(order.cost)} gold. Cancel to refund it.`)}">
         ${figureSvg(order.unit, color)}
         <span class="queue-entry-name">${escapeHtml(label)}</span>
         <span class="reg-status">${escapeHtml(when)}</span>

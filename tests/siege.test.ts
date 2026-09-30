@@ -28,7 +28,7 @@ function romaBesieged(): { ctx: GameContext; state: GameState; garrison: Army; b
         owner: "carthage",
         tile: besiegerTile,
         destination: null,
-        regiments: [{ id: "besieger", unit: "spearmen", soldiers: regimentSize("spearmen"), movementLeft: 12, pinned: false }],
+        regiments: [{ id: "besieger", unit: "spearmen", tier: 1, soldiers: regimentSize("spearmen"), movementLeft: 12, pinned: false }],
       },
     },
   };

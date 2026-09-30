@@ -120,6 +120,7 @@ function garrisonCities(state: GameState, player: string): GameState {
       regiments: units.map((unit, i) => ({
         id: `${id}r${i}`,
         unit,
+        tier: 1 as const,
         soldiers: regimentSize(unit),
         movementLeft: 0,
         pinned: false,

@@ -1,6 +1,6 @@
 import type { BuildingType } from "@/data/buildings.js";
 import type { TaxRate } from "@/data/economy.js";
-import type { UnitType } from "@/data/units.js";
+import type { Tier, UnitType } from "@/data/units.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { TileId } from "@/map/topology.js";
 
@@ -57,7 +57,7 @@ export interface City {
 
 /** An order in a city's recruitment queue, paid for when it was queued. */
 export type RecruitOrder =
-  | { kind: "train"; unit: UnitType; cost: number }
+  | { kind: "train"; unit: UnitType; tier: Tier; cost: number }
   | { kind: "retrain"; unit: UnitType; regimentId: RegimentId; soldiers: number; cost: number };
 
 export interface Construction {
@@ -79,6 +79,8 @@ export interface TileClaim {
 export interface Regiment {
   id: RegimentId;
   unit: UnitType;
+  /** Basic, advanced or elite, fixed when it's trained (see TIERS in data/units.ts). */
+  tier: Tier;
   soldiers: number;
   /** Movement points left this turn. Refilled at the start of the owner's turn. */
   movementLeft: number;

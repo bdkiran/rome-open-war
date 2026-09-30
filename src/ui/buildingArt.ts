@@ -8,12 +8,26 @@ const ART: Record<BuildingType, string> = {
     ${[14, 23, 32, 41, 50].map((x) => `<rect x="${x - 2}" y="28" width="4" height="20" fill="var(--stone)"/>`).join("")}
     <rect x="8" y="48" width="48" height="4" fill="var(--stone)"/>
     <rect x="5" y="52" width="54" height="5" fill="var(--stone-dark)"/>`,
-  barracks: `
-    <path d="M6 30 L32 18 L58 30 Z" fill="var(--roof)"/>
-    <rect x="9" y="30" width="46" height="22" fill="var(--stone)"/>
-    <path d="M27 52 V40 H37 V52 Z" fill="var(--ink)"/>
-    <path d="M14 34 V48 M20 34 V48 M44 34 V48 M50 34 V48" stroke="var(--wood)" stroke-width="2.4"/>
-    <path d="M14 34 L12 31 M20 34 L18 31 M44 34 L42 31 M50 34 L48 31" stroke="#b9c2c7" stroke-width="2"/>
+  spearYard: `
+    <rect x="6" y="52" width="52" height="5" fill="var(--stone-dark)"/>
+    <path d="M10 52 V26 H54 V52" fill="none" stroke="var(--wood)" stroke-width="3"/>
+    <path d="M10 34 H54" stroke="var(--wood)" stroke-width="2.5"/>
+    ${[18, 26, 34, 42, 50].map((x) => `<path d="M${x} 50 V12" stroke="var(--wood)" stroke-width="2"/><path d="M${x} 6 L${x + 2.5} 13 H${x - 2.5} Z" fill="#b9c2c7"/>`).join("")}`,
+  archeryRange: `
+    <rect x="4" y="52" width="56" height="5" fill="#8fa35a"/>
+    <circle cx="40" cy="30" r="15" fill="#f1e3c4" stroke="var(--wood)" stroke-width="2"/>
+    <circle cx="40" cy="30" r="10" fill="#c0392b"/>
+    <circle cx="40" cy="30" r="5" fill="#f1e3c4"/>
+    <path d="M38 52 L40 45 L42 52" stroke="var(--wood)" stroke-width="2" fill="none"/>
+    <path d="M8 26 L34 30" stroke="var(--wood)" stroke-width="2"/>
+    <path d="M34 30 L29 27 M34 30 L29 33" stroke="var(--wood)" stroke-width="1.5"/>`,
+  stables: `
+    <path d="M6 28 L32 14 L58 28 Z" fill="var(--roof)"/>
+    <rect x="9" y="28" width="46" height="24" fill="var(--wood)"/>
+    <rect x="15" y="34" width="14" height="18" fill="var(--ink)"/>
+    <rect x="35" y="34" width="14" height="18" fill="var(--ink)"/>
+    <path d="M15 40 H29 M35 40 H49" stroke="var(--wood)" stroke-width="2"/>
+    <path d="M40 34 Q43 29 47 31 L46 36" fill="#6f4a2c"/>
     <rect x="5" y="52" width="54" height="5" fill="var(--stone-dark)"/>`,
   walls: `
     <path d="M6 56 V24 H12 V18 H18 V24 H24 V18 H30 V24 H34 V18 H40 V24 H46 V18 H52 V24 H58 V56 Z" fill="var(--stone)"/>
