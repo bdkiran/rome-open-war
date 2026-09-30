@@ -1,9 +1,12 @@
 name: Test
 
+# Off for now: runs only when started by hand (Actions tab > Test > Run
+# workflow). To run it on every push and pull request again, restore:
+#   push:
+#     branches: [master]
+#   pull_request:
 on:
-  push:
-    branches: [master]
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
