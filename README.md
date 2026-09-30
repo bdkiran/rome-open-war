@@ -65,6 +65,15 @@ If you'd rather not use `serve`, any static file server works, for example
 `python3 -m http.server`. Opening `index.html` directly from disk does not
 work, because browsers block ES modules loaded from `file://`.
 
+## For developers and coding agents
+
+`AGENTS.md` (imported by `CLAUDE.md` for Claude Code) holds the working
+instructions: commands, architecture, the rules that must not break, and how
+to test. `docs/DECISIONS.md` explains why the rules and numbers are what they
+are. `tools/simulate.py` plays a whole AI-vs-AI game headlessly and reports
+invalid AI orders, debt, city growth and treasuries; run it after any change
+to the rules, the numbers in `src/data/`, or the AI.
+
 ## Controls
 
 - Drag or use arrow keys / WASD to pan
