@@ -172,8 +172,6 @@ Always measure with `tools/simulate.py` before and after.
 - The AI doesn't single out the player; it targets whoever is cheapest to
   take.
 - Territory can straddle a sea crossing (cosmetic).
-- The `fresh` flag on regiments is now mostly vestigial (new regiments appear
-  at the end of the owner's turn and are refreshed at the start of the next).
 - No automated test suite beyond `tools/simulate.py` and manual browser
   checks.
 - Public order / unrest was discussed, not built.

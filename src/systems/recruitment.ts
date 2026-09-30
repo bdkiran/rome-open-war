@@ -195,7 +195,6 @@ function trainNext(state: GameState, factionId: FactionId, cityId: CityId): Game
     unit: order.unit,
     soldiers: regimentSize(order.unit),
     movementLeft: 0,
-    fresh: false,
     pinned: false,
   };
   next = { ...next, nextRegimentNumber: next.nextRegimentNumber + 1 };
