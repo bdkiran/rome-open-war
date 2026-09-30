@@ -342,7 +342,7 @@ surrender), you choose its fate:
 | Choice          | Its people                                              | Plunder            |
 |-----------------|---------------------------------------------------------|--------------------|
 | **Occupy**      | Kept as they are                                        | 5 gold per 1,000   |
-| **Enslave**     | 25% sent to your other cities (shared evenly), 10% lost | 15 gold per 1,000  |
+| **Enslave**     | 25% sent to your other cities (shared evenly), 5% lost  | 15 gold per 1,000  |
 | **Exterminate** | 50% killed                                              | 40 gold per 1,000  |
 
 Plunder grows by 50% for each city level above 1, and is always worked out
