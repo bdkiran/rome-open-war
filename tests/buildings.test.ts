@@ -61,19 +61,29 @@ describe("buildingAvailable", () => {
 });
 
 describe("ports and roads", () => {
-  it("offers a port only to a city with fishing grounds, and roads to any", () => {
+  it("offers a port only to a city with sea on its coast, and roads to any", () => {
     const state = newGame();
-    const coastal = Object.values(state.cities).find((c) => c.fishingGrounds > 0)!;
-    const inland = Object.values(state.cities).find((c) => c.fishingGrounds === 0)!;
+    const coastal = Object.values(state.cities).find((c) => c.coast > 0)!;
+    const inland = Object.values(state.cities).find((c) => c.coast === 0)!;
     assert.equal(buildingAvailable(state, coastal.id, "port"), true);
     assert.equal(buildingAvailable(state, inland.id, "port"), false);
     assert.equal(buildingAvailable(state, coastal.id, "roads"), true);
     assert.equal(buildingAvailable(state, inland.id, "roads"), true);
   });
 
+  it("offers a port where the sea touches a city's land, even beyond its fishing grounds", () => {
+    const state = newGame();
+    for (const name of ["Amaseia", "Treva", "Sardis"]) {
+      const city = cityNamed(state, name);
+      assert.equal(city.fishingGrounds, 0, `${name} has no fishing grounds`);
+      assert.ok(city.coast > 0, `${name}'s land touches the sea`);
+      assert.equal(buildingAvailable(state, city.id, "port"), true, name);
+    }
+  });
+
   it("scales a port's growth by the city's share of sea, on top of its farms", () => {
     let state = newGame();
-    const city = Object.values(state.cities).find((c) => c.fishingGrounds > 0)!;
+    const city = Object.values(state.cities).find((c) => c.coast > 0)!;
     const base = cityStats(state, city).growthRate;
     const withBoth = { ...city, buildings: { ...city.buildings, farms: 1, port: 1 } };
     state = withCity(state, withBoth);

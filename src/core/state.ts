@@ -48,6 +48,11 @@ export interface City {
   unsettled: boolean;
   /** Sea tiles within its reach: fishing grounds that add to its capacity and growth. Set when it's founded. */
   fishingGrounds: number;
+  /**
+   * Sea it can build a port on: its fishing grounds, plus any sea touching
+   * its land further out. Set once every city has claimed its land.
+   */
+  coast: number;
 }
 
 /** An order in a city's recruitment queue, paid for when it was queued. */
