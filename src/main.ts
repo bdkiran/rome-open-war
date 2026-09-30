@@ -27,6 +27,7 @@ import { MapView3D } from "@/render/three/mapView3d.js";
 import { armyHolding, attackOptions, marchRoute, marchSchedule, reachableTiles } from "@/systems/armies.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { renderInfoPanel, type CityTab } from "@/ui/infoPanel.js";
+import { renderSelectionBar, type BarTab } from "@/ui/selectionBar.js";
 import { hideBattlePanel, showBattlePanel } from "@/ui/battlePanel.js";
 import { hideSiegePanel, showSiegePanel } from "@/ui/siegePanel.js";
 import { hideBattleResult, showBattleResult } from "@/ui/battleResult.js";
@@ -62,6 +63,8 @@ function byId<T extends HTMLElement>(id: string): T {
 
 const canvas = byId<HTMLCanvasElement>("map");
 const infoPanel = byId<HTMLElement>("tile-info");
+const selectionBar = byId<HTMLElement>("selection-bar");
+const turnPanel = byId<HTMLElement>("turn-panel");
 const reportElements = {
   root: byId<HTMLElement>("reports"),
   count: byId<HTMLElement>("reports-count"),
@@ -127,6 +130,9 @@ const view: ViewState = {
 };
 /** The city panel tab the player last chose. */
 let cityTab: CityTab = "construction";
+/** The selection bar's tab, and the tile it was chosen for: a new selection starts on Army. */
+let barTab: BarTab = "army";
+let barTabFor: TileId | null = null;
 /** Regiments queued for retraining, and the city they're queued in. */
 let retrainQueue = new Set<RegimentId>();
 let retrainCity: string | null = null;
@@ -277,6 +283,7 @@ const input = attachInput(canvas, camera, (p) => mapView.pick(p), {
 
 window.addEventListener("resize", () => {
   mapView.resize();
+  placeReports();
   requestRedraw();
 });
 
@@ -650,13 +657,17 @@ window.addEventListener("keydown", (e) => {
 });
 
 // Buttons in the panel: city tabs, recruitment cards, taxes, retraining, and army orders.
-infoPanel.addEventListener("click", (e) => {
+/** Clicks in the side panel and the selection bar: tabs, orders, construction and recruitment. */
+function handlePanelClick(e: MouseEvent): void {
   const target = e.target instanceof Element ? e.target.closest("button") : null;
   if (!target) return;
   const state = controller.getState();
   const city = view.selected ? cityAt(state, view.selected) : undefined;
 
-  if (target.dataset.cityTab) {
+  if (target.dataset.barTab) {
+    barTab = target.dataset.barTab as BarTab;
+    renderInfo(state);
+  } else if (target.dataset.cityTab) {
     cityTab = target.dataset.cityTab as CityTab;
     renderInfo(state);
   } else if (target.dataset.build && city) {
@@ -709,7 +720,9 @@ infoPanel.addEventListener("click", (e) => {
       openSiegePanel(besieged.id, army.regiments.filter((r) => chosen.has(r.id)).map((r) => r.id));
     }
   }
-});
+}
+infoPanel.addEventListener("click", handlePanelClick);
+selectionBar.addEventListener("click", handlePanelClick);
 
 // ---- UI updates ---------------------------------------------------------
 
@@ -728,7 +741,22 @@ function infoInput(state: GameState) {
 }
 
 function renderInfo(state: GameState): void {
-  infoPanel.innerHTML = renderInfoPanel(infoInput(state));
+  if (view.selected !== barTabFor) {
+    barTab = "army";
+    barTabFor = view.selected;
+  }
+  const input = infoInput(state);
+  infoPanel.innerHTML = renderInfoPanel(input);
+  const bar = renderSelectionBar(input, barTab);
+  selectionBar.innerHTML = bar;
+  selectionBar.hidden = bar === "";
+}
+
+/** The reports tray sits just under the turn panel, whose height changes with the faction list. */
+function placeReports(): void {
+  const top = turnPanel.offsetTop + turnPanel.offsetHeight + 12;
+  reportElements.root.style.top = `${top}px`;
+  reportElements.root.style.maxHeight = `calc(100vh - ${top}px - var(--bar-space))`;
 }
 
 function refreshAll(state: GameState): void {
@@ -737,6 +765,7 @@ function refreshAll(state: GameState): void {
   syncChosen(state);
   refreshHighlights(state);
   updateTurnPanel(turnElements, state, humanId);
+  placeReports();
   collectReports(state);
   drawReports();
   renderInfo(state);

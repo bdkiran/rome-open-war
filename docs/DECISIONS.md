@@ -162,6 +162,14 @@ Always measure with `npm run simulate` before and after.
 - **Panels**: box grids for regiments, units and
   buildings, with queues below. Minimal explanatory text (the player found
   the UI too wordy): show what's blocked and why; details go in tooltips.
+- **Cards in a bottom bar, facts and city work in the side panel.** One panel
+  held too much. The selection bar (bottom centre) shows what's selected as
+  cards: Army (regiments, ticked for orders) and Town (buildings built), for
+  enemy cities too. The side panel (top left) keeps facts, taxes and the
+  Construction / Recruitment / Retraining tabs. Selecting a city opens the
+  bar on Army. Construction lists only buildings the city can build next
+  (`buildingAvailable`): ones it can't yet are hidden, ones it can't afford
+  are greyed out. The reports moved under the turn panel to free the bottom.
 - **Reports** replace the log: notifications at the start of the player's
   turn, filtered to what concerns them plus world news. They last one turn:
   ending the turn clears them, and there's no history view (a running log

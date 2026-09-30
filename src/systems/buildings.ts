@@ -46,41 +46,62 @@ export function nextLevel(city: City, building: BuildingType): { level: number; 
 }
 
 /**
- * Whether a building's next level can be queued in a city. Buildings go up to
- * the city's level, which only a finished government raises; the government
- * building itself needs enough people first. Up to
- * CONSTRUCTION_QUEUE_SIZE buildings can be queued; none while besieged.
+ * Why a building's next level isn't open to a city at all, or null if it is.
+ * Buildings go up to the city's level, which only a finished government
+ * raises; the government building itself needs enough people first; a mine
+ * needs hills or mountains. Gold, a full queue and a siege only hold a
+ * building up for now, so they don't count here.
+ */
+function unavailableReason(state: GameState, city: City, building: BuildingType): string | null {
+  const next = nextLevel(city, building);
+  if (!next) {
+    return `${BUILDINGS[building].name} ${plannedLevel(city, building) > city.buildings[building] ? "will be" : "are"} at their highest level.`;
+  }
+  if (building === "mine" && mineableTiles(state, city.id) === 0) {
+    return `${city.name}'s land has no hills or mountains to mine.`;
+  }
+  if (building === "government") {
+    const needed = LEVEL_POPULATION[next.level];
+    if (city.population < needed) {
+      return `Needs ${fmt(needed)} people to become a level ${next.level} city (it has ${fmt(city.population)}).`;
+    }
+  } else if (next.level > cityLevel(city)) {
+    // Only a finished government unlocks the next level; one still being built doesn't.
+    return `Needs a level ${next.level} city. Finish raising its government first.`;
+  }
+  return null;
+}
+
+/**
+ * Whether a building's next level is open to a city: everything but gold, a
+ * full queue and a siege allows it. The Construction tab lists only these.
+ */
+export function buildingAvailable(state: GameState, cityId: CityId, building: BuildingType): boolean {
+  const city = state.cities[cityId];
+  return Boolean(city) && unavailableReason(state, city, building) === null;
+}
+
+/**
+ * Whether a building's next level can be queued in a city now: it's open to
+ * the city (see buildingAvailable), the queue has room (up to
+ * CONSTRUCTION_QUEUE_SIZE buildings), the city isn't besieged, and the
+ * faction can pay for it.
  */
 export function canBuild(state: GameState, factionId: FactionId, cityId: CityId, building: BuildingType): Check {
   const city = state.cities[cityId];
   const faction = getFaction(state, factionId);
   if (!city || !faction || city.owner !== factionId) return { ok: false, reason: "That city isn't yours." };
 
-  const next = nextLevel(city, building);
-  if (!next) {
-    return { ok: false, reason: `${BUILDINGS[building].name} ${plannedLevel(city, building) > city.buildings[building] ? "will be" : "are"} at their highest level.` };
-  }
+  const unavailable = unavailableReason(state, city, building);
+  if (unavailable) return { ok: false, reason: unavailable };
   if (city.constructionQueue.length >= CONSTRUCTION_QUEUE_SIZE) {
     return { ok: false, reason: `${city.name}'s construction queue is full (${CONSTRUCTION_QUEUE_SIZE} buildings).` };
   }
   if (city.besiegedBy) return { ok: false, reason: `${city.name} can't build while it's besieged.` };
 
-  if (building === "mine" && mineableTiles(state, city.id) === 0) {
-    return { ok: false, reason: `${city.name}'s land has no hills or mountains to mine.` };
-  }
-
-  if (building === "government") {
-    const needed = LEVEL_POPULATION[next.level];
-    if (city.population < needed) {
-      return { ok: false, reason: `Needs ${fmt(needed)} people to become a level ${next.level} city (it has ${fmt(city.population)}).` };
-    }
-  } else if (next.level > cityLevel(city)) {
-    // Only a finished government unlocks the next level; one still being built doesn't.
-    return { ok: false, reason: `Needs a level ${next.level} city. Finish raising its government first.` };
-  }
-
-  if (faction.gold < next.def.cost) {
-    return { ok: false, reason: `Costs ${fmt(next.def.cost)} gold. You have ${fmt(faction.gold)}.` };
+  const cost = nextLevel(city, building)!.def.cost;
+  if (faction.gold < cost) {
+    return { ok: false, reason: `Costs ${fmt(cost)} gold. You have ${fmt(faction.gold)}.` };
   }
   return { ok: true };
 }
