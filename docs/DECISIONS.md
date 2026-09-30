@@ -133,6 +133,12 @@ so.
   a queued one doesn't. Several levels of the *same* building may be queued.
 - **Taking a city**: occupy / enslave / exterminate, with plunder from the
   city's population and level at the time (so re-sacking pays little).
+  Enslaving loses 5% of the people on the march (it was 10%, which left it
+  the best choice in only ~1 city in 3 at any horizon). Now each choice has
+  its own horizon: exterminate for quick cash (~10 turns), enslave for the
+  medium term (~25), occupy for the long game. The enslaved always found
+  room in their new cities, so the losses were the only drag; more plunder
+  on top made enslaving best even short-term, so it wasn't raised.
 
 ## Economy tuning history
 
@@ -159,7 +165,8 @@ The economy was retuned several times; the lesson each time:
      AI income ~11% and got more of its cities to level 3 in full games.
    - Conquest: exterminating pays most for ~10 turns (its plunder is ~6
      turns of the city's income, and halved cities regrow fast); occupying
-     overtakes it after ~18 turns, enslaving sits between. A real choice.
+     overtakes it after ~18 turns, enslaving sits between (and, since its
+     losses were halved, is the best 25-turn choice in about half the cities).
      The AI enslaves, or exterminates when short of gold; it never occupies.
    - Population caps (8k / 20k by level, then the land) matter: a city at
      its level cap gains nothing from low taxes.
