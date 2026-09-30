@@ -69,8 +69,9 @@ so.
 - **Battles pull in every army within one tile of either side**
   (`battleSides`): attackers bring regiments that can still move, defenders
   bring everything. Losing side loses every army that fought.
-- **Besieged garrisons can only attack their besiegers** (from their own
-  walls, no marching out) and only join battles against them.
+- **Besieged garrisons are shut in**: they can't move, march or lay siege,
+  can only attack their besiegers (from their own walls), and only join
+  battles against them. Letting them walk out left the city empty for free.
 
 ## Sieges
 
@@ -162,7 +163,9 @@ Always measure with `npm run simulate` before and after.
   buildings, with queues below. Minimal explanatory text (the player found
   the UI too wordy): show what's blocked and why; details go in tooltips.
 - **Reports** replace the log: notifications at the start of the player's
-  turn, filtered to what concerns them plus world news.
+  turn, filtered to what concerns them plus world news. They last one turn:
+  ending the turn clears them, and there's no history view (a running log
+  piled up).
 - **Money breakdown** under the treasury; per-city income line in the city
   panel. March routes are coloured per turn.
 
@@ -171,8 +174,6 @@ Always measure with `npm run simulate` before and after.
 - **Phase 9: save and load** (not started; keep state serializable).
 - Late-game spending: a city still trains only one regiment a turn; recruitment
   slots by city level (1/2/3) was proposed and not yet chosen.
-- A besieged garrison can still simply *move* out of its city (leaving it
-  empty); only attacking is restricted.
 - The AI doesn't single out the player; it targets whoever is cheapest to
   take.
 - Territory can straddle a sea crossing (cosmetic).

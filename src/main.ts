@@ -66,7 +66,6 @@ const reportElements = {
   root: byId<HTMLElement>("reports"),
   count: byId<HTMLElement>("reports-count"),
   list: byId<HTMLOListElement>("reports-list"),
-  history: byId<HTMLButtonElement>("reports-history"),
   dismissAll: byId<HTMLButtonElement>("reports-dismiss"),
 };
 const turnElements = {
@@ -534,10 +533,9 @@ byId<HTMLElement>("treasury").addEventListener("click", (e) => {
 
 // ---- Reports ------------------------------------------------------------
 
-/** Notifications not yet dismissed, and which are opened. */
+/** This turn's notifications not yet dismissed, and which are opened. */
 let unreadReports: LogEntry[] = [];
 const openReports = new Set<number>();
-let showHistory = false;
 /** Log entries from this id on arrive as notifications at the start of the player's next turn. */
 let reportsFrom = controller.getState().nextLogNumber;
 let wasPlayerTurn = isPlayerTurn();
@@ -545,20 +543,22 @@ let wasPlayerTurn = isPlayerTurn();
 /**
  * When the player's turn begins, what happened since they ended their last
  * one (the end of their turn, and every other faction's turn) that concerns
- * them arrives as notifications.
+ * them arrives as notifications. They last only this turn: ending the turn
+ * clears them.
  */
 function collectReports(state: GameState): void {
   const playerTurn = isPlayerTurn();
   if (playerTurn && !wasPlayerTurn && humanId) {
     const fresh = state.log.filter((e) => e.id >= reportsFrom && concerns(e, humanId!));
-    unreadReports = [...unreadReports, ...fresh];
+    unreadReports = fresh;
+    openReports.clear();
     reportsFrom = state.nextLogNumber;
   }
   wasPlayerTurn = playerTurn;
 }
 
-function drawReports(state: GameState): void {
-  renderReports(reportElements, state, humanId, { unread: unreadReports, expanded: openReports, showHistory });
+function drawReports(): void {
+  renderReports(reportElements, { unread: unreadReports, expanded: openReports });
 }
 
 reportElements.list.addEventListener("click", (e) => {
@@ -568,21 +568,17 @@ reportElements.list.addEventListener("click", (e) => {
     const id = Number(target.dataset.dismiss);
     unreadReports = unreadReports.filter((r) => r.id !== id);
     openReports.delete(id);
-  } else if (target.dataset.report && !showHistory) {
+  } else if (target.dataset.report) {
     const id = Number(target.dataset.report);
     if (openReports.has(id)) openReports.delete(id);
     else openReports.add(id);
   }
-  drawReports(controller.getState());
+  drawReports();
 });
 reportElements.dismissAll.addEventListener("click", () => {
   unreadReports = [];
   openReports.clear();
-  drawReports(controller.getState());
-});
-reportElements.history.addEventListener("click", () => {
-  showHistory = !showHistory;
-  drawReports(controller.getState());
+  drawReports();
 });
 
 // ---- Battle panel -------------------------------------------------------
@@ -636,8 +632,11 @@ function dialogOpen(): boolean {
 function endPlayerTurn(): void {
   if (!isPlayerTurn() || dialogOpen()) return;
   deselect();
-  // What happens from here on (the end of this turn and the others' turns) is reported next turn.
+  // What happens from here on (the end of this turn and the others' turns) is reported next turn;
+  // this turn's notifications go.
   reportsFrom = controller.getState().nextLogNumber;
+  unreadReports = [];
+  openReports.clear();
   dispatch({ type: "endTurn" });
 }
 
@@ -739,7 +738,7 @@ function refreshAll(state: GameState): void {
   refreshHighlights(state);
   updateTurnPanel(turnElements, state, humanId);
   collectReports(state);
-  drawReports(state);
+  drawReports();
   renderInfo(state);
   requestRedraw();
 }

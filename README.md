@@ -84,8 +84,8 @@ Either way you can close the screen to look at the map, or play again.
 - **Reports** (bottom right): at the start of each turn, what happened since
   your last one arrives as notifications: battles, sieges and cities involving
   you, your finished buildings and recruits, and world news (cities changing
-  hands, factions falling). Click one to read it, × to dismiss it; History
-  shows recent reports again
+  hands, factions falling). Click one to read it, × to dismiss it. They
+  last only that turn: ending your turn clears them
 - In the army panel: Merge damaged regiments of the same type; leave some
   regiments out to split the army; move onto a friendly army to merge
 - End turn with the button or Enter
@@ -325,8 +325,8 @@ next to it marches in. The siege holds as long as the besieger ends its turn
 with an army next to the city; otherwise it's lifted, and the city restocks
 one turn of supplies per turn.
 
-A besieged garrison can only attack the besiegers next to its city, and only
-joins battles against them. The defenders can break a siege by attacking the
+A besieged garrison is shut in: it can't leave the city, and can only attack
+the besiegers next to it and join battles against them. The defenders can break a siege by attacking the
 besiegers, and a relief army can do the same from outside.
 
 ## Taking cities

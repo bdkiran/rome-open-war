@@ -156,7 +156,6 @@ button.secondary:hover:not(:disabled) { background: rgba(224, 181, 79, 0.18); }
 .reports-count:empty { display: none; }
 .reports-buttons { display: flex; gap: 6px; }
 .reports-buttons button { padding: 4px 9px; font-size: 12px; }
-.reports-buttons button[aria-pressed="true"] { background: rgba(224, 181, 79, 0.2); border-color: var(--brass); }
 .reports-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; overflow-y: auto; }
 .report { display: grid; grid-template-columns: 1fr auto; align-items: start; background: rgba(0, 0, 0, 0.22); border-left: 3px solid var(--kind); border-radius: 2px; }
 button.report-body {
