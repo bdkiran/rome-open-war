@@ -494,13 +494,15 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
 /**
  * The order the AI builds in a city: government, barracks (to train more than
  * militia), market, a mine (only with a few hills or mountains to dig),
- * farms, then walls. With enemies near, walls come first.
+ * farms, a port (only on the coast), walls, then roads. With enemies near,
+ * walls come first.
  */
 export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boolean): BuildingType[] {
   const mine: BuildingType[] = mineableTiles(state, cityId) >= AI.mineWorthTiles ? ["mine"] : [];
+  const port: BuildingType[] = state.cities[cityId].fishingGrounds > 0 ? ["port"] : [];
   return threatened
-    ? ["walls", "government", "barracks", "market", ...mine, "farms"]
-    : ["government", "barracks", "market", ...mine, "farms", "walls"];
+    ? ["walls", "government", "barracks", "market", ...mine, "farms", ...port, "roads"]
+    : ["government", "barracks", "market", ...mine, "farms", ...port, "walls", "roads"];
 }
 
 function constructionAction(ctx: GameContext, state: GameState, factionId: FactionId, plan: Assessment): Action | null {

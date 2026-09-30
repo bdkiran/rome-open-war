@@ -24,6 +24,7 @@ import {
 } from "@/data/buildings.js";
 import { buildingAvailable, canBuild, cityLevel, nextLevel, plannedLevel } from "@/systems/buildings.js";
 import { cityDefense, defenseBonusAt } from "@/systems/combat.js";
+import { enterCost } from "@/systems/pathfinding.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
 import { formatNumber, formatPercent } from "@/render/format.js";
@@ -480,7 +481,8 @@ function terrainSection(state: GameState, tile: TileId, compact: boolean): strin
 
   const claim = state.territory[tile];
   const owner = claim ? getFaction(state, claim.owner) : undefined;
-  const move = terrain.passable ? `${terrain.moveCost}` : "Impassable";
+  const cost = terrain.passable ? enterCost(state, tile) : 0;
+  const move = !terrain.passable ? "Impassable" : cost < terrain.moveCost ? `${cost} (roads)` : `${cost}`;
   return `
     <h2>${terrain.name}</h2>
     ${owner ? ownerLine(owner.name, owner.color, state.cities[claim!.cityId]?.name ?? "") : ""}

@@ -39,6 +39,19 @@ const ART: Record<BuildingType, string> = {
     <rect x="42" y="47" width="12" height="6" fill="var(--wood)"/>
     <circle cx="45" cy="54" r="2" fill="var(--ink)"/><circle cx="51" cy="54" r="2" fill="var(--ink)"/>
     <circle cx="45" cy="46" r="2" fill="#d9b24a"/><circle cx="50" cy="45.5" r="2.2" fill="#d9b24a"/>`,
+  port: `
+    <path d="M4 44 Q16 40 28 44 T52 44 T64 44 V60 H0 V44 Z" fill="#4f7f96"/>
+    <path d="M6 50 Q14 47 22 50 M30 53 Q38 50 46 53" stroke="#9cc3d4" stroke-width="1.5" fill="none"/>
+    <rect x="4" y="34" width="30" height="5" fill="var(--wood)"/>
+    <path d="M8 39 V52 M18 39 V52 M28 39 V52" stroke="var(--wood)" stroke-width="3"/>
+    <path d="M38 42 H60 L56 48 H42 Z" fill="var(--wood)"/>
+    <path d="M49 42 V16" stroke="var(--wood)" stroke-width="2"/>
+    <path d="M50 18 L60 38 H50 Z" fill="#f1e3c4"/>`,
+  roads: `
+    <path d="M22 60 L29 8 H35 L42 60 Z" fill="var(--stone)"/>
+    <path d="M32 14 V20 M32 28 V36 M32 44 V54" stroke="var(--stone-dark)" stroke-width="2.5"/>
+    <path d="M4 60 L22 60 L29 8 L4 30 Z M60 60 L42 60 L35 8 L60 30 Z" fill="#8fa35a"/>
+    <path d="M48 52 V38 A4 4 0 0 1 56 38 V52 Z" fill="var(--stone)" stroke="var(--stone-dark)" stroke-width="1.2"/>`,
 };
 
 export function buildingSvg(building: BuildingType): string {

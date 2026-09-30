@@ -142,7 +142,7 @@ growth = baseGrowthRate × population × (1 − population / capacity)
   terrain type supports a set amount: plains 3,200, forest 1,600, hills 1,300,
   mountains 400, desert 150. The sea is never claimed as land, but every sea
   tile within a city's reach (2 tiles) counts as **fishing grounds**, adding
-  1,000. The largest city on the map, all-plains Lutetia, has land for about
+  1,000, and lets the city build a **port**. The largest city on the map, all-plains Lutetia, has land for about
   60,000.
 - **The city's level caps it.** Whatever its land supports, a city can't grow
   past its level's limit until its government is raised: 8,000 people with a
@@ -181,12 +181,19 @@ No city starts with a Barracks: every city trains militia until one is built.
 | Farms    | +20% / +40% / +60% population growth                       | 150 / 300 / 550 gold | 2 / 3 / 4 |
 | Market   | +30% / +60% / +100% gold                                   | 150 / 300 / 500 gold | 2 / 3 / 4 |
 | Mine     | +2 / +4 / +6 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
+| Port     | +20% / +40% / +60% growth, times the city's share of sea (coastal cities only) | 200 / 400 / 650 gold | 2 / 3 / 4 |
+| Roads    | Faster movement across the city's land, for every army (see Movement) | 150 / 300 / 500 gold | 2 / 3 / 4 |
 
 A mine can only be built in a city whose territory has hills or mountains, so
 it's worth a lot in hill country and nothing on the plains; the Construction
 tab shows how many tiles it can dig and what the next level would earn. Its
 gold counts toward the city's income before taxes and the market, so both
 multiply it.
+
+A **port** can only be built in a city with fishing grounds. Its growth bonus
+is scaled by how much of the city's reach is sea (its fishing grounds against
+all its tiles), so Lilybaeum, nearly all sea, gets almost the full bonus, and
+a city with a strip of coast only a little. It adds to the farms' bonus.
 
 Build from the city panel's Construction tab: click a building to queue its
 next level. The **construction queue** holds up to 5 buildings, built one
@@ -274,6 +281,16 @@ hills or desert, and 4 in mountains, so infantry cover 6 tiles of open
 ground, 4 of rough ground or 3 of mountains a turn, and cavalry 8, 5 or 4. An
 army may enter a tile only if it has the points, except that it can always
 take one step at the start of its turn.
+
+**Roads** make a city's land cheaper to cross, for every army that marches
+through it, enemies included:
+
+| City's roads      | Plains | Forest, hills, desert | Mountains |
+|-------------------|--------|-----------------------|-----------|
+| None              | 2      | 3                     | 4         |
+| Tracks (1)        | 2      | 2                     | 4         |
+| Roads (2)         | 2      | 2                     | 2         |
+| Paved roads (3)   | 1      | 1                     | 1         |
 
 **Zone of control.** Every army controls the tiles next to it. An enemy army
 that moves into one of those tiles must stop there for the rest of the turn:
@@ -379,8 +396,9 @@ to expect from them:
   surrender is two turns away, and makes a **last stand** at any odds on its
   final turn of supplies.
 - They garrison cities against nearby enemies, build walls near their
-  borders, advance their cities, build barracks, then markets, mines and
-  farms. Their level-1 cities can only raise militia.
+  borders, advance their cities, build barracks, then markets, mines,
+  farms, ports and, last, roads. Their level-1 cities can only raise
+  militia.
 - They raise taxes when in debt and lower them once recovered, and tax a
   city high once it's full (it can't grow anyway). When they
   take a city, they exterminate when short of gold, enslave when they have

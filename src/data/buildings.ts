@@ -2,7 +2,7 @@
  * City buildings. The government building is the city's level (1 to 3): other
  * buildings can be built up to that level, and advancing it needs people.
  */
-export type BuildingType = "government" | "barracks" | "walls" | "farms" | "market" | "mine";
+export type BuildingType = "government" | "barracks" | "walls" | "farms" | "market" | "mine" | "port" | "roads";
 
 export interface BuildingLevel {
   name: string;
@@ -82,10 +82,28 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { name: "Deep mines", cost: 700, turns: 4 },
     ],
   },
+  port: {
+    name: "Port",
+    purpose: "Fishing fleets feed a coastal city: faster growth, the more of its reach is sea. Needs fishing grounds.",
+    levels: [
+      { name: "Jetty", cost: 200, turns: 2 },
+      { name: "Harbour", cost: 400, turns: 3 },
+      { name: "Great harbour", cost: 650, turns: 4 },
+    ],
+  },
+  roads: {
+    name: "Roads",
+    purpose: "Faster movement across the city's land, for every army that marches through it.",
+    levels: [
+      { name: "Tracks", cost: 150, turns: 2 },
+      { name: "Roads", cost: 300, turns: 3 },
+      { name: "Paved roads", cost: 500, turns: 4 },
+    ],
+  },
 };
 
 /** The order buildings are shown in. */
-export const BUILDING_ORDER: readonly BuildingType[] = ["government", "barracks", "walls", "farms", "market", "mine"];
+export const BUILDING_ORDER: readonly BuildingType[] = ["government", "barracks", "walls", "farms", "market", "mine", "port", "roads"];
 
 /**
  * The most people a city can hold at each level (index = level), whatever
@@ -109,4 +127,6 @@ export const BUILDING_EFFECTS = {
   marketGold: [0, 0.3, 0.6, 1],
   /** Gold per hills or mountain tile in the city's territory, before taxes and the market. */
   mineGoldPerTile: [0, 2, 4, 6],
+  /** Extra population growth from a port, scaled by the share of the city's reach that is sea. */
+  portGrowth: [0, 0.2, 0.4, 0.6],
 } as const;

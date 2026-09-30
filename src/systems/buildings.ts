@@ -60,6 +60,9 @@ function unavailableReason(state: GameState, city: City, building: BuildingType)
   if (building === "mine" && mineableTiles(state, city.id) === 0) {
     return `${city.name}'s land has no hills or mountains to mine.`;
   }
+  if (building === "port" && city.fishingGrounds === 0) {
+    return `${city.name} has no sea to fish.`;
+  }
   if (building === "government") {
     const needed = LEVEL_POPULATION[next.level];
     if (city.population < needed) {
