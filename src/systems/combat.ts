@@ -37,8 +37,8 @@ import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
 
 /** Rock-paper-scissors multiplier for `unit` fighting `against`. */
 export function matchup(unit: UnitType, against: UnitType): number {
-  if (UNITS[unit].beats === against) return COMBAT.advantage;
-  if (UNITS[against].beats === unit) return COMBAT.disadvantage;
+  if (UNITS[unit].beats.includes(against)) return COMBAT.advantage;
+  if (UNITS[against].beats.includes(unit)) return COMBAT.disadvantage;
   return 1;
 }
 

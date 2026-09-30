@@ -103,6 +103,19 @@ so.
   at the same gold per soldier as before (1/2/3), so the balance between
   units holds. Keeping regiment prices at 100/200/300 was rejected: it would
   have made spearmen twice as good per gold.
+- **Militia and the Barracks.** Level-1 cities train only militia: 220 to a
+  regiment at 0.5 gold and 0.01 upkeep per soldier, beating nothing, with
+  every other type getting its ×1.5 against them. So they're the cheapest
+  strength in gold and the dearest in people. A Barracks (level-2 city)
+  unlocks spearmen, level 2 archers, level 3 (level-3 city) cavalry; capitals
+  start with one. Spearmen went from 200 to 180 so militia stay a real step
+  down (220 militia lose to 180 spearmen: 220 vs 270); a first proposal of
+  300 militia was judged too many. A regiment of militia still beats one of
+  cavalry (220 vs 180). Retraining needs no Barracks. Training and
+  retraining costs round up to whole gold, since militia cost half a gold.
+  In full games wars move faster (34 cities taken in 100 turns, up from 16),
+  AI armies are mostly militia and spearmen, and cavalry are rare (few cities
+  reach level 3).
 - **One army per tile, up to 10 regiments**; stacks move at the pace of the
   slowest chosen regiment; moving part of a stack splits it.
 - **Recruitment queue** per city (6 orders), shared by training and
@@ -206,8 +219,9 @@ economy) before and after.
 ## Backlog and known issues
 
 - **Phase 9: save and load** (not started; keep state serializable).
-- Late-game spending: a city still trains only one regiment a turn; recruitment
-  slots by city level (1/2/3) was proposed and not yet chosen.
+- Late-game spending: a city still trains only one regiment a turn. Recruitment
+  slots by city level (1/2/3) were proposed; the Barracks now gates units by
+  level instead.
 - The AI doesn't single out the player; it targets whoever is cheapest to
   take.
 - Territory can straddle a sea crossing (cosmetic).

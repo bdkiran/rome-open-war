@@ -13,7 +13,8 @@ import {
   type Regiment,
   type RegimentId,
 } from "@/core/state.js";
-import { ARMY_RULES, UNITS, type UnitType, regimentSize } from "@/data/units.js";
+import { BUILDINGS } from "@/data/buildings.js";
+import { ARMY_RULES, UNIT_TYPES, UNITS, type UnitType, regimentSize } from "@/data/units.js";
 import { placeNewArmy, regimentCost } from "@/systems/armies.js";
 
 /**
@@ -26,9 +27,9 @@ import { placeNewArmy, regimentCost } from "@/systems/armies.js";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-/** Gold to bring a regiment back to full strength. */
+/** Gold to bring a regiment back to full strength, rounded up to a whole coin. */
 export function retrainCost(regiment: Regiment): number {
-  return (regimentSize(regiment.unit) - regiment.soldiers) * UNITS[regiment.unit].goldPerSoldier;
+  return Math.ceil((regimentSize(regiment.unit) - regiment.soldiers) * UNITS[regiment.unit].goldPerSoldier);
 }
 
 function queueCheck(state: GameState, factionId: FactionId, cityId: CityId, orders: number, gold: number): Check {
@@ -43,11 +44,31 @@ function queueCheck(state: GameState, factionId: FactionId, cityId: CityId, orde
   return { ok: true };
 }
 
-/** Whether a regiment of a unit type can be queued for training in a city. */
+/** Whether a city can train a unit type at all: any city trains militia; the rest need its Barracks to be high enough. */
+export function unitUnlocked(city: City, unit: UnitType): boolean {
+  return city.buildings.barracks >= UNITS[unit].barracks;
+}
+
+/** The unit types a city can train, cheapest first. */
+export function trainableUnits(city: City): UnitType[] {
+  return UNIT_TYPES.filter((unit) => unitUnlocked(city, unit));
+}
+
+/** What a city needs to train a unit type it can't yet, e.g. "Needs a Drill yard (Barracks level 2)." */
+export function unlockReason(unit: UnitType): string {
+  const level = UNITS[unit].barracks;
+  return `Needs a ${BUILDINGS.barracks.levels[level - 1].name} (Barracks level ${level}).`;
+}
+
+/**
+ * Whether a regiment of a unit type can be queued for training in a city.
+ * Retraining an existing regiment needs no Barracks: see canRetrain.
+ */
 export function canTrain(state: GameState, factionId: FactionId, cityId: CityId, unit: UnitType): Check {
   const check = queueCheck(state, factionId, cityId, 1, regimentCost(unit).gold);
   if (!check.ok) return check;
   const city = state.cities[cityId];
+  if (!unitUnlocked(city, unit)) return { ok: false, reason: unlockReason(unit) };
 
   // Room in the army there, counting regiments already queued for training.
   const stationed = armyAt(state, city.tile);

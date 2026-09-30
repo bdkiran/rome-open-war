@@ -9,8 +9,10 @@ import {
   type GameState,
 } from "@/core/state.js";
 import { AI } from "@/data/ai.js";
-import { ARMY_RULES, counterTo, UNIT_TYPES, type UnitType, UNITS } from "@/data/units.js";
+import { ARMY_RULES, counterTo, LINE_UNITS, UNIT_TYPES, type UnitType, UNITS } from "@/data/units.js";
 import { mainUnit } from "@/systems/armies.js";
+import { matchup } from "@/systems/combat.js";
+import { trainableUnits } from "@/systems/recruitment.js";
 import { landmasses } from "@/systems/pathfinding.js";
 
 /** What an AI faction makes of its situation right now. */
@@ -75,8 +77,8 @@ export function enemyRegimentsNear(ctx: GameContext, state: GameState, factionId
     if (ctx.topology.distance(army.tile, tile) > AI.threatRadius) continue;
     for (const r of army.regiments) soldiers += r.soldiers;
   }
-  // In regiments of an average size, since regiment sizes differ by unit type.
-  return soldiers / (UNIT_TYPES.reduce((sum, u) => sum + UNITS[u].regimentSize, 0) / UNIT_TYPES.length);
+  // In regiments of an average size, since regiment sizes differ by unit type (militia's big regiments left out).
+  return soldiers / (LINE_UNITS.reduce((sum, u) => sum + UNITS[u].regimentSize, 0) / LINE_UNITS.length);
 }
 
 /**
@@ -131,7 +133,21 @@ export function counterFor(army: Army | undefined): UnitType | null {
   return army ? counterTo(mainUnit(army)) : null;
 }
 
-/** The counter to the nearest enemy army, or a rotating default when none are near. */
+/**
+ * The unit a city should train against an enemy army: the counter to its
+ * main type if the city can train it, otherwise whichever unit it can train
+ * does best against that type (the dearer one on a tie). Null with no enemy.
+ */
+export function trainAgainst(city: City, army: Army | undefined): UnitType | null {
+  if (!army) return null;
+  const enemy = mainUnit(army);
+  const options = trainableUnits(city);
+  const counter = counterTo(enemy);
+  if (options.includes(counter)) return counter;
+  return [...options].sort((a, b) => matchup(b, enemy) - matchup(a, enemy) || UNIT_TYPES.indexOf(b) - UNIT_TYPES.indexOf(a))[0];
+}
+
+/** What a city should train against the nearest enemy army, or a rotating choice of what it can train when none are near. */
 export function counterToNearestEnemy(ctx: GameContext, state: GameState, city: City): UnitType {
   let nearest: Army | undefined;
   let nearestDistance = Infinity;
@@ -143,10 +159,11 @@ export function counterToNearestEnemy(ctx: GameContext, state: GameState, city: 
       nearestDistance = d;
     }
   }
-  const counter = counterFor(nearest);
+  const counter = trainAgainst(city, nearest);
   if (counter) return counter;
+  const options = trainableUnits(city);
   const index = Number(city.id.replace(/\D/g, "")) || 0;
-  return UNIT_TYPES[index % UNIT_TYPES.length];
+  return options[index % options.length];
 }
 
 /** Whether every regiment in the army can still move this turn (a stack moves at its slowest pace). */

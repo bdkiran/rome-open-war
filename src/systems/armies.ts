@@ -30,9 +30,10 @@ export interface TrainingCost {
   population: number;
 }
 
+/** Gold and people to train this many soldiers of a type. Gold is rounded up to a whole coin (militia cost half a gold each). */
 export function trainingCost(unit: UnitType, soldiers: number): TrainingCost {
   return {
-    gold: soldiers * UNITS[unit].goldPerSoldier,
+    gold: Math.ceil(soldiers * UNITS[unit].goldPerSoldier),
     population: soldiers * ARMY_RULES.populationPerSoldier,
   };
 }

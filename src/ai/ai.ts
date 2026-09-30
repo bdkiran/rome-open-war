@@ -22,6 +22,7 @@ import {
   assess,
   counterFor,
   counterToNearestEnemy,
+  trainAgainst,
   enemyRegimentsNear,
   stackCanMove,
   type Assessment,
@@ -39,7 +40,7 @@ import { battleSides, battleStrength, defenseBonusAt, matchup } from "@/systems/
 import { canBesiege } from "@/systems/siege.js";
 import { canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
-import { canRetrain, canTrain } from "@/systems/recruitment.js";
+import { canRetrain, canTrain, trainableUnits } from "@/systems/recruitment.js";
 import type { BuildingType } from "@/data/buildings.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { costToTarget } from "@/systems/pathfinding.js";
@@ -305,7 +306,8 @@ function launchRelief(ctx: GameContext, real: GameState, state: GameState, facti
 
 /** Higher for units that do better against the counter's victim. */
 function rank(unit: UnitType, counter: UnitType): number {
-  return unit === counter ? 2 : matchup(unit, UNITS[counter].beats) >= 1 ? 1 : 0;
+  // The counter's victim is the first type it beats (the triangle one; every type beats militia).
+  return unit === counter ? 2 : matchup(unit, UNITS[counter].beats[0]) >= 1 ? 1 : 0;
 }
 
 // ---- 4. Advance ---------------------------------------------------------
@@ -407,7 +409,7 @@ function trainingAction(
   const { relief } = plan;
   if (phase === "defense" && relief?.muster) {
     const main = relief.besiegers.sort((a, b) => b.regiments.length - a.regiments.length)[0];
-    const unit = counterFor(main) ?? leastRepresented(armyAt(state, relief.muster.tile));
+    const unit = trainAgainst(relief.muster, main) ?? leastRepresented(relief.muster, armyAt(state, relief.muster.tile));
     if (canAffordRegiment(state, factionId, relief.muster.id, unit, Infinity)) {
       return { type: "trainRegiment", cityId: relief.muster.id, unit };
     }
@@ -449,7 +451,7 @@ function trainingAction(
   const { target, muster } = plan;
   if (target && muster && regimentsAt(muster.tile) < ARMY_RULES.maxRegiments) {
     // Counter the garrison if we can see it; otherwise build a balanced stack.
-    const unit = counterFor(armyAt(state, target.tile)) ?? leastRepresented(armyAt(state, muster.tile));
+    const unit = trainAgainst(muster, armyAt(state, target.tile)) ?? leastRepresented(muster, armyAt(state, muster.tile));
     if (canAffordRegiment(state, factionId, muster.id, unit, spareIncome)) {
       return { type: "trainRegiment", cityId: muster.id, unit };
     }
@@ -480,8 +482,7 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
   // Pretend the treasury is full, to ask "could it be built, gold aside?"
   const rich = updateFaction(state, factionId, (f) => ({ ...f, gold: Number.MAX_SAFE_INTEGER }));
   return cities.some((city) =>
-    (["government", "market", "mine", "farms", "walls"] as const).some((building) => {
-      if (building === "mine" && mineableTiles(state, city.id) < AI.mineWorthTiles) return false;
+    aiBuildOrder(state, city.id, false).some((building) => {
       const next = nextLevel(city, building);
       if (!next || faction.gold >= next.def.cost + AI.buildReserve) return false;
       return next.def.cost - faction.gold <= income * SAVING_TURNS && canBuild(rich, factionId, city.id, building).ok;
@@ -491,15 +492,15 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
 
 
 /**
- * The order the AI builds in a city: government, market, a mine (only with
- * a few hills or mountains to dig), farms, then walls. With enemies near,
- * walls come first.
+ * The order the AI builds in a city: government, barracks (to train more than
+ * militia), market, a mine (only with a few hills or mountains to dig),
+ * farms, then walls. With enemies near, walls come first.
  */
 export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boolean): BuildingType[] {
   const mine: BuildingType[] = mineableTiles(state, cityId) >= AI.mineWorthTiles ? ["mine"] : [];
   return threatened
-    ? ["walls", "government", "market", ...mine, "farms"]
-    : ["government", "market", ...mine, "farms", "walls"];
+    ? ["walls", "government", "barracks", "market", ...mine, "farms"]
+    : ["government", "barracks", "market", ...mine, "farms", "walls"];
 }
 
 function constructionAction(ctx: GameContext, state: GameState, factionId: FactionId, plan: Assessment): Action | null {
@@ -518,10 +519,13 @@ function constructionAction(ctx: GameContext, state: GameState, factionId: Facti
   return null;
 }
 
-/** The unit type with the fewest soldiers in an army (or spearmen for an empty one), to keep stacks mixed. */
-function leastRepresented(army: Army | undefined): UnitType {
-  const totals = new Map<UnitType, number>(UNIT_TYPES.map((t) => [t, 0]));
-  for (const r of army?.regiments ?? []) totals.set(r.unit, totals.get(r.unit)! + r.soldiers);
+/**
+ * Of the unit types a city can train, the one with the fewest soldiers in an
+ * army, to keep stacks mixed (the cheapest, for an empty army).
+ */
+function leastRepresented(city: City, army: Army | undefined): UnitType {
+  const totals = new Map<UnitType, number>(trainableUnits(city).map((t) => [t, 0]));
+  for (const r of army?.regiments ?? []) if (totals.has(r.unit)) totals.set(r.unit, totals.get(r.unit)! + r.soldiers);
   return [...totals].sort((a, b) => a[1] - b[1])[0][0];
 }
 

@@ -171,10 +171,12 @@ but needs enough people first.
 | Forum        | 2          | 6,000 people   | 20,000 people      | 500 gold   | 4     |
 | Senate       | 3          | 15,000 people  | all its land holds | 1,200 gold | 6     |
 
-Capitals start at level 2 with their Forum; other cities start at level 1.
+Capitals start at level 2 with their Forum and a Barracks; other cities start
+at level 1.
 
 | Building | Effect per level (1 / 2 / 3)                               | Cost (1 / 2 / 3)     | Turns     |
 |----------|------------------------------------------------------------|----------------------|-----------|
+| Barracks | Trains spearmen / archers / cavalry (needs a level 2, 2, 3 city) | 250 / 400 / 600 gold | 2 / 3 / 4 |
 | Walls    | +15% / +30% / +50% defense, on top of the city's 10%       | 200 / 400 / 700 gold | 2 / 3 / 4 |
 | Farms    | +20% / +40% / +60% population growth                       | 150 / 300 / 550 gold | 2 / 3 / 4 |
 | Market   | +30% / +60% / +100% gold                                   | 150 / 300 / 500 gold | 2 / 3 / 4 |
@@ -210,13 +212,23 @@ goes back to normal taxes.
 
 ## Armies
 
-There are three unit types in a rock-paper-scissors triangle:
+Spearmen, archers and cavalry form a rock-paper-scissors triangle. Militia
+stand outside it: big, cheap regiments that beat nothing, and that every
+other unit beats.
 
-| Unit     | Movement | Beats    | Loses to | Regiment     | Cost per regiment | Upkeep per regiment |
-|----------|----------|----------|----------|--------------|-------------------|---------------------|
-| Spearmen | 12       | Cavalry  | Archers  | 200 soldiers | 200 gold          | 4 gold a turn       |
-| Archers  | 12       | Spearmen | Cavalry  | 160 soldiers | 320 gold          | 5 gold a turn       |
-| Cavalry  | 16       | Archers  | Spearmen | 120 soldiers | 360 gold          | 6 gold a turn       |
+| Unit     | Movement | Beats             | Loses to             | Regiment     | Cost per regiment | Upkeep per regiment | Trained in              |
+|----------|----------|-------------------|----------------------|--------------|-------------------|---------------------|-------------------------|
+| Militia  | 12       | nothing           | everything else      | 220 soldiers | 110 gold          | about 2 gold a turn | any city                |
+| Spearmen | 12       | Cavalry, militia  | Archers              | 180 soldiers | 180 gold          | about 4 gold a turn | a city with a Barracks  |
+| Archers  | 12       | Spearmen, militia | Cavalry              | 160 soldiers | 320 gold          | 5 gold a turn       | a city with a Drill yard (Barracks 2) |
+| Cavalry  | 16       | Archers, militia  | Spearmen             | 120 soldiers | 360 gold          | 6 gold a turn       | a city with a Military academy (Barracks 3) |
+
+A level-1 city can only train militia. A **Barracks** (which needs a level-2
+city) unlocks spearmen, and each further level of it unlocks the next unit:
+archers, then cavalry (which needs a level-3 city). A regiment of militia
+loses to one of spearmen or archers, but beats one of cavalry: cavalry beat
+militia soldier for soldier, but a militia regiment is almost twice as big.
+Militia are the cheapest strength in gold, and the dearest in people.
 
 Every faction starts with a regiment each of Archers and Cavalry in its
 capital, and a regiment of Spearmen garrisoning each of its other cities,
@@ -367,7 +379,8 @@ to expect from them:
   surrender is two turns away, and makes a **last stand** at any odds on its
   final turn of supplies.
 - They garrison cities against nearby enemies, build walls near their
-  borders, advance their cities, then build markets, mines and farms.
+  borders, advance their cities, build barracks, then markets, mines and
+  farms. Their level-1 cities can only raise militia.
 - They raise taxes when in debt and lower them once recovered, and tax a
   city high once it's full (it can't grow anyway). When they
   take a city, they exterminate when short of gold, enslave when they have

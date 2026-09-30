@@ -65,9 +65,10 @@ function unavailableReason(state: GameState, city: City, building: BuildingType)
     if (city.population < needed) {
       return `Needs ${fmt(needed)} people to become a level ${next.level} city (it has ${fmt(city.population)}).`;
     }
-  } else if (next.level > cityLevel(city)) {
+  } else {
     // Only a finished government unlocks the next level; one still being built doesn't.
-    return `Needs a level ${next.level} city. Finish raising its government first.`;
+    const needed = next.def.cityLevel ?? next.level;
+    if (needed > cityLevel(city)) return `Needs a level ${needed} city. Finish raising its government first.`;
   }
   return null;
 }

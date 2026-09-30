@@ -29,7 +29,7 @@ import type { TileId } from "@/map/topology.js";
 import { formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg } from "@/render/figures.js";
 import { besiegedCity, canMerge, regimentCost, upkeepFor } from "@/systems/armies.js";
-import { canRetrain, canTrain, retrainCost } from "@/systems/recruitment.js";
+import { canRetrain, canTrain, retrainCost, trainableUnits } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
 import { cityStats, mineableTiles, type CityStats } from "@/systems/cities.js";
@@ -339,18 +339,22 @@ function mineSummary(state: GameState, city: City, nextLevelNumber: number | nul
 }
 
 /**
- * A box per unit type (click one to queue a regiment of it), and the city's
- * recruitment queue, shared with retraining.
+ * A box per unit type the city can train (click one to queue a regiment of
+ * it), what its Barracks would unlock next, and the city's recruitment
+ * queue, shared with retraining.
  */
 function recruitmentTab(input: InfoPanelInput, city: City): string {
   const { state, humanId } = input;
   if (!humanId) return "";
   const color = getFaction(state, humanId)?.color ?? "#888888";
+  const units = trainableUnits(city);
 
-  const boxes = UNIT_TYPES.map((unit) => {
+  const boxes = units.map((unit) => {
     const def = UNITS[unit];
     const cost = regimentCost(unit);
     const check = canTrain(state, humanId, city.id, unit);
+    // Every type beats militia; name the one that matters.
+    const beats = def.beats.filter((b) => b !== "militia");
     return `
       <button type="button" class="unit-box" data-train="${unit}" ${check.ok ? "" : "disabled"}
         title="${escapeHtml(check.ok ? `Queue a regiment of ${def.name}: ${cost.gold} gold, ${cost.population} people, upkeep ${formatUpkeep(upkeepFor(unit, regimentSize(unit)))} a turn` : check.reason)}">
@@ -359,16 +363,20 @@ function recruitmentTab(input: InfoPanelInput, city: City): string {
         <span class="unit-stat">${regimentSize(unit)} soldiers</span>
         <span class="unit-stat">${formatNumber(cost.gold)} gold</span>
         <span class="unit-stat">Move ${def.movement}</span>
-        <span class="unit-stat">Beats ${UNITS[def.beats].name.toLowerCase()}</span>
+        <span class="unit-stat">${beats.length ? `Beats ${beats.map((b) => UNITS[b].name.toLowerCase()).join(", ")}` : "Beats nothing"}</span>
       </button>`;
   }).join("");
 
-  const blocked = UNIT_TYPES.map((u) => canTrain(state, humanId, city.id, u)).find((c) => !c.ok);
-  const allBlocked = UNIT_TYPES.every((u) => !canTrain(state, humanId, city.id, u).ok);
-  const note = allBlocked && blocked && !blocked.ok ? escapeHtml(blocked.reason) : "";
+  const checks = units.map((u) => canTrain(state, humanId, city.id, u));
+  const blocked = checks.find((c) => !c.ok);
+  const note = checks.every((c) => !c.ok) && blocked && !blocked.ok ? escapeHtml(blocked.reason) : "";
+  // What the Barracks would unlock next.
+  const locked = UNIT_TYPES.find((u) => !units.includes(u));
+  const next = locked ? `Next: ${UNITS[locked].name.toLowerCase()}, with a ${BUILDINGS.barracks.levels[UNITS[locked].barracks - 1].name}.` : "";
 
   return `
     <div class="box-grid units">${boxes}</div>
+    ${next ? `<p class="hint">${escapeHtml(next)}</p>` : ""}
     ${recruitQueue(city, color)}
     ${note ? `<p class="hint">${note}</p>` : ""}`;
 }
