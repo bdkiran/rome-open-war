@@ -18,6 +18,8 @@ npm run build            # tsc; must finish with no errors
 npm test                 # AI-vs-AI games in Node, checked as they play (~20 s)
 npm run simulate -- [--turns 100] [--garrison] [--seed N]
                          # balance report: one AI-vs-AI game's numbers
+npm run levers -- [--turns 100] [--from 50] [--seed N]
+                         # economic levers: tax policies and conquest choices
 ```
 
 Tests and tools need Node 22+. They're built by `tsconfig.node.json` into
@@ -71,9 +73,11 @@ tests/         simulation.test.ts (whole games: invalid orders, debt, state
                never mutated, JSON round trip, determinism), invariants.ts
                (what must hold in any state: add to it when adding rules),
                map.test.ts (every starting city can reach level 3),
-               siege.test.ts, buildings.test.ts (rules checked directly)
+               siege.test.ts, buildings.test.ts (rules checked directly),
+               balance.test.ts (no tax policy or conquest choice dominates)
 tools/         build_europe_map.py (map generator), simulation.ts (plays a
-               game in Node), simulate.ts (the balance report)
+               game in Node), simulate.ts (the balance report), economy.ts
+               (peacetime economy model), levers.ts (the levers report)
 models/        optional .glb models listed in models/models.json
 ```
 
@@ -128,6 +132,7 @@ be swapped in through a scenario.
 3. For rules, data or AI changes, also read the numbers:
    `npm run simulate` (and `-- --garrison`). Check city levels spread across
    1–3, treasuries not piling up, and factions still conquering each other.
+   For taxes, conquest or the AI's economic choices, also `npm run levers`.
 4. For UI or map changes: check in a browser. Headless Chromium can run the
    3D map with `--use-gl=angle --use-angle=swiftshader
    --enable-unsafe-swiftshader`. The debug hook at the end of `src/main.ts`

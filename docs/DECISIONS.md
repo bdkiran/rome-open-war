@@ -146,7 +146,24 @@ The economy was retuned several times; the lesson each time:
 3. The AI needed explicit rules to spend well: defense training first, then
    building (keeping a small reserve), then field regiments; it saves for a
    building once it has 5 regiments per city.
-Always measure with `npm run simulate` before and after.
+4. **The economic levers were measured with buildings in the model**
+   (`npm run levers`, `tools/economy.ts`): a peacetime economy where cities
+   build up as the AI does. A first model without construction said high
+   taxes always win and low taxes never pay; that was wrong, because growth
+   pays back through higher levels and better buildings. With them:
+   - Taxes: all-high leads for most of a game, but "grow, then tax" (low
+     until a city has the people for its next level, high after) overtakes
+     it around turn 70 and ends 100 turns ~55% ahead. That's the intended
+     play. The AI stays on normal, so it plays neither.
+   - Conquest: exterminating pays most for ~10 turns (its plunder is ~6
+     turns of the city's income, and halved cities regrow fast); occupying
+     overtakes it after ~18 turns, enslaving sits between. A real choice.
+     The AI enslaves, or exterminates when short of gold; it never occupies.
+   - Population caps (8k / 20k by level, then the land) matter: a city at
+     its level cap gains nothing from low taxes.
+   `tests/balance.test.ts` keeps these trade-offs from collapsing.
+Always measure with `npm run simulate` (and `npm run levers` for the
+economy) before and after.
 
 ## Interface
 
