@@ -62,12 +62,16 @@ Either way you can close the screen to look at the map, or play again.
 - Drag or use arrow keys / WASD to pan
 - Scroll to zoom; you can zoom out until the whole map fits, and the view
   stays on the map
-- Click a tile, city or army to inspect it; Escape clears the selection
+- Click a tile, city or army to inspect it; Escape clears the selection. The
+  panel at the top left shows its details; the **bar along the bottom**
+  shows its cards: **Army** for an army's regiments (a city's garrison, or a
+  field army) and **Town** for the buildings a city has built
 - Select one of your cities to open its panel: its details, the tax rate
-  (the arrows lower or raise it), and the Construction, Recruitment and
-  Retraining tabs
+  (the arrows lower or raise it), and the Construction (what it can build
+  next), Recruitment and Retraining tabs
 - **Left click selects; right click gives orders.** Left-click one of your
-  armies (its regiment boxes choose which regiments to order), then
+  armies (its regiment cards in the bottom bar choose which regiments to
+  order), then
   right-click a highlighted tile to move there or a red tile to attack it. Red
   tiles include enemies the army can march up to this turn; it moves next to
   them and attacks in one go. Attacking an army opens the battle panel with
@@ -81,13 +85,14 @@ Either way you can close the screen to look at the map, or play again.
   click the income line under your treasury for a breakdown of where your
   money comes from (each city's base, people and mine gold, times its taxes
   and market) and where it goes (each army's upkeep)
-- **Reports** (bottom right): at the start of each turn, what happened since
+- **Reports** (right, under the faction list): at the start of each turn, what happened since
   your last one arrives as notifications: battles, sieges and cities involving
   you, your finished buildings and recruits, and world news (cities changing
   hands, factions falling). Click one to read it, × to dismiss it. They
   last only that turn: ending your turn clears them
-- In the army panel: Merge damaged regiments of the same type; leave some
-  regiments out to split the army; move onto a friendly army to merge
+- In the army panel: Merge damaged regiments of the same type. Leave some
+  regiments unticked in the bottom bar to split the army; move onto a
+  friendly army to merge
 - End turn with the button or Enter
 
 ## The map
@@ -110,8 +115,8 @@ city's garrison doesn't choose its regiments: click the ones you want to
 march out.
 
 In the panels, regiments are shown as boxes with their unit type's figure and
-a strength bar: in the army panel (click a box to include or leave out that
-regiment), and in a city's Recruitment and Retraining tabs.
+a strength bar: in the bottom bar's Army tab (click a box to include or leave
+out that regiment), and in a city's Recruitment and Retraining tabs.
 
 **Fog of war.** You see the land around your cities (3 tiles), around your
 armies (2 tiles, or 3 if they include cavalry), and all of your own

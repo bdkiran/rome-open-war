@@ -62,14 +62,16 @@ src/
   render/      three/ (the 3D map: mapView3d, terrain3d, models, camera3d),
                mapView.ts (ViewState, MapCamera), input.ts, figures.ts (SVG
                unit art for panels), colors.ts, format.ts
-  ui/          panels as HTML strings: infoPanel (army + city tabs), turnPanel
+  ui/          panels as HTML strings: infoPanel (side panel: facts + city
+               tabs), selectionBar (bottom bar: Army / Town cards), turnPanel
                (scoreboard, money breakdown), battlePanel, battleResult,
                siegePanel, settlementPanel, reports (notifications), gameOver
   main.ts      wires it all together; view state; player input
 tests/         simulation.test.ts (whole games: invalid orders, debt, state
                never mutated, JSON round trip, determinism), invariants.ts
                (what must hold in any state: add to it when adding rules),
-               map.test.ts (every starting city can reach level 3)
+               map.test.ts (every starting city can reach level 3),
+               siege.test.ts, buildings.test.ts (rules checked directly)
 tools/         build_europe_map.py (map generator), simulation.ts (plays a
                game in Node), simulate.ts (the balance report)
 models/        optional .glb models listed in models/models.json

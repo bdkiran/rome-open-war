@@ -21,9 +21,8 @@ import {
   CONSTRUCTION_QUEUE_SIZE,
   LEVEL_POPULATION,
   LEVEL_POPULATION_LIMIT,
-  MAX_CITY_LEVEL,
 } from "@/data/buildings.js";
-import { canBuild, cityLevel, nextLevel, plannedLevel } from "@/systems/buildings.js";
+import { buildingAvailable, canBuild, cityLevel, nextLevel, plannedLevel } from "@/systems/buildings.js";
 import { cityDefense, defenseBonusAt } from "@/systems/combat.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
@@ -34,6 +33,7 @@ import { canRetrain, canTrain, retrainCost } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
 import { cityStats, mineableTiles, type CityStats } from "@/systems/cities.js";
+import { levelPips, regimentBox } from "@/ui/boxes.js";
 import { escapeHtml, ownerLine, signed } from "@/ui/html.js";
 
 /** Which tab of the city panel is showing. Kept between redraws. */
@@ -75,6 +75,10 @@ export function renderInfoPanel(input: InfoPanelInput): string {
   return sections.join(`<hr>`);
 }
 
+/**
+ * The army's facts and orders: its size, upkeep, march and siege buttons.
+ * Its regiments, to tick for orders, are in the selection bar.
+ */
 function armySection(input: InfoPanelInput, army: Army): string {
   const { state, humanId, playerTurn, chosenRegiments } = input;
   const owner = getFaction(state, army.owner);
@@ -83,26 +87,9 @@ function armySection(input: InfoPanelInput, army: Army): string {
   const count = army.regiments.length;
   const upkeep = army.regiments.reduce((sum, r) => sum + upkeepFor(r.unit, r.soldiers), 0);
 
-  const color = owner?.color ?? "#888888";
-  const boxes = army.regiments
-    .map((r) => {
-      const def = UNITS[r.unit];
-      const status = !mine ? "" : r.pinned ? "Held" : `${r.movementLeft}/${def.movement}`;
-      const title = `${def.name}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers${mine ? `, ${r.movementLeft} of ${def.movement} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
-      return regimentBox(r, color, {
-        status,
-        title,
-        attr: canOrder ? `data-regiment="${r.id}"` : "",
-        pressed: canOrder ? chosenRegiments.has(r.id) : null,
-        dim: mine && r.movementLeft <= 0,
-      });
-    })
-    .join("");
-
   let html = `
     <h2>${formatNumber(armySoldiers(army))} soldiers</h2>
-    ${ownerLine(owner?.name ?? "Unknown", owner?.color ?? "#000", `${count} of ${ARMY_RULES.maxRegiments} regiments`)}
-    <div class="box-grid">${boxes}</div>`;
+    ${ownerLine(owner?.name ?? "Unknown", owner?.color ?? "#000", `${count} of ${ARMY_RULES.maxRegiments} regiments`)}`;
 
   if (mine) html += `<p class="terrain-line">Upkeep ${formatNumber(Math.round(upkeep))} gold per turn.</p>`;
   if (canOrder) html += armyServices(input, army);
@@ -263,41 +250,49 @@ function cityTabs(input: InfoPanelInput, city: City): string {
 }
 
 /**
- * A box per building, showing its level and what the next one costs (click
- * to build it), and the construction queue: what's being built, and how long
- * it has to go. One building at a time.
+ * A box per building the city can build next, with what it costs (click to
+ * queue it), and the construction queue: what's being built, and how long it
+ * has to go. Buildings it can't build yet are left out; one it can't afford
+ * is greyed out. What's already built is in the selection bar's Town tab.
  */
 function constructionTab(input: InfoPanelInput, city: City): string {
   const { state, humanId } = input;
   if (!humanId) return "";
 
-  const boxes = BUILDING_ORDER.map((building) => {
+  // A siege or a full queue holds up every building: say so once.
+  const heldUp = city.besiegedBy
+    ? `${city.name} can't build while it's besieged.`
+    : city.constructionQueue.length >= CONSTRUCTION_QUEUE_SIZE
+      ? `The construction queue is full.`
+      : "";
+
+  const boxes = BUILDING_ORDER.filter((building) => buildingAvailable(state, city.id, building)).map((building) => {
     const def = BUILDINGS[building];
     const built = city.buildings[building];
-    const next = nextLevel(city, building);
+    const next = nextLevel(city, building)!;
     const check = canBuild(state, humanId, city.id, building);
-    const pips = Array.from({ length: MAX_CITY_LEVEL }, (_, i) => `<span class="pip${i < built ? " on" : ""}"></span>`).join("");
     const queued = plannedLevel(city, building) - built;
     const current = (built > 0 ? def.levels[built - 1].name : "Not built") + (queued > 0 ? ` (+${queued} queued)` : "");
-    const status = !next
-      ? "Complete"
-      : `${escapeHtml(next.def.name)}: ${formatNumber(next.def.cost)} gold, ${next.def.turns} turns`;
+    const status = `${escapeHtml(next.def.name)}: ${formatNumber(next.def.cost)} gold, ${next.def.turns} turns`;
     // A mine's worth depends on the land: say what the next level would earn.
-    const mineNote = building === "mine" ? mineSummary(state, city, next?.level ?? null) : "";
-    const title = `${def.name}. ${def.purpose} ${mineNote} ${next ? (check.ok ? `Click to queue the ${next.def.name}.` : check.reason) : "At its highest level."}`;
-    // Why it can't be queued, shown in the box.
-    const blocked = next && !check.ok ? check.reason : "";
+    const mineNote = building === "mine" ? mineSummary(state, city, next.level) : "";
+    const title = `${def.name}. ${def.purpose} ${mineNote} ${check.ok ? `Click to queue the ${next.def.name}.` : check.reason}`;
+    // Short of gold: say so in the box. (A siege or full queue is said once, below.)
+    const blocked = !check.ok && !heldUp ? check.reason : "";
     return `
       <button type="button" class="building-box" data-build="${building}" ${check.ok ? "" : "disabled"} title="${escapeHtml(title)}">
         ${buildingSvg(building)}
         <span class="unit-name">${def.name}</span>
-        <span class="level-pips" aria-label="Level ${built} of ${MAX_CITY_LEVEL}">${pips}</span>
+        ${levelPips(built)}
         <span class="unit-stat">${escapeHtml(current)}</span>
         <span class="building-next">${status}</span>
         ${mineNote ? `<span class="building-note">${escapeHtml(mineNote)}</span>` : ""}
         ${blocked ? `<span class="building-lock">${escapeHtml(blocked)}</span>` : ""}
       </button>`;
   }).join("");
+  const options = boxes
+    ? `<div class="box-grid buildings">${boxes}</div>${heldUp ? `<p class="hint">${escapeHtml(heldUp)}</p>` : ""}`
+    : `<p class="hint">Nothing more to build right now.</p>`;
 
   // The queue: the first building is under way, the rest start in turn.
   let turnsSoFar = 0;
@@ -325,7 +320,7 @@ function constructionTab(input: InfoPanelInput, city: City): string {
     : "";
 
   return `
-    <div class="box-grid buildings">${boxes}</div>
+    ${options}
     <h4 class="queue-title">Construction queue <span class="queue-count">${city.constructionQueue.length}/${CONSTRUCTION_QUEUE_SIZE}</span></h4>
     <div class="queue-row">${queue}</div>
     ${advance && city.constructionQueue.length === 0 ? `<p class="hint">${advance}</p>` : ""}`;
@@ -464,24 +459,6 @@ function recruitQueue(city: City, color: string): string {
   return `
     <h4 class="queue-title">Recruitment queue <span class="queue-count">${city.recruitQueue.length}/${ARMY_RULES.recruitQueueSize}</span></h4>
     <div class="queue-row">${items || `<div class="queue-slot empty">Empty</div>`}</div>`;
-}
-
-/** A regiment as a box: its figure, soldiers, a strength bar, and a status line. */
-function regimentBox(
-  r: Regiment,
-  color: string,
-  opts: { status: string; title: string; attr: string; pressed: boolean | null; dim: boolean },
-): string {
-  const strength = Math.round((r.soldiers / regimentSize(r.unit)) * 100);
-  const tag = opts.attr ? "button" : "div";
-  const pressed = opts.pressed === null ? "" : `aria-pressed="${opts.pressed}"`;
-  return `
-    <${tag} ${tag === "button" ? 'type="button"' : ""} class="reg-box${opts.dim ? " dim" : ""}" ${opts.attr} ${pressed} title="${escapeHtml(opts.title)}">
-      ${figureSvg(r.unit, color)}
-      <span class="reg-count">${formatNumber(r.soldiers)}</span>
-      <span class="strength"><span style="width:${strength}%"></span></span>
-      ${opts.status ? `<span class="reg-status">${escapeHtml(opts.status)}</span>` : ""}
-    </${tag}>`;
 }
 
 function terrainSection(state: GameState, tile: TileId, compact: boolean): string {
