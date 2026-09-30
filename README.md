@@ -342,7 +342,7 @@ surrender), you choose its fate:
 | Choice          | Its people                                              | Plunder            |
 |-----------------|---------------------------------------------------------|--------------------|
 | **Occupy**      | Kept as they are                                        | 5 gold per 1,000   |
-| **Enslave**     | 25% sent to your other cities (shared evenly), 10% lost | 15 gold per 1,000  |
+| **Enslave**     | 25% sent to your other cities (shared evenly), 5% lost  | 15 gold per 1,000  |
 | **Exterminate** | 50% killed                                              | 40 gold per 1,000  |
 
 Plunder grows by 50% for each city level above 1, and is always worked out
@@ -368,7 +368,8 @@ to expect from them:
   final turn of supplies.
 - They garrison cities against nearby enemies, build walls near their
   borders, advance their cities, then build markets, mines and farms.
-- They raise taxes when in debt and lower them once recovered. When they
+- They raise taxes when in debt and lower them once recovered, and tax a
+  city high once it's full (it can't grow anyway). When they
   take a city, they exterminate when short of gold, enslave when they have
   other cities to fill, and otherwise occupy.
 
