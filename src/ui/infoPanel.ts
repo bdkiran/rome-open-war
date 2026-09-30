@@ -29,7 +29,7 @@ import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
 import { formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg } from "@/render/figures.js";
-import { canMerge, regimentCost, upkeepFor } from "@/systems/armies.js";
+import { besiegedCity, canMerge, regimentCost, upkeepFor } from "@/systems/armies.js";
 import { canRetrain, canTrain, retrainCost } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
@@ -113,7 +113,7 @@ function armySection(input: InfoPanelInput, army: Army): string {
       ${canOrder ? `<button type="button" class="action secondary" data-cancel-march="${army.id}">Cancel march</button>` : ""}`;
   }
   if (canOrder) {
-    const hint = orderHint(army, chosenRegiments);
+    const hint = orderHint(state, army, chosenRegiments);
     if (hint) html += `<p class="hint">${hint}</p>`;
     html += siegeButtons(input, army);
   }
@@ -167,9 +167,10 @@ function siegeStatus(state: GameState, city: City): string {
 }
 
 /** Tells the player what the ticked regiments can do right now. */
-function orderHint(army: Army, chosen: ReadonlySet<RegimentId>): string {
+function orderHint(state: GameState, army: Army, chosen: ReadonlySet<RegimentId>): string {
   const ticked = army.regiments.filter((r) => chosen.has(r.id));
   if (army.regiments.every((r) => r.movementLeft <= 0)) return "No moves left this turn.";
+  if (besiegedCity(state, army)) return "Besieged: can only attack the besiegers.";
   if (ticked.some((r) => r.pinned)) return "Held by an enemy's zone of control.";
   if (ticked.length === 0) return "Choose regiments to order.";
   if (ticked.some((r) => r.movementLeft <= 0)) return "Some chosen regiments have no moves left.";
