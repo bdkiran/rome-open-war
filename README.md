@@ -84,8 +84,8 @@ Either way you can close the screen to look at the map, or play again.
 - **Reports** (bottom right): at the start of each turn, what happened since
   your last one arrives as notifications: battles, sieges and cities involving
   you, your finished buildings and recruits, and world news (cities changing
-  hands, factions falling). Click one to read it, × to dismiss it; History
-  shows recent reports again
+  hands, factions falling). Click one to read it, × to dismiss it. They
+  last only that turn: ending your turn clears them
 - In the army panel: Merge damaged regiments of the same type; leave some
   regiments out to split the army; move onto a friendly army to merge
 - End turn with the button or Enter

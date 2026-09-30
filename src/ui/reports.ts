@@ -1,18 +1,17 @@
-import type { FactionId, GameState, LogEntry, LogKind } from "@/core/state.js";
+import type { FactionId, LogEntry, LogKind } from "@/core/state.js";
 import { escapeHtml } from "@/ui/html.js";
 
 /**
  * The reports tray. At the start of each of the player's turns, what happened
  * since their last one arrives as notifications: events involving them, and
  * world news (cities changing hands, factions falling). Each can be opened
- * to read in full and dismissed; History shows recent reports again.
+ * to read in full and dismissed. They last only that turn.
  */
 
 export interface ReportElements {
   root: HTMLElement;
   count: HTMLElement;
   list: HTMLOListElement;
-  history: HTMLButtonElement;
   dismissAll: HTMLButtonElement;
 }
 
@@ -21,32 +20,25 @@ export interface ReportView {
   unread: readonly LogEntry[];
   /** Notifications opened to read in full. */
   expanded: ReadonlySet<number>;
-  showHistory: boolean;
 }
-
-const HISTORY_SIZE = 30;
 
 /** Whether the player hears about a log entry: it concerns them, or it's world news. */
 export function concerns(entry: LogEntry, playerId: FactionId): boolean {
   return entry.factions.includes(playerId) || entry.major;
 }
 
-export function renderReports(el: ReportElements, state: GameState, playerId: FactionId | null, view: ReportView): void {
+/** Draws this turn's notifications. */
+export function renderReports(el: ReportElements, view: ReportView): void {
   el.count.textContent = view.unread.length > 0 ? `${view.unread.length} new` : "";
-  el.history.setAttribute("aria-pressed", String(view.showHistory));
-  el.dismissAll.hidden = view.showHistory || view.unread.length === 0;
+  el.dismissAll.hidden = view.unread.length === 0;
 
-  const entries = view.showHistory && playerId
-    ? state.log.filter((e) => concerns(e, playerId)).slice(-HISTORY_SIZE).reverse()
-    : view.unread;
-
-  if (entries.length === 0) {
-    el.list.innerHTML = `<li class="report-empty">${view.showHistory ? "Nothing has happened yet." : "No new reports."}</li>`;
+  if (view.unread.length === 0) {
+    el.list.innerHTML = `<li class="report-empty">No new reports.</li>`;
     return;
   }
-  el.list.innerHTML = entries
+  el.list.innerHTML = view.unread
     .map((entry) => {
-      const open = view.showHistory || view.expanded.has(entry.id);
+      const open = view.expanded.has(entry.id);
       return `
         <li class="report report-${entry.kind}${open ? " open" : ""}">
           <button type="button" class="report-body" data-report="${entry.id}" aria-expanded="${open}">
@@ -54,7 +46,7 @@ export function renderReports(el: ReportElements, state: GameState, playerId: Fa
             <span class="report-text">${escapeHtml(entry.text)}</span>
             <span class="report-turn">T${entry.turn}</span>
           </button>
-          ${view.showHistory ? "" : `<button type="button" class="report-dismiss" data-dismiss="${entry.id}" aria-label="Dismiss">&times;</button>`}
+          <button type="button" class="report-dismiss" data-dismiss="${entry.id}" aria-label="Dismiss">&times;</button>
         </li>`;
     })
     .join("");

@@ -157,7 +157,9 @@ Always measure with `npm run simulate` before and after.
   buildings, with queues below. Minimal explanatory text (the player found
   the UI too wordy): show what's blocked and why; details go in tooltips.
 - **Reports** replace the log: notifications at the start of the player's
-  turn, filtered to what concerns them plus world news.
+  turn, filtered to what concerns them plus world news. They last one turn:
+  ending the turn clears them, and there's no history view (a running log
+  piled up).
 - **Money breakdown** under the treasury; per-city income line in the city
   panel. March routes are coloured per turn.
 
