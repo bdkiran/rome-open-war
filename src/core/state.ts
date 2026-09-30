@@ -77,8 +77,6 @@ export interface Regiment {
   soldiers: number;
   /** Movement points left this turn. Refilled at the start of the owner's turn. */
   movementLeft: number;
-  /** Trained this turn: can't move until the owner's next turn, and isn't ticked for orders by default. */
-  fresh: boolean;
   /**
    * Moved into an enemy army's zone of control this turn: it must stop there
    * and can't move again until the owner's next turn, though it can still attack.

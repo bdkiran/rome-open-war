@@ -200,7 +200,7 @@ function syncChosen(state: GameState): void {
     chosenFor = null;
     return;
   }
-  const orderable = army.regiments.filter((r) => !r.fresh).map((r) => r.id);
+  const orderable = army.regiments.map((r) => r.id);
   if (chosenFor === army.id) {
     chosen = new Set(orderable.filter((id) => chosen.has(id)));
   } else {
@@ -476,7 +476,7 @@ function order(action: Action, from: TileId, regimentIds: RegimentId[]): void {
   const after = controller.getState();
   const holder = Object.values(after.armies).find((a) => a.regiments.some((r) => regimentIds.includes(r.id)));
   view.selected = holder?.tile ?? from;
-  chosen = new Set(holder?.regiments.filter((r) => !r.fresh).map((r) => r.id) ?? []);
+  chosen = new Set(holder?.regiments.map((r) => r.id) ?? []);
   chosenFor = holder?.id ?? null;
   refreshAll(after);
 }

@@ -87,14 +87,12 @@ function armySection(input: InfoPanelInput, army: Army): string {
   const boxes = army.regiments
     .map((r) => {
       const def = UNITS[r.unit];
-      const status = !mine ? "" : r.fresh ? "New" : r.pinned ? "Held" : `${r.movementLeft}/${def.movement}`;
-      const title = r.fresh
-        ? "Trained this turn. It can move next turn."
-        : `${def.name}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers${mine ? `, ${r.movementLeft} of ${def.movement} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
+      const status = !mine ? "" : r.pinned ? "Held" : `${r.movementLeft}/${def.movement}`;
+      const title = `${def.name}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers${mine ? `, ${r.movementLeft} of ${def.movement} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
       return regimentBox(r, color, {
         status,
         title,
-        attr: canOrder && !r.fresh ? `data-regiment="${r.id}"` : "",
+        attr: canOrder ? `data-regiment="${r.id}"` : "",
         pressed: canOrder ? chosenRegiments.has(r.id) : null,
         dim: mine && r.movementLeft <= 0,
       });
@@ -171,7 +169,6 @@ function siegeStatus(state: GameState, city: City): string {
 /** Tells the player what the ticked regiments can do right now. */
 function orderHint(army: Army, chosen: ReadonlySet<RegimentId>): string {
   const ticked = army.regiments.filter((r) => chosen.has(r.id));
-  if (army.regiments.every((r) => r.fresh)) return "Trained this turn.";
   if (army.regiments.every((r) => r.movementLeft <= 0)) return "No moves left this turn.";
   if (ticked.some((r) => r.pinned)) return "Held by an enemy's zone of control.";
   if (ticked.length === 0) return "Choose regiments to order.";

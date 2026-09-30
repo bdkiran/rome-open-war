@@ -139,7 +139,7 @@ The economy was retuned several times; the lesson each time:
 3. The AI needed explicit rules to spend well: defense training first, then
    building (keeping a small reserve), then field regiments; it saves for a
    building once it has 5 regiments per city.
-Always measure with `tools/simulate.py` before and after.
+Always measure with `npm run simulate` before and after.
 
 ## Interface
 
@@ -172,8 +172,6 @@ Always measure with `tools/simulate.py` before and after.
 - The AI doesn't single out the player; it targets whoever is cheapest to
   take.
 - Territory can straddle a sea crossing (cosmetic).
-- The `fresh` flag on regiments is now mostly vestigial (new regiments appear
-  at the end of the owner's turn and are refreshed at the start of the next).
-- No automated test suite beyond `tools/simulate.py` and manual browser
-  checks.
+- The test suite plays whole games and checks invariants; there are no unit
+  tests of single rules yet, and no automated browser checks.
 - Public order / unrest was discussed, not built.

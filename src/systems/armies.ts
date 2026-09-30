@@ -88,8 +88,8 @@ export function canMerge(army: Army): boolean {
 
 /**
  * Combines under-strength regiments of the same type into as few as
- * possible: full regiments of 100, plus one holding any remainder (so 60 and
- * 70 become 100 and 30). Full regiments are left alone. Free, and takes no
+ * possible: full regiments, plus one holding any remainder (so 120 and 140
+ * Spearmen become 200 and 60). Full regiments are left alone. Free, and takes no
  * movement, but a merged regiment moves at the pace of the slowest regiment
  * that went into it.
  */
@@ -103,13 +103,12 @@ export function mergeRegiments(state: GameState, armyId: ArmyId): GameState {
     if (group.length === 0) continue;
     let soldiers = group.reduce((sum, r) => sum + r.soldiers, 0);
     const movementLeft = Math.min(...group.map((r) => r.movementLeft));
-    const fresh = group.some((r) => r.fresh);
     const pinned = group.some((r) => r.pinned);
     // Keep the ids of the first regiments in the group; the rest are folded in.
     for (const original of group) {
       if (soldiers <= 0) break;
       const size = Math.min(regimentSize(unit), soldiers);
-      regiments.push({ ...original, soldiers: size, movementLeft, fresh, pinned });
+      regiments.push({ ...original, soldiers: size, movementLeft, pinned });
       soldiers -= size;
     }
   }
@@ -280,13 +279,13 @@ export function zoneOfControl(ctx: GameContext, state: GameState, owner: Faction
   return zone;
 }
 
-/** Refills movement for every regiment a faction owns, and last turn's recruits are ready. Runs at the start of its turn. */
+/** Refills movement for every regiment a faction owns, including last turn's recruits. Runs at the start of its turn. */
 export function refreshMovement(state: GameState, factionId: FactionId): GameState {
   const armies = { ...state.armies };
   for (const army of armiesOf(state, factionId)) {
     armies[army.id] = {
       ...army,
-      regiments: army.regiments.map((r) => ({ ...r, movementLeft: UNITS[r.unit].movement, fresh: false, pinned: false })),
+      regiments: army.regiments.map((r) => ({ ...r, movementLeft: UNITS[r.unit].movement, pinned: false })),
     };
   }
   return { ...state, armies };

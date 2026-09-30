@@ -1,0 +1,11 @@
+{
+  // Builds the test suite and the Node tools (and the game code they import)
+  // into build/, for running in Node. The game itself is built by tsconfig.json.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "build",
+    "types": ["node"]
+  },
+  "include": ["tests", "tools"]
+}

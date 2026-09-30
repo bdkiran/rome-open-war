@@ -223,8 +223,8 @@ has a **recruitment queue** of up to 6 orders, shared by training and
 retraining. Orders are paid for in gold when queued, and each soldier takes
 one person from the city when completed (a city can't go below 1,000 people).
 At the end of each of your turns the city trains **one new regiment** (the
-first training order in the queue), which joins the army there. New regiments
-are marked New and can't move until your next turn. Every order can be
+first training order in the queue), which joins the army there, ready to move
+on your next turn. Every order can be
 cancelled (its ×) for a full refund. Training waits if the city hasn't the
 people to spare or the army there is full, and the whole queue stops while
 the city is besieged.

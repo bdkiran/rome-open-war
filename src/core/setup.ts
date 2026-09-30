@@ -106,7 +106,6 @@ function placeStartingArmies(state: GameState): GameState {
             unit,
             soldiers: regimentSize(unit),
             movementLeft: UNITS[unit].movement,
-            fresh: false,
             pinned: false,
           });
         }
