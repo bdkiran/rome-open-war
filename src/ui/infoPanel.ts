@@ -29,7 +29,7 @@ import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
 import { formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg } from "@/render/figures.js";
-import { besiegedCity, canMerge, regimentCost, upkeepFor } from "@/systems/armies.js";
+import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
 import { canRetrain, canTrain, retrainCost, trainableUnits } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
@@ -93,7 +93,6 @@ function armySection(input: InfoPanelInput, army: Army): string {
     ${ownerLine(owner?.name ?? "Unknown", owner?.color ?? "#000", `${count} of ${ARMY_RULES.maxRegiments} regiments`)}`;
 
   if (mine) html += `<p class="terrain-line">Upkeep ${formatNumber(Math.round(upkeep))} gold per turn.</p>`;
-  if (canOrder) html += armyServices(input, army);
 
   if (mine && army.destination) {
     html += `
@@ -106,13 +105,6 @@ function armySection(input: InfoPanelInput, army: Army): string {
     html += siegeButtons(input, army);
   }
   return html;
-}
-
-/** A button to merge damaged regiments of the same type. Retraining lives in the city panel. */
-function armyServices(_input: InfoPanelInput, army: Army): string {
-  return canMerge(army)
-    ? `<button type="button" class="action secondary" data-merge="${army.id}">Merge damaged regiments of the same type</button>`
-    : "";
 }
 
 /** "Vostgrad", "near Vostgrad" or "the hills" for a tile. */
@@ -273,11 +265,11 @@ function constructionTab(input: InfoPanelInput, city: City): string {
     const next = nextLevel(city, building)!;
     const check = canBuild(state, humanId, city.id, building);
     const queued = plannedLevel(city, building) - built;
-    const current = (built > 0 ? def.levels[built - 1].name : "Not built") + (queued > 0 ? ` (+${queued} queued)` : "");
-    const status = `${escapeHtml(next.def.name)}: ${formatNumber(next.def.cost)} gold, ${next.def.turns} turns`;
+    // One name per box, the building's: the level's own name (Palisade, Forum...) is in the tooltip, and the pips show the level.
+    const status = `${formatNumber(next.def.cost)} gold, ${next.def.turns} turns`;
     // A mine's worth depends on the land: say what the next level would earn.
     const mineNote = building === "mine" ? mineSummary(state, city, next.level) : "";
-    const title = `${def.name}. ${def.purpose} ${mineNote} ${check.ok ? `Click to queue the ${next.def.name}.` : check.reason}`;
+    const title = `${def.name}, level ${next.level}: ${next.def.name}. ${def.purpose} ${mineNote} ${check.ok ? `Click to queue it.` : check.reason}`;
     // Short of gold: say so in the box. (A siege or full queue is said once, below.)
     const blocked = !check.ok && !heldUp ? check.reason : "";
     return `
@@ -285,7 +277,7 @@ function constructionTab(input: InfoPanelInput, city: City): string {
         ${buildingSvg(building)}
         <span class="unit-name">${def.name}</span>
         ${levelPips(built)}
-        <span class="unit-stat">${escapeHtml(current)}</span>
+        ${queued > 0 ? `<span class="unit-stat">+${queued} queued</span>` : ""}
         <span class="building-next">${status}</span>
         ${mineNote ? `<span class="building-note">${escapeHtml(mineNote)}</span>` : ""}
         ${blocked ? `<span class="building-lock">${escapeHtml(blocked)}</span>` : ""}
