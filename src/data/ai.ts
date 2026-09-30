@@ -35,4 +35,13 @@ export const AI = {
   distanceWeight: 40,
   /** Keep at least this share of income free after upkeep; only emergencies ignore it. */
   upkeepHeadroom: 0.25,
+
+  /** Below this much gold, a conquered city is exterminated for its plunder (otherwise enslaved or occupied). */
+  plunderWhenBelow: 300,
+  /** Gold wanted in hand before taxes come back down after a debt. */
+  recoveredGold: 300,
+  /** Hills and mountain tiles a city needs before a mine is worth building. */
+  mineWorthTiles: 3,
+  /** Gold kept back for emergencies before anything is built. */
+  buildReserve: 100,
 } as const;

@@ -8,6 +8,7 @@ import {
   citiesOf,
   getFaction,
   type Army,
+  type CityId,
   type FactionId,
   type GameState,
   type RegimentId,
@@ -92,9 +93,6 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
 
 // ---- 0. Conquered cities, taxes and merging -------------------------------
 
-/** Below this much gold, the AI exterminates a conquered city for its plunder. */
-const PLUNDER_WHEN_BELOW = 300;
-
 /**
  * Decides the fate of a city just taken: exterminate it when short of gold,
  * enslave it when there are other cities to send its people to, otherwise
@@ -105,13 +103,10 @@ function settleAction(state: GameState, factionId: FactionId): Action | null {
   if (!city) return null;
   const gold = getFaction(state, factionId)?.gold ?? 0;
   const others = citiesOf(state, factionId).length - 1;
-  const choice = gold < PLUNDER_WHEN_BELOW ? "exterminate" : others > 0 ? "enslave" : "occupy";
+  const choice = gold < AI.plunderWhenBelow ? "exterminate" : others > 0 ? "enslave" : "occupy";
   return { type: "settleCity", cityId: city.id, choice };
 }
 
-
-/** Gold the AI wants in hand before it lowers taxes again after a debt. */
-const RECOVERED_GOLD = 300;
 
 /**
  * In debt, or with a city under siege, raise taxes everywhere to pay for the
@@ -120,7 +115,7 @@ const RECOVERED_GOLD = 300;
  */
 function taxAction(state: GameState, factionId: FactionId, plan: Assessment): Action | null {
   const gold = getFaction(state, factionId)?.gold ?? 0;
-  const wanted = gold < 0 || plan.relief ? "high" : gold > RECOVERED_GOLD ? "normal" : null;
+  const wanted = gold < 0 || plan.relief ? "high" : gold > AI.recoveredGold ? "normal" : null;
   if (!wanted) return null;
   const city = citiesOf(state, factionId).find((c) => c.taxRate !== wanted);
   return city ? { type: "setTaxRate", cityId: city.id, rate: wanted } : null;
@@ -474,19 +469,26 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
   const rich = updateFaction(state, factionId, (f) => ({ ...f, gold: Number.MAX_SAFE_INTEGER }));
   return cities.some((city) =>
     (["government", "market", "mine", "farms", "walls"] as const).some((building) => {
-      if (building === "mine" && mineableTiles(state, city.id) < MINE_WORTH_TILES) return false;
+      if (building === "mine" && mineableTiles(state, city.id) < AI.mineWorthTiles) return false;
       const next = nextLevel(city, building);
-      if (!next || faction.gold >= next.def.cost + BUILD_RESERVE) return false;
+      if (!next || faction.gold >= next.def.cost + AI.buildReserve) return false;
       return next.def.cost - faction.gold <= income * SAVING_TURNS && canBuild(rich, factionId, city.id, building).ok;
     }),
   );
 }
 
 
-/** Hills and mountain tiles a city needs before the AI thinks a mine is worth building. */
-const MINE_WORTH_TILES = 3;
-/** Gold kept back for emergencies before anything is built. */
-const BUILD_RESERVE = 100;
+/**
+ * The order the AI builds in a city: government, market, a mine (only with
+ * a few hills or mountains to dig), farms, then walls. With enemies near,
+ * walls come first.
+ */
+export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boolean): BuildingType[] {
+  const mine: BuildingType[] = mineableTiles(state, cityId) >= AI.mineWorthTiles ? ["mine"] : [];
+  return threatened
+    ? ["walls", "government", "market", ...mine, "farms"]
+    : ["government", "market", ...mine, "farms", "walls"];
+}
 
 function constructionAction(ctx: GameContext, state: GameState, factionId: FactionId, plan: Assessment): Action | null {
   if (plan.relief) return null; // at war for a city: every coin goes to the army
@@ -495,14 +497,9 @@ function constructionAction(ctx: GameContext, state: GameState, factionId: Facti
   for (const city of citiesOf(state, factionId)) {
     if (city.constructionQueue.length > 0 || city.besiegedBy) continue;
     const threatened = enemyRegimentsNear(ctx, state, factionId, city.tile) > 0;
-    // A mine is only worth it with a few hills or mountains to dig.
-    const mine: BuildingType[] = mineableTiles(state, city.id) >= MINE_WORTH_TILES ? ["mine"] : [];
-    const order: BuildingType[] = threatened
-      ? ["walls", "government", "market", ...mine, "farms"]
-      : ["government", "market", ...mine, "farms", "walls"];
-    for (const building of order) {
+    for (const building of aiBuildOrder(state, city.id, threatened)) {
       const next = nextLevel(city, building);
-      if (!next || gold < next.def.cost + BUILD_RESERVE) continue;
+      if (!next || gold < next.def.cost + AI.buildReserve) continue;
       if (canBuild(state, factionId, city.id, building).ok) return { type: "build", cityId: city.id, building };
     }
   }
