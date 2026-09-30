@@ -29,11 +29,12 @@ describe("recruitment", () => {
     assert.match(spearmen.ok ? "" : spearmen.reason, /Barracks/);
   });
 
-  it("starts capitals with a Barracks, so they can train spearmen", () => {
+  it("starts every city without a Barracks, capitals included: they train militia until they build one", () => {
     const state = newGame();
+    for (const city of Object.values(state.cities)) assert.equal(city.buildings.barracks, 0, city.name);
     const roma = cityNamed(state, "Roma");
-    assert.equal(roma.buildings.barracks, 1);
-    assert.deepEqual(trainableUnits(roma), ["militia", "spearmen"]);
+    assert.deepEqual(trainableUnits(roma), ["militia"]);
+    assert.deepEqual(trainableUnits({ ...roma, buildings: { ...roma.buildings, barracks: 1 } }), ["militia", "spearmen"]);
   });
 
   it("unlocks archers with Barracks 2 and cavalry with Barracks 3", () => {
@@ -60,7 +61,7 @@ describe("the Barracks", () => {
     const ariminum = cityNamed(state, "Ariminum"); // level 1
     assert.equal(buildingAvailable(state, ariminum.id, "barracks"), false);
 
-    const roma = cityNamed(state, "Roma"); // level 2, Barracks 1
+    const roma = cityNamed(state, "Roma"); // level 2, no Barracks yet
     assert.equal(buildingAvailable(state, roma.id, "barracks"), true);
     state = withCity(state, { ...roma, buildings: { ...roma.buildings, barracks: 2 } });
     assert.equal(buildingAvailable(state, roma.id, "barracks"), false);

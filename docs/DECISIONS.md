@@ -107,8 +107,9 @@ so.
   regiment at 0.5 gold and 0.01 upkeep per soldier, beating nothing, with
   every other type getting its ×1.5 against them. So they're the cheapest
   strength in gold and the dearest in people. A Barracks (level-2 city)
-  unlocks spearmen, level 2 archers, level 3 (level-3 city) cavalry; capitals
-  start with one. Spearmen went from 200 to 180 so militia stay a real step
+  unlocks spearmen, level 2 archers, level 3 (level-3 city) cavalry. No city
+  starts with one, capitals included: building it is the player's choice
+  (starting capitals with one was tried and rejected). Spearmen went from 200 to 180 so militia stay a real step
   down (220 militia lose to 180 spearmen: 220 vs 270); a first proposal of
   300 militia was judged too many. A regiment of militia still beats one of
   cavalry (220 vs 180). Retraining needs no Barracks. Training and

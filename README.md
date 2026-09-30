@@ -171,8 +171,8 @@ but needs enough people first.
 | Forum        | 2          | 6,000 people   | 20,000 people      | 500 gold   | 4     |
 | Senate       | 3          | 15,000 people  | all its land holds | 1,200 gold | 6     |
 
-Capitals start at level 2 with their Forum and a Barracks; other cities start
-at level 1.
+Capitals start at level 2 with their Forum; other cities start at level 1.
+No city starts with a Barracks: every city trains militia until one is built.
 
 | Building | Effect per level (1 / 2 / 3)                               | Cost (1 / 2 / 3)     | Turns     |
 |----------|------------------------------------------------------------|----------------------|-----------|
