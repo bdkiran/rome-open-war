@@ -126,6 +126,21 @@ so.
   In full games wars move faster (34 cities taken in 100 turns, up from 16),
   AI armies are mostly militia and spearmen, and cavalry are rare (few cities
   reach level 3).
+- **Unit buildings and tiers replaced the Barracks.** With one Barracks gated
+  at city level 2, the AI trained almost nothing but militia (388 militia
+  regiments against 46 others in 100 turns). Now spearmen, archers and
+  cavalry each have a building (Spear yard, Archery range, Stables) that even
+  a level-1 city can build; its levels unlock basic, advanced and elite
+  tiers (advanced and elite need a level-2 and level-3 city, as for any
+  building). Tiers make each soldier fight like 1 / 1.3 / 1.6 basic ones for
+  ×1 / 1.5 / 2.1 the gold and upkeep and the same people: a little worse per
+  gold, much better per person. A regiment's tier is fixed; merging needs
+  the same unit and tier. The AI builds its market before the unit
+  buildings (an early Barracks had slowed its economy) and trains the best
+  tier whose upkeep it can afford. First results: the AI builds the
+  buildings widely but still trains mostly militia (most training happens
+  early, before they exist), and no city reached level 3 in 100 turns: the
+  gold goes into unit buildings. That's for the military AI balancing.
 - **One army per tile, up to 10 regiments**; stacks move at the pace of the
   slowest chosen regiment; moving part of a stack splits it.
 - **Recruitment queue** per city (6 orders), shared by training and
@@ -235,8 +250,8 @@ economy) before and after.
 
 - **Phase 9: save and load** (not started; keep state serializable).
 - Late-game spending: a city still trains only one regiment a turn. Recruitment
-  slots by city level (1/2/3) were proposed; the Barracks now gates units by
-  level instead.
+  slots by city level (1/2/3) were proposed; unit buildings and tiers gate
+  units instead.
 - The AI doesn't single out the player; it targets whoever is cheapest to
   take.
 - Territory can straddle a sea crossing (cosmetic).

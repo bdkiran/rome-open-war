@@ -25,6 +25,9 @@ export function brokenRules(state: GameState): string[] {
       broken.push(`${at}: ${army.id} has ${army.regiments.length} regiments`);
     }
     for (const r of army.regiments) {
+      if (![1, 2, 3].includes(r.tier) || (r.unit === "militia" && r.tier !== 1)) {
+        broken.push(`${at}: regiment ${r.id} is ${r.unit} of tier ${r.tier}`);
+      }
       if (!(r.soldiers > 0 && r.soldiers <= regimentSize(r.unit))) {
         broken.push(`${at}: regiment ${r.id} has ${r.soldiers} ${r.unit}`);
       }

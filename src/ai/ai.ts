@@ -16,7 +16,7 @@ import {
 } from "@/core/state.js";
 import { AI } from "@/data/ai.js";
 import type { TaxRate } from "@/data/economy.js";
-import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, type UnitType } from "@/data/units.js";
+import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, type Tier, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import {
   assess,
@@ -40,7 +40,7 @@ import { battleSides, battleStrength, defenseBonusAt, matchup } from "@/systems/
 import { canBesiege } from "@/systems/siege.js";
 import { canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
-import { canRetrain, canTrain, trainableUnits } from "@/systems/recruitment.js";
+import { bestTier, canRetrain, canTrain, trainableUnits } from "@/systems/recruitment.js";
 import type { BuildingType } from "@/data/buildings.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { costToTarget } from "@/systems/pathfinding.js";
@@ -410,8 +410,9 @@ function trainingAction(
   if (phase === "defense" && relief?.muster) {
     const main = relief.besiegers.sort((a, b) => b.regiments.length - a.regiments.length)[0];
     const unit = trainAgainst(relief.muster, main) ?? leastRepresented(relief.muster, armyAt(state, relief.muster.tile));
-    if (canAffordRegiment(state, factionId, relief.muster.id, unit, Infinity)) {
-      return { type: "trainRegiment", cityId: relief.muster.id, unit };
+    const tier = affordableTier(state, factionId, relief.muster.id, unit, Infinity);
+    if (tier) {
+      return { type: "trainRegiment", cityId: relief.muster.id, unit, tier };
     }
   }
 
@@ -439,8 +440,9 @@ function trainingAction(
     const unit = counterToNearestEnemy(ctx, state, city);
     // An empty or threatened city gets its garrison even if upkeep is tight.
     const emergency = regimentsAt(city.tile) === 0 || enemyRegimentsNear(ctx, state, factionId, city.tile) > 0;
-    if (canAffordRegiment(state, factionId, city.id, unit, emergency ? Infinity : spareIncome)) {
-      return { type: "trainRegiment", cityId: city.id, unit };
+    const tier = affordableTier(state, factionId, city.id, unit, emergency ? Infinity : spareIncome);
+    if (tier) {
+      return { type: "trainRegiment", cityId: city.id, unit, tier };
     }
   }
 
@@ -452,8 +454,9 @@ function trainingAction(
   if (target && muster && regimentsAt(muster.tile) < ARMY_RULES.maxRegiments) {
     // Counter the garrison if we can see it; otherwise build a balanced stack.
     const unit = trainAgainst(muster, armyAt(state, target.tile)) ?? leastRepresented(muster, armyAt(state, muster.tile));
-    if (canAffordRegiment(state, factionId, muster.id, unit, spareIncome)) {
-      return { type: "trainRegiment", cityId: muster.id, unit };
+    const tier = affordableTier(state, factionId, muster.id, unit, spareIncome);
+    if (tier) {
+      return { type: "trainRegiment", cityId: muster.id, unit, tier };
     }
   }
   return null;
@@ -492,17 +495,19 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
 
 
 /**
- * The order the AI builds in a city: government, barracks (to train more than
- * militia), market, a mine (only with a few hills or mountains to dig),
- * farms, a port (only on the coast), walls, then roads. With enemies near,
- * walls come first.
+ * The order the AI builds in a city: government, market, the unit buildings
+ * (spear yard, archery range, stables), a mine (only with a few hills or
+ * mountains to dig), farms, a port (only with sea), walls, then roads. With
+ * enemies near, walls come first. The market comes before the military
+ * buildings so the economy isn't starved early.
  */
 export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boolean): BuildingType[] {
   const mine: BuildingType[] = mineableTiles(state, cityId) >= AI.mineWorthTiles ? ["mine"] : [];
   const port: BuildingType[] = state.cities[cityId].fishingGrounds > 0 ? ["port"] : [];
+  const military: BuildingType[] = ["spearYard", "archeryRange", "stables"];
   return threatened
-    ? ["walls", "government", "barracks", "market", ...mine, "farms", ...port, "roads"]
-    : ["government", "barracks", "market", ...mine, "farms", ...port, "walls", "roads"];
+    ? ["walls", "government", "market", ...military, ...mine, "farms", ...port, "roads"]
+    : ["government", "market", ...military, ...mine, "farms", ...port, "walls", "roads"];
 }
 
 function constructionAction(ctx: GameContext, state: GameState, factionId: FactionId, plan: Assessment): Action | null {
@@ -531,16 +536,26 @@ function leastRepresented(city: City, army: Army | undefined): UnitType {
   return [...totals].sort((a, b) => a[1] - b[1])[0][0];
 }
 
-/** Whether we can train a regiment in this city now, and keep paying its upkeep. */
-function canAffordRegiment(
+/**
+ * The best tier of a unit we can train in this city now and keep paying
+ * for: the highest the city has unlocked whose gold we have and whose
+ * upkeep fits in the spare income, dropping a tier until one does. Null if
+ * none does.
+ */
+function affordableTier(
   state: GameState,
   factionId: FactionId,
   cityId: string,
   unit: UnitType,
   spareIncome: number,
-): boolean {
-  if (upkeepFor(unit, regimentSize(unit)) > spareIncome) return false;
+): Tier | null {
   // One order at a time per city, so the AI can change its mind as things change.
-  if (state.cities[cityId].recruitQueue.length > 0) return false;
-  return canTrain(state, factionId, cityId, unit).ok;
+  if (state.cities[cityId].recruitQueue.length > 0) return null;
+  const best = bestTier(state.cities[cityId], unit) ?? 0;
+  for (let tier = best; tier >= 1; tier--) {
+    const t = tier as Tier;
+    if (upkeepFor(unit, regimentSize(unit), t) > spareIncome) continue;
+    if (canTrain(state, factionId, cityId, unit, t).ok) return t;
+  }
+  return null;
 }

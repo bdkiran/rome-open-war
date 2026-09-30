@@ -25,17 +25,40 @@ export interface UnitDef {
    * Training always happens in whole regiments.
    */
   regimentSize: number;
-  /** The Barracks level a city needs to train it (0: any city can). */
-  barracks: number;
+  /**
+   * The building that trains it, whose level is the best tier the city can
+   * train (see TIERS). Militia need none and come in one tier.
+   */
+  building: "spearYard" | "archeryRange" | "stables" | null;
 }
 
 export const UNITS: Record<UnitType, UnitDef> = {
-  // A regiment costs 110 / 180 / 320 / 360 gold and about 2 / 4 / 5 / 6 gold a turn in upkeep.
-  militia: { name: "Militia", movement: 12, beats: [], goldPerSoldier: 0.5, upkeep: 0.01, regimentSize: 220, barracks: 0 },
-  spearmen: { name: "Spearmen", movement: 12, beats: ["cavalry", "militia"], goldPerSoldier: 1, upkeep: 0.02, regimentSize: 180, barracks: 1 },
-  archers: { name: "Archers", movement: 12, beats: ["spearmen", "militia"], goldPerSoldier: 2, upkeep: 0.03125, regimentSize: 160, barracks: 2 },
-  cavalry: { name: "Cavalry", movement: 16, beats: ["archers", "militia"], goldPerSoldier: 3, upkeep: 0.05, regimentSize: 120, barracks: 3 },
+  // A basic regiment costs 110 / 180 / 320 / 360 gold and about 2 / 4 / 5 / 6 gold a turn in upkeep.
+  militia: { name: "Militia", movement: 12, beats: [], goldPerSoldier: 0.5, upkeep: 0.01, regimentSize: 220, building: null },
+  spearmen: { name: "Spearmen", movement: 12, beats: ["cavalry", "militia"], goldPerSoldier: 1, upkeep: 0.02, regimentSize: 180, building: "spearYard" },
+  archers: { name: "Archers", movement: 12, beats: ["spearmen", "militia"], goldPerSoldier: 2, upkeep: 0.03125, regimentSize: 160, building: "archeryRange" },
+  cavalry: { name: "Cavalry", movement: 16, beats: ["archers", "militia"], goldPerSoldier: 3, upkeep: 0.05, regimentSize: 120, building: "stables" },
 };
+
+/** A regiment's quality: basic, advanced or elite. Militia are always basic. */
+export type Tier = 1 | 2 | 3;
+
+/**
+ * Tiers of spearmen, archers and cavalry. Better soldiers fight harder (each
+ * counts as `strength` basic ones in battle) and cost more gold and upkeep,
+ * but take no more people: elites are slightly worse per gold, much better
+ * per person. A tier needs its unit's building at that level.
+ */
+export const TIERS: Record<Tier, { name: string; strength: number; cost: number }> = {
+  1: { name: "Basic", strength: 1, cost: 1 },
+  2: { name: "Advanced", strength: 1.3, cost: 1.5 },
+  3: { name: "Elite", strength: 1.6, cost: 2.1 },
+};
+
+/** "Spearmen", "Advanced spearmen" or "Elite spearmen". */
+export function unitName(unit: UnitType, tier: Tier): string {
+  return tier === 1 ? UNITS[unit].name : `${TIERS[tier].name} ${UNITS[unit].name.toLowerCase()}`;
+}
 
 /** Soldiers in a full regiment of a unit type. */
 export function regimentSize(unit: UnitType): number {

@@ -18,7 +18,7 @@ import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import type { Scenario } from "@/data/scenarios/types.js";
 import type { TaxRate } from "@/data/economy.js";
 import type { BuildingType } from "@/data/buildings.js";
-import { ARMY_RULES, type UnitType, regimentSize } from "@/data/units.js";
+import { ARMY_RULES, type Tier, type UnitType, regimentSize } from "@/data/units.js";
 import { GameController } from "@/game/controller.js";
 import type { TileId } from "@/map/topology.js";
 import { attachInput } from "@/render/input.js";
@@ -677,7 +677,8 @@ function handlePanelClick(e: MouseEvent): void {
   } else if (target.dataset.cancelRecruit !== undefined && city) {
     dispatch({ type: "cancelRecruit", cityId: city.id, index: Number(target.dataset.cancelRecruit) });
   } else if (target.dataset.train && city) {
-    dispatch({ type: "trainRegiment", cityId: city.id, unit: target.dataset.train as UnitType });
+    const tier = Number(target.dataset.tier ?? 1) as Tier;
+    dispatch({ type: "trainRegiment", cityId: city.id, unit: target.dataset.train as UnitType, tier });
   } else if (target.dataset.tax && city) {
     dispatch({ type: "setTaxRate", cityId: city.id, rate: target.dataset.tax as TaxRate });
   } else if (target.dataset.merge) {

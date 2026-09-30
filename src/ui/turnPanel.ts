@@ -118,7 +118,7 @@ function moneyBreakdown(state: GameState, factionId: FactionId): string {
 
   const armies = armiesOf(state, factionId).map((army) => {
     const where = cityAt(state, army.tile)?.name ?? placeName(state, army.tile).replace(/^(at|near|in) /, "");
-    const cost = army.regiments.reduce((sum, r) => sum + upkeepFor(r.unit, r.soldiers), 0);
+    const cost = army.regiments.reduce((sum, r) => sum + upkeepFor(r.unit, r.soldiers, r.tier), 0);
     return `
       <tr>
         <th scope="row">${escapeHtml(where)}</th>

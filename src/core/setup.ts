@@ -104,6 +104,7 @@ function placeStartingArmies(state: GameState): GameState {
           regiments.push({
             id: `reg${next.nextRegimentNumber + regiments.length}`,
             unit,
+            tier: 1,
             soldiers: regimentSize(unit),
             movementLeft: UNITS[unit].movement,
             pinned: false,

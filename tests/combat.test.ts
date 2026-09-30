@@ -26,3 +26,11 @@ it("lets a regiment of militia lose to spearmen but beat cavalry", () => {
   const vsCavalry = [sideStrength(regiment("militia"), regiment("cavalry")), sideStrength(regiment("cavalry"), regiment("militia"))];
   assert.deepEqual(vsCavalry, [220, 180]);
 });
+
+it("counts each soldier by the regiment's tier: an elite regiment fights like 1.6 basic ones", () => {
+  const basic = [{ unit: "spearmen" as const, soldiers: 180 }];
+  assert.equal(sideStrength([{ unit: "spearmen", soldiers: 180, tier: 3 }], basic), 288);
+  assert.equal(sideStrength([{ unit: "spearmen", soldiers: 180, tier: 2 }], basic), 234);
+  // An elite regiment of spearmen against basic cavalry: tier and matchup multiply.
+  assert.equal(sideStrength([{ unit: "spearmen", soldiers: 180, tier: 3 }], [{ unit: "cavalry", soldiers: 120 }]), 180 * 1.6 * 1.5);
+});
