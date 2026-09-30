@@ -90,8 +90,8 @@ Either way you can close the screen to look at the map, or play again.
   you, your finished buildings and recruits, and world news (cities changing
   hands, factions falling). Click one to read it, × to dismiss it. They
   last only that turn: ending your turn clears them
-- In the army panel: Merge damaged regiments of the same type. Leave some
-  regiments unticked in the bottom bar to split the army; move onto a
+- In the bottom bar's Army tab: Merge combines damaged regiments of the same
+  type. Leave some regiments unticked to split the army; move onto a
   friendly army to merge
 - End turn with the button or Enter
 
@@ -272,7 +272,7 @@ in it, so a stack moves at the pace of its slowest regiment. Leave some out
 Stopping on a friendly army merges into it, if the combined stack has room.
 
 **Merging.** Damaged regiments of the same type can be merged into fuller
-ones: 120 and 140 Spearmen become 200 and 60. Full regiments are left alone.
+ones: 120 and 140 Spearmen become 180 and 80. Full regiments are left alone.
 It's free and takes no movement, but a merged regiment moves at the pace of
 the slowest one that went into it.
 

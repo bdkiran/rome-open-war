@@ -3,6 +3,7 @@ import { BUILDING_ORDER, BUILDINGS } from "@/data/buildings.js";
 import { UNITS, regimentSize } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
+import { canMerge } from "@/systems/armies.js";
 import { levelPips, regimentBox } from "@/ui/boxes.js";
 import { escapeHtml } from "@/ui/html.js";
 import type { InfoPanelInput } from "@/ui/infoPanel.js";
@@ -39,8 +40,13 @@ export function renderSelectionBar(input: InfoPanelInput, tab: BarTab): string {
   const tabButton = (id: BarTab) =>
     `<button type="button" role="tab" class="bar-tab" data-bar-tab="${id}" aria-selected="${shown === id}">${id === "army" ? "Army" : "Town"}</button>`;
   const cards = shown === "army" && army ? armyCards(input, army) : city ? townCards(city) : "";
+  // Merging damaged regiments of a type is an army order, so it lives with the regiments.
+  const merge =
+    shown === "army" && army && army.owner === input.humanId && input.playerTurn && canMerge(army)
+      ? `<button type="button" class="bar-action" data-merge="${army.id}" title="Merge damaged regiments of the same type into fuller ones. Free, and takes no movement.">Merge</button>`
+      : "";
   return `
-    <div class="bar-tabs" role="tablist">${tabs.map(tabButton).join("")}</div>
+    <div class="bar-tabs" role="tablist">${tabs.map(tabButton).join("")}${merge}</div>
     <div class="bar-cards" role="tabpanel">${cards}</div>`;
 }
 

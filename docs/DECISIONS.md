@@ -21,6 +21,9 @@ so.
 - **Sea crossings** (Pillars of Hercules, Messina, Sicily–Africa, the
   Channel, Corsica–Sardinia, Corsica–Italy) are ordinary steps in the
   topology (`links()`), so every city is reachable by land.
+  A crossing never lands on a city tile: Sicily–Africa once joined
+  Lilybaeum to Carthago directly, so an army in one could besiege the other
+  across the sea. `tests/map.test.ts` checks no two cities touch.
 - **Every starting city can reach level 3.** Tarsus's land held only 14,000
   people (the Senate needs 15,000) because the Taurus band buried it in
   mountains. The generator now draws the Cilician plain (`PLAINS`), which

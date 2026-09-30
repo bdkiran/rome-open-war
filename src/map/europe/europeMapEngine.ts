@@ -23,7 +23,9 @@ const TERRAIN_BY_CHAR: Record<string, TerrainType> = {
  */
 export const SEA_CROSSINGS: readonly { name: string; from: [number, number]; to: [number, number] }[] = [
   { name: "Pillars of Hercules", from: [-5.7, 36.6], to: [-5.6, 35.4] },
-  { name: "Sicily to Africa", from: [12.4, 37.8], to: [11.05, 37.05] },
+  // Lands beside Lilybaeum and Carthago, not on them: a crossing between two
+  // city tiles would let an army in one besiege the other across the sea.
+  { name: "Sicily to Africa", from: [12.8, 38.08], to: [9.84, 36.85] },
   { name: "Fretum Siculum", from: [15.45, 38.2], to: [15.9, 38.3] },
   { name: "Fretum Gallicum", from: [1.6, 50.95], to: [1.35, 51.15] },
   { name: "Corsica to Sardinia", from: [9.2, 41.4], to: [9.25, 41.2] },

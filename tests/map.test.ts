@@ -1,4 +1,4 @@
-/** The starting map: every city can grow into a level-3 city. */
+/** The starting map: every city can grow into a level-3 city, and no two cities touch. */
 import assert from "node:assert/strict";
 import { it } from "node:test";
 import type { GameContext } from "@/core/context.js";
@@ -23,4 +23,15 @@ it("gives every starting city enough land to reach the top level", () => {
     .map((city) => ({ city: city.name, land: cityStats(state, city).landCapacity }))
     .filter(({ land }) => land < needed);
   assert.deepEqual(tooPoor, [], `a city's land holds fewer than ${needed} people`);
+});
+
+it("never puts two cities next to each other, not even across a sea crossing", () => {
+  const map = ROMAN_WORLD.mapEngine.createMap();
+  const ctx: GameContext = { topology: map.topology };
+  const state = createGame(ctx, map, ROMAN_WORLD);
+  const cityTiles = new Map(Object.values(state.cities).map((c) => [c.tile, c.name]));
+  const touching = Object.values(state.cities).flatMap((city) =>
+    ctx.topology.neighbors(city.tile).filter((t) => cityTiles.has(t)).map((t) => `${city.name} and ${cityTiles.get(t)}`),
+  );
+  assert.deepEqual(touching, []);
 });

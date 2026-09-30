@@ -904,6 +904,16 @@ button.bar-tab {
 }
 button.bar-tab:hover:not(:disabled) { color: var(--bone); background: rgba(236, 228, 208, 0.06); }
 button.bar-tab[aria-selected="true"] { color: var(--bone); background: rgba(224, 181, 79, 0.16); border-color: rgba(224, 181, 79, 0.35); }
+button.bar-action {
+  margin: 0 0 4px auto;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--bone);
+  background: rgba(236, 228, 208, 0.08);
+  border: 1px solid rgba(224, 181, 79, 0.6);
+}
+button.bar-action:hover:not(:disabled) { background: rgba(224, 181, 79, 0.18); }
+.bar-tabs { align-items: flex-end; }
 .bar-cards { display: flex; gap: 4px; overflow-x: auto; }
 .bar-cards .reg-box { width: 62px; flex: none; }
 .town-card {
