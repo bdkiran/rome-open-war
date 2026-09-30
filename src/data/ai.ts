@@ -40,6 +40,8 @@ export const AI = {
   plunderWhenBelow: 300,
   /** Gold wanted in hand before taxes come back down after a debt. */
   recoveredGold: 300,
+  /** A city with this share of its capacity is full: it pays high taxes, since it can't grow anyway. */
+  fullCity: 0.95,
   /** Hills and mountain tiles a city needs before a mine is worth building. */
   mineWorthTiles: 3,
   /** Gold kept back for emergencies before anything is built. */

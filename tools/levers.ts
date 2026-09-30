@@ -63,7 +63,7 @@ for (const [a, b] of [
   ["grow, then tax", "all high"],
   ["grow, then tax", "all normal"],
   ["grow, then normal", "all normal"],
-  ["high at the level cap", "all normal"],
+  ["the AI", "all normal"],
   ["all low", "all normal"],
 ]) {
   console.log(`  ${a} overtakes ${b}: ${turnOf(overtakes(curves[a], curves[b]))}`);
