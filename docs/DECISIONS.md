@@ -48,6 +48,12 @@ so.
   Making mountains cost the same as hills was tried and rejected: it barely
   shortened real routes (armies take the passes) and erased the difference.
   Cavalry was cut from 18 to 16 so they couldn't strike from anywhere.
+- **Roads** (any city, three levels) cut the cost of entering the city's
+  tiles: Tracks make rough ground cost like plains, Roads the mountains too,
+  Paved roads make every tile cost 1. They help every army, enemies
+  included: roads are for whoever marches on them, so building them near a
+  border is a real risk. Costs stay whole numbers so movement reads the same.
+  All tile costs go through `enterCost` (systems/pathfinding.ts).
 - **Zone of control:** entering a tile next to an enemy army ends the move;
   the army can still attack. Armies can't slip past each other.
 - **Marches** (right-click a distant tile) move at the *end* of the owner's
@@ -134,6 +140,11 @@ so.
   threshold). This, more than anything, fixed late-game runaway growth and AI
   gold hoarding.
 - **Farms only speed growth** (they used to add capacity too).
+- **Ports** are for coastal cities (any fishing grounds) and add +20/40/60%
+  growth, like farms, but scaled by the city's sea share (fishing grounds
+  against all its tiles). A flat bonus would have given a city with one sea
+  tile a full farm's worth. In full games coastal cities don't run away:
+  they average ~9.9k people against ~8k inland at turn 100.
 - **Land capacity** was cut ~47% (plains 3,200/tile) so the largest city
   (Lutetia) tops out near 60,000. Starting cities are small: capitals 6,000,
   others 3,000.

@@ -1,8 +1,19 @@
 import type { GameContext } from "@/core/context.js";
 import type { FactionId, GameState } from "@/core/state.js";
-import { TERRAIN } from "@/data/terrain.js";
+import { ROAD_MOVE_COST, TERRAIN } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { TileId } from "@/map/topology.js";
+
+/**
+ * Movement points to enter a tile: its terrain's cost, or less on the land of
+ * a city with roads. Roads serve every army, whoever owns them.
+ */
+export function enterCost(state: GameState, tile: TileId): number {
+  const terrain = state.tiles[tile].terrain;
+  const claim = state.territory[tile];
+  const roads = claim ? (state.cities[claim.cityId]?.buildings.roads ?? 0) : 0;
+  return ROAD_MOVE_COST[roads]?.[terrain] ?? TERRAIN[terrain].moveCost;
+}
 
 /** A small binary min-heap for Dijkstra. */
 class MinHeap<T> {
@@ -68,11 +79,11 @@ export function costToTarget(ctx: GameContext, state: GameState, target: TileId,
   while (heap.size > 0) {
     const { key, value: tile } = heap.pop()!;
     if (key > dist.get(tile)!) continue;
-    // Stepping from a neighbor into `tile` costs tile's terrain; the target itself counts as 1.
-    const enterCost = tile === target ? 1 : TERRAIN[state.tiles[tile].terrain].moveCost;
+    // Stepping from a neighbor into `tile` costs what it takes to enter it; the target itself counts as 1.
+    const stepCost = tile === target ? 1 : enterCost(state, tile);
     for (const n of ctx.topology.neighbors(tile)) {
       if (blocked.has(n) || !TERRAIN[state.tiles[n].terrain].passable) continue;
-      const cost = key + enterCost;
+      const cost = key + stepCost;
       if (cost < (dist.get(n) ?? Infinity)) {
         dist.set(n, cost);
         heap.push(n, cost);

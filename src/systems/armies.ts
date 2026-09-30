@@ -19,7 +19,7 @@ import {
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, UNITS, regimentSize, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
-import { costToTarget } from "@/systems/pathfinding.js";
+import { costToTarget, enterCost } from "@/systems/pathfinding.js";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
@@ -174,11 +174,11 @@ export function reachableTiles(
     if (tile !== army.tile && zoc.has(tile)) continue;
 
     for (const n of ctx.topology.neighbors(tile)) {
-      const terrain = TERRAIN[state.tiles[n].terrain];
-      if (!terrain.passable || enemyTiles.has(n)) continue;
+      if (!TERRAIN[state.tiles[n].terrain].passable || enemyTiles.has(n)) continue;
+      const cost = enterCost(state, n);
 
       let after: number;
-      if (terrain.moveCost <= left) after = left - terrain.moveCost;
+      if (cost <= left) after = left - cost;
       else if (tile === army.tile && freshTurn) after = 0;
       else continue;
 
@@ -353,7 +353,7 @@ export function marchSchedule(state: GameState, army: Army, route: readonly Tile
   let turn = 0;
   let fresh = army.regiments.every((r) => r.movementLeft === UNITS[r.unit].movement);
   return route.map((tile) => {
-    const cost = TERRAIN[state.tiles[tile].terrain].moveCost;
+    const cost = enterCost(state, tile);
     if (cost > left && !fresh) {
       turn++;
       left = full;

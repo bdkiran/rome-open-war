@@ -41,7 +41,7 @@ export function createCity(
     recruitQueue: [],
     taxRate: "normal",
     // Every city has a council hall; a capital starts with a forum (level 2). None has a barracks yet.
-    buildings: { government: isCapital ? 2 : 1, barracks: 0, walls: 0, farms: 0, market: 0, mine: 0 },
+    buildings: { government: isCapital ? 2 : 1, barracks: 0, walls: 0, farms: 0, market: 0, mine: 0, port: 0, roads: 0 },
     constructionQueue: [],
     unsettled: false,
     fishingGrounds: tilesWithin(ctx.topology, tile, GAME_SETUP.territoryRadius).filter(
@@ -162,8 +162,9 @@ export function cityStats(state: GameState, city: City): CityStats {
   const places = tiles.length + city.fishingGrounds;
   const baseGrowthRate = places > 0 ? growthSum / places : 0;
   const tax = TAX_RATES[city.taxRate];
-  const farms = city.buildings.farms;
-  const growthRate = baseGrowthRate * tax.growth * (1 + BUILDING_EFFECTS.farmsGrowth[farms]);
+  const farms = BUILDING_EFFECTS.farmsGrowth[city.buildings.farms];
+  const port = BUILDING_EFFECTS.portGrowth[city.buildings.port] * seaShare(state, city);
+  const growthRate = baseGrowthRate * tax.growth * (1 + farms + port);
   const levelLimit = LEVEL_POPULATION_LIMIT[city.buildings.government];
   const fedCapacity = Math.min(capacity, levelLimit);
   const base = ECONOMY.cityBaseGold;
@@ -183,6 +184,16 @@ export function cityStats(state: GameState, city: City): CityStats {
     gold: total,
     income: { base, people, mine, subtotal, taxes: tax.gold, market, total },
   };
+}
+
+/**
+ * The share of a city's reach that is sea: its fishing grounds against all
+ * the tiles it draws on. A port's growth bonus is scaled by it, so a city
+ * with a sliver of coast gets a sliver of the bonus.
+ */
+export function seaShare(state: GameState, city: City): number {
+  const places = city.fishingGrounds + cityTiles(state, city.id).length;
+  return places > 0 ? city.fishingGrounds / places : 0;
 }
 
 /**

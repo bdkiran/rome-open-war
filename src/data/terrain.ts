@@ -45,3 +45,16 @@ export const TERRAIN: Record<TerrainType, TerrainDef> = {
   mountains: { name: "Mountains", moveCost: 4,        passable: true,  defenseBonus: 0.25, capacity: 400,  growth: 0.01,  mineable: true },
   desert:    { name: "Desert",    moveCost: 3,        passable: true,  defenseBonus: 0,    capacity: 150,  growth: 0.01,  mineable: false },
 };
+
+/**
+ * Movement points to enter a tile of a city's land, by the level of its
+ * roads (index = level; 0 means no roads, so the terrain's own moveCost).
+ * Roads help every army, enemies included. Tracks ease rough ground, Roads
+ * the mountains too, and Paved roads halve even the plains.
+ */
+export const ROAD_MOVE_COST: readonly (Partial<Record<TerrainType, number>> | null)[] = [
+  null,
+  { plains: 2, forest: 2, hills: 2, desert: 2, mountains: 4 },
+  { plains: 2, forest: 2, hills: 2, desert: 2, mountains: 2 },
+  { plains: 1, forest: 1, hills: 1, desert: 1, mountains: 1 },
+];
