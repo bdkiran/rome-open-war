@@ -7,9 +7,12 @@
     "dev": "concurrently --kill-others --names tsc,serve --prefix-colors blue,green \"tsc --watch --preserveWatchOutput\" \"serve .\"",
     "build": "tsc",
     "watch": "tsc --watch",
-    "serve": "serve ."
+    "serve": "serve .",
+    "test": "tsc -p tsconfig.node.json && node --import ./tests/register.mjs --test \"build/tests/**/*.test.js\"",
+    "simulate": "tsc -p tsconfig.node.json && node --import ./tests/register.mjs build/tools/simulate.js"
   },
   "devDependencies": {
+    "@types/node": "^22.20.4",
     "@types/three": "^0.186.0",
     "concurrently": "^10.0.5",
     "serve": "^14.2.6",

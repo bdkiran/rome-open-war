@@ -15,10 +15,13 @@ balance or the AI.
 npm install              # once; three.js is served straight from node_modules
 npm run dev              # tsc --watch + static server on http://localhost:3000
 npm run build            # tsc; must finish with no errors
-python3 tools/simulate.py [--turns 100] [--garrison] [--url URL]
-                         # headless AI-vs-AI game; needs the game served (npm run dev)
-                         # and `pip install playwright && python -m playwright install chromium`
+npm test                 # AI-vs-AI games in Node, checked as they play (~20 s)
+npm run simulate -- [--turns 100] [--garrison] [--seed N]
+                         # balance report: one AI-vs-AI game's numbers
 ```
+
+Tests and tools need Node 22+. They're built by `tsconfig.node.json` into
+`build/`; `tests/register.mjs` resolves `@/` imports there.
 
 Regenerating the map (only when changing coastlines, terrain or islands):
 
@@ -62,7 +65,11 @@ src/
                (scoreboard, money breakdown), battlePanel, battleResult,
                siegePanel, settlementPanel, reports (notifications), gameOver
   main.ts      wires it all together; view state; player input
-tools/         build_europe_map.py (map generator), simulate.py (AI games)
+tests/         simulation.test.ts (whole games: invalid orders, debt, state
+               never mutated, JSON round trip, determinism), invariants.ts
+               (what must hold in any state: add to it when adding rules)
+tools/         build_europe_map.py (map generator), simulation.ts (plays a
+               game in Node), simulate.ts (the balance report)
 models/        optional .glb models listed in models/models.json
 ```
 
@@ -84,7 +91,7 @@ be swapped in through a scenario.
   save/load (Phase 9) depends on it.
 - **The AI never issues an invalid action.** It decides from a *fogged* view
   (`systems/vision.ts`: only what it can see) but plans moves against the real
-  state. `tools/simulate.py` must report `INVALID 0` and nobody in debt.
+  state. `npm test` fails on any invalid AI action or AI debt.
 - **Every number lives in `src/data/`.** Don't hardcode rules numbers
   elsewhere. Regiment sizes differ by unit: use `regimentSize(unit)`, never a
   fixed 100.
@@ -110,18 +117,21 @@ be swapped in through a scenario.
 ## Testing a change
 
 1. `npm run build` with no errors.
-2. For rules, data or AI changes: `python3 tools/simulate.py` (and
-   `--garrison`). Check INVALID 0, nobody in debt, city levels spread across
+2. `npm test` passes. It plays whole AI-vs-AI games and fails on an invalid
+   AI action, an AI turn that never ends, an AI in debt, a broken invariant
+   (`tests/invariants.ts`), state changed in place, or state that isn't plain
+   JSON.
+3. For rules, data or AI changes, also read the numbers:
+   `npm run simulate` (and `-- --garrison`). Check city levels spread across
    1–3, treasuries not piling up, and factions still conquering each other.
-3. For UI or map changes: check in a browser. Headless Chromium can run the
+4. For UI or map changes: check in a browser. Headless Chromium can run the
    3D map with `--use-gl=angle --use-angle=swiftshader
    --enable-unsafe-swiftshader`. The debug hook at the end of `src/main.ts`
    (`Object.assign(window, { game: … })`) exposes `game.state`,
    `game.controller` (`dispatch(factionId, action)`, `options.aiTurnDelayMs`),
    `game.camera`, `game.topology`, `game.view` and `game.mapView.screenOf(tile)`
    (a tile's screen position, for clicking it). Keep that hook; if it's
-   missing, restore it. (`tools/simulate.py` doesn't need it: it imports the
-   game modules and builds its own game.)
+   missing, restore it.
 
 ## Working with this user
 
@@ -129,7 +139,7 @@ be swapped in through a scenario.
 - Keep references to other commercial games out of the repo: code, comments,
   docs and commit messages.
 - For balance changes, **plan first**: measure the current numbers (e.g. with
-  `tools/simulate.py`), then propose changes as a before/after table, and
+  `npm run simulate`), then propose changes as a before/after table, and
   implement after they agree.
 - Implement what's asked; if a request is ambiguous, say which reading you
   took. If a change has knock-on effects (e.g. smaller cities making the
