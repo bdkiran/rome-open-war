@@ -1,10 +1,9 @@
 # Unlimited War
 
 A browser-based, turn-based grand strategy game set in the Mediterranean world
-of 218 BC, inspired by Rome: Total War's campaign map. The player is Rome; 13
-AI factions share a hex map from Iberia to Syria and from Egypt to Britain.
-3D map (three.js), turn-based rules engine, AI opponents. TypeScript, no
-bundler, no framework.
+of 218 BC. The player is Rome; 13 AI factions share a hex map from Iberia to
+Syria and from Egypt to Britain. 3D map (three.js), turn-based rules engine,
+AI opponents. TypeScript, no bundler, no framework.
 
 `README.md` is the player-facing rulebook. `docs/DECISIONS.md` records why the
 rules and numbers are what they are; read it before changing game rules,
@@ -126,7 +125,9 @@ be swapped in through a scenario.
 
 ## Working with this user
 
-- They direct the design; Rome: Total War is the usual reference point.
+- They direct the design.
+- Keep references to other commercial games out of the repo: code, comments,
+  docs and commit messages.
 - For balance changes, **plan first**: measure the current numbers (e.g. with
   `tools/simulate.py`), then propose changes as a before/after table, and
   implement after they agree.

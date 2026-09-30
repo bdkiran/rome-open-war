@@ -152,7 +152,7 @@ Always measure with `tools/simulate.py` before and after.
   army). A garrison isn't drawn: the city's banner shows its strength
   instead; half-mast banner = undefended; enemy cities in fog show a plain
   banner.
-- **Rome: Total War-style panels**: box grids for regiments, units and
+- **Panels**: box grids for regiments, units and
   buildings, with queues below. Minimal explanatory text (the player found
   the UI too wordy): show what's blocked and why; details go in tooltips.
 - **Reports** replace the log: notifications at the start of the player's
@@ -176,4 +176,4 @@ Always measure with `tools/simulate.py` before and after.
   at the end of the owner's turn and are refreshed at the start of the next).
 - No automated test suite beyond `tools/simulate.py` and manual browser
   checks.
-- Public order / unrest (as in Rome: Total War) was discussed, not built.
+- Public order / unrest was discussed, not built.
