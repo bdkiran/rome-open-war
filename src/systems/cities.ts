@@ -47,6 +47,8 @@ export function createCity(
     fishingGrounds: tilesWithin(ctx.topology, tile, GAME_SETUP.territoryRadius).filter(
       (t) => state.tiles[t].terrain === "water",
     ).length,
+    // Worked out by measureCoasts once every city has claimed its land.
+    coast: 0,
   };
   const next: GameState = {
     ...state,
@@ -187,13 +189,33 @@ export function cityStats(state: GameState, city: City): CityStats {
 }
 
 /**
- * The share of a city's reach that is sea: its fishing grounds against all
- * the tiles it draws on. A port's growth bonus is scaled by it, so a city
- * with a sliver of coast gets a sliver of the bonus.
+ * Counts each city's coast: the sea within its reach (its fishing grounds)
+ * plus any sea touching its land further out. A city can build a port if it
+ * has any. Territory never changes, so this runs once, after every city has
+ * claimed its land.
+ */
+export function measureCoasts(ctx: GameContext, state: GameState): GameState {
+  const cities = { ...state.cities };
+  for (const city of Object.values(state.cities)) {
+    const sea = new Set(
+      tilesWithin(ctx.topology, city.tile, GAME_SETUP.territoryRadius).filter((t) => state.tiles[t].terrain === "water"),
+    );
+    for (const tile of cityTiles(state, city.id)) {
+      for (const n of ctx.topology.neighbors(tile)) if (state.tiles[n].terrain === "water") sea.add(n);
+    }
+    cities[city.id] = { ...city, coast: sea.size };
+  }
+  return { ...state, cities };
+}
+
+/**
+ * The share of a city's reach that is sea: its coast against its coast and
+ * land together. A port's growth bonus is scaled by it, so a city with a
+ * sliver of coast gets a sliver of the bonus.
  */
 export function seaShare(state: GameState, city: City): number {
-  const places = city.fishingGrounds + cityTiles(state, city.id).length;
-  return places > 0 ? city.fishingGrounds / places : 0;
+  const places = city.coast + cityTiles(state, city.id).length;
+  return places > 0 ? city.coast / places : 0;
 }
 
 /**

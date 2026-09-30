@@ -142,7 +142,7 @@ growth = baseGrowthRate × population × (1 − population / capacity)
   terrain type supports a set amount: plains 3,200, forest 1,600, hills 1,300,
   mountains 400, desert 150. The sea is never claimed as land, but every sea
   tile within a city's reach (2 tiles) counts as **fishing grounds**, adding
-  1,000, and lets the city build a **port**. The largest city on the map, all-plains Lutetia, has land for about
+  1,000. The largest city on the map, all-plains Lutetia, has land for about
   60,000.
 - **The city's level caps it.** Whatever its land supports, a city can't grow
   past its level's limit until its government is raised: 8,000 people with a
@@ -181,7 +181,7 @@ No city starts with a Barracks: every city trains militia until one is built.
 | Farms    | +20% / +40% / +60% population growth                       | 150 / 300 / 550 gold | 2 / 3 / 4 |
 | Market   | +30% / +60% / +100% gold                                   | 150 / 300 / 500 gold | 2 / 3 / 4 |
 | Mine     | +2 / +4 / +6 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Port     | +20% / +40% / +60% growth, times the city's share of sea (coastal cities only) | 200 / 400 / 650 gold | 2 / 3 / 4 |
+| Port     | +20% / +40% / +60% growth, times the city's share of sea (cities whose land touches the sea) | 200 / 400 / 650 gold | 2 / 3 / 4 |
 | Roads    | Faster movement across the city's land, for every army (see Movement) | 150 / 300 / 500 gold | 2 / 3 / 4 |
 
 A mine can only be built in a city whose territory has hills or mountains, so
@@ -190,10 +190,12 @@ tab shows how many tiles it can dig and what the next level would earn. Its
 gold counts toward the city's income before taxes and the market, so both
 multiply it.
 
-A **port** can only be built in a city with fishing grounds. Its growth bonus
-is scaled by how much of the city's reach is sea (its fishing grounds against
-all its tiles), so Lilybaeum, nearly all sea, gets almost the full bonus, and
-a city with a strip of coast only a little. It adds to the farms' bonus.
+A **port** can be built by any city with sea on its coast: sea within its
+reach, or touching any tile of its land, however far from the city itself.
+Its growth bonus is scaled by how much of the city's reach is sea (its coast
+against its coast and land together), so Lilybaeum, nearly all sea, gets
+almost the full bonus, and a city with a strip of coast only a little. It
+adds to the farms' bonus.
 
 Build from the city panel's Construction tab: click a building to queue its
 next level. The **construction queue** holds up to 5 buildings, built one
