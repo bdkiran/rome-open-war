@@ -31,8 +31,9 @@ curl -L -o tools/ne_50m_land.geojson https://raw.githubusercontent.com/nvkelso/n
 python3 tools/build_europe_map.py        # rewrites src/map/europe/europeTerrain.ts
 ```
 
-Coastlines come from Natural Earth; mountain ranges, deserts, forests and
-hills are rough outlines inside the script, so edit them there.
+Coastlines come from Natural Earth; mountain ranges, deserts, forests, hills
+and lowland plains are rough outlines inside the script, so edit them there.
+Regenerating with the script unchanged reproduces the same map.
 
 ## Architecture
 
@@ -67,7 +68,8 @@ src/
   main.ts      wires it all together; view state; player input
 tests/         simulation.test.ts (whole games: invalid orders, debt, state
                never mutated, JSON round trip, determinism), invariants.ts
-               (what must hold in any state: add to it when adding rules)
+               (what must hold in any state: add to it when adding rules),
+               map.test.ts (every starting city can reach level 3)
 tools/         build_europe_map.py (map generator), simulation.ts (plays a
                game in Node), simulate.ts (the balance report)
 models/        optional .glb models listed in models/models.json

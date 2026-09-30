@@ -3,8 +3,8 @@ Builds src/map/europe/europeTerrain.ts: the terrain of the Roman world on a
 hex grid.
 
 Coastlines come from Natural Earth's 1:50m land polygons (public domain).
-Mountains, deserts, forests and hills are drawn from the rough outlines below,
-so they can be tuned by hand.
+Mountains, deserts, forests, hills and a few lowland plains are drawn from the
+rough outlines below, so they can be tuned by hand.
 
 Usage (from the project root):
     pip install shapely
@@ -79,6 +79,14 @@ HILLS = {
     "Iberian system": ([(-3.0, 42.0), (-1.8, 41.0), (-1.0, 40.0)], 0.6),
     "Wales":          ([(-4.0, 51.8), (-3.6, 53.0)], 0.6),
     "Pennines":       ([(-2.3, 53.2), (-2.3, 54.8)], 0.38),
+}
+
+# Lowland plains that override the ranges and hills above: open farmland that
+# sits right under a mountain range, which the rough bands would otherwise bury.
+PLAINS = {
+    # Tarsus's fertile plain, between the Taurus and the sea. Without it the
+    # city's land is all hills and mountains, too poor to ever reach level 3.
+    "Cilician plain": ([(34.7, 36.95), (35.4, 37.05), (36.0, 36.95)], 0.5),
 }
 
 def forest_share(lon, lat):
@@ -277,7 +285,10 @@ def main():
                 coastal = any(not is_land[n] for n in neighbors(col, row))
                 mountain_d = min(dist_to_polyline(lon, lat, pts) - w / 2 for pts, w in MOUNTAINS.values())
                 hill_d = min(dist_to_polyline(lon, lat, pts) - w / 2 for pts, w in HILLS.values())
-                if mountain_d <= 0:
+                plains_d = min(dist_to_polyline(lon, lat, pts) - w / 2 for pts, w in PLAINS.values())
+                if plains_d <= 0:
+                    ch = "."
+                elif mountain_d <= 0:
                     ch = "^"
                 elif mountain_d <= HILL_FRINGE or hill_d <= 0:
                     ch = "n"

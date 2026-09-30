@@ -21,6 +21,12 @@ so.
 - **Sea crossings** (Pillars of Hercules, Messina, Sicily–Africa, the
   Channel, Corsica–Sardinia, Corsica–Italy) are ordinary steps in the
   topology (`links()`), so every city is reachable by land.
+- **Every starting city can reach level 3.** Tarsus's land held only 14,000
+  people (the Senate needs 15,000) because the Taurus band buried it in
+  mountains. The generator now draws the Cilician plain (`PLAINS`), which
+  lifts it to 18,700 and Antiochia to 40,300; `tests/map.test.ts` keeps every
+  city at least 10% above the Senate's need. Raising sea or mountain capacity
+  instead was rejected: it would have shifted the economy of 20–30 cities.
 - **Fixed territory.** Each city claims land within 2 tiles at the start and
   it never changes. Cities never claim sea, but sea tiles in reach count as
   fishing grounds (capacity and growth), because coastal cities were
@@ -168,8 +174,6 @@ Always measure with `npm run simulate` before and after.
 - **Phase 9: save and load** (not started; keep state serializable).
 - Late-game spending: a city still trains only one regiment a turn; recruitment
   slots by city level (1/2/3) was proposed and not yet chosen.
-- Some cities can never reach level 3 on poor land (e.g. Tarsus, ~14k) since
-  farms no longer add capacity. Accepted for now.
 - The AI doesn't single out the player; it targets whoever is cheapest to
   take.
 - Territory can straddle a sea crossing (cosmetic).
