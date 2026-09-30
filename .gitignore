@@ -1,0 +1,3 @@
+node_modules/
+dist/
+tools/ne_50m_land.geojson

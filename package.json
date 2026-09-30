@@ -1,0 +1,21 @@
+{
+  "name": "unlimited-war",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --kill-others --names tsc,serve --prefix-colors blue,green \"tsc --watch --preserveWatchOutput\" \"serve .\"",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "serve": "serve ."
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "concurrently": "^10.0.5",
+    "serve": "^14.2.6",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  }
+}

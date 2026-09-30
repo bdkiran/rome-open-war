@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unlimited War</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="map" aria-label="Campaign map. Drag or use arrow keys to pan, scroll to zoom, click a tile to inspect it."></canvas>
+  <div id="map-labels" class="map-labels" aria-hidden="true"></div>
+
+  <header class="title-plate">
+    <h1>Unlimited War</h1>
+  </header>
+
+  <section id="turn-panel" class="panel" aria-label="Turn">
+    <div class="turn-header">
+      <h2 id="turn-number"></h2>
+      <div class="turn-buttons">
+        <div class="city-cycler" role="group" aria-label="Your cities">
+          <button id="prev-city" type="button" class="secondary" title="Previous city (Shift+Tab)" aria-label="Previous city">&#9664;</button>
+          <span>Cities</span>
+          <button id="next-city" type="button" class="secondary" title="Next city (Tab)" aria-label="Next city">&#9654;</button>
+        </div>
+        <button id="end-turn" type="button" title="End turn (Enter)">End turn</button>
+      </div>
+    </div>
+    <p id="treasury" class="treasury"></p>
+    <div id="money-breakdown" class="money-breakdown" hidden></div>
+    <div class="faction-list-header" aria-hidden="true"><span></span><span>People</span><span>Soldiers</span><span>Gold</span></div>
+    <ol id="faction-list" class="faction-list" aria-label="Turn order"></ol>
+    <p id="turn-status" class="turn-status" aria-live="polite"></p>
+  </section>
+
+  <aside id="tile-info" class="panel" aria-live="polite"></aside>
+
+  <div id="notice" class="notice" role="status" hidden></div>
+
+  <section id="reports" class="panel reports" aria-label="Reports">
+    <div class="reports-header">
+      <h3>Reports <span id="reports-count" class="reports-count"></span></h3>
+      <div class="reports-buttons">
+        <button id="reports-history" type="button" class="secondary" aria-pressed="false">History</button>
+        <button id="reports-dismiss" type="button" class="secondary">Dismiss all</button>
+      </div>
+    </div>
+    <ol id="reports-list" class="reports-list"></ol>
+  </section>
+
+  <!-- Lets the browser resolve "@/..." imports, matching "paths" in tsconfig.json. -->
+  <div id="battle" class="modal" role="dialog" aria-modal="true" aria-labelledby="battle-title" hidden>
+    <div class="modal-card battle-card">
+      <h2 id="battle-title"></h2>
+      <div id="battle-body"></div>
+      <div class="modal-actions">
+        <button id="battle-fight" type="button">Fight</button>
+        <button id="battle-withdraw" type="button" class="secondary">Withdraw</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="siege" class="modal" role="dialog" aria-modal="true" aria-labelledby="siege-title" hidden>
+    <div class="modal-card battle-card">
+      <h2 id="siege-title"></h2>
+      <div id="siege-body"></div>
+      <div class="modal-actions">
+        <button id="siege-continue" type="button">Continue the siege</button>
+        <button id="siege-storm" type="button" class="secondary">Storm the city</button>
+        <button id="siege-withdraw" type="button" class="secondary">Withdraw</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="battle-result" class="modal battle-result" role="dialog" aria-modal="true" aria-labelledby="battle-result-title" hidden>
+    <div class="modal-card battle-card">
+      <h2 id="battle-result-title"></h2>
+      <div id="battle-result-body"></div>
+      <div class="modal-actions">
+        <button id="battle-result-close" type="button">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="settle" class="modal" role="dialog" aria-modal="true" aria-labelledby="settle-title" hidden>
+    <div class="modal-card settle-card-wrap">
+      <h2 id="settle-title"></h2>
+      <div id="settle-body"></div>
+    </div>
+  </div>
+
+  <div id="game-over" class="modal game-over" role="dialog" aria-modal="true" aria-labelledby="game-over-title" hidden>
+    <div class="modal-card game-over-card">
+      <h2 id="game-over-title"></h2>
+      <p id="game-over-text"></p>
+      <div class="modal-actions">
+        <button id="play-again" type="button">Play again</button>
+        <button id="view-map" type="button" class="secondary">View the map</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "@/": "./dist/",
+        "three": "./node_modules/three/build/three.module.js",
+        "three/addons/": "./node_modules/three/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="dist/main.js"></script>
+</body>
+</html>
