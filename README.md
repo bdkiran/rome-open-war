@@ -325,8 +325,8 @@ next to it marches in. The siege holds as long as the besieger ends its turn
 with an army next to the city; otherwise it's lifted, and the city restocks
 one turn of supplies per turn.
 
-A besieged garrison can only attack the besiegers next to its city, and only
-joins battles against them. The defenders can break a siege by attacking the
+A besieged garrison is shut in: it can't leave the city, and can only attack
+the besiegers next to it and join battles against them. The defenders can break a siege by attacking the
 besiegers, and a relief army can do the same from outside.
 
 ## Taking cities

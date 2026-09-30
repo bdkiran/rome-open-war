@@ -135,7 +135,8 @@ export function pickRegiments(army: Army, regimentIds: readonly RegimentId[]): R
  * within the regiment limit. They can't pass enemy armies or enemy cities,
  * and can't go on past any tile next to an enemy army (its zone of control):
  * they can step into one, but must stop there. Regiments already stopped
- * that way this turn can't move at all.
+ * that way this turn can't move at all, and nor can a besieged garrison: it
+ * can't leave its walls.
  */
 export function reachableTiles(
   ctx: GameContext,
@@ -144,7 +145,7 @@ export function reachableTiles(
   regimentIds: readonly RegimentId[],
 ): Map<TileId, number> {
   const moving = pickRegiments(army, regimentIds);
-  if (!moving || moving.some((r) => r.pinned)) return new Map();
+  if (!moving || moving.some((r) => r.pinned) || besiegedCity(state, army)) return new Map();
 
   const budget = Math.min(...moving.map((r) => r.movementLeft));
   const freshTurn = moving.every((r) => r.movementLeft === UNITS[r.unit].movement);
@@ -206,6 +207,7 @@ export function canMove(
   if (!army || army.owner !== factionId) return { ok: false, reason: "That army isn't yours." };
   const moving = pickRegiments(army, regimentIds);
   if (!moving) return { ok: false, reason: "Choose which regiments to move." };
+  if (besiegedCity(state, army)) return { ok: false, reason: SHUT_IN };
   if (moving.some((r) => r.movementLeft <= 0)) return { ok: false, reason: "Some chosen regiments have no movement left." };
   if (!reachableTiles(ctx, state, army, regimentIds).has(to)) {
     return { ok: false, reason: "Those regiments can't reach that tile this turn." };
@@ -308,6 +310,7 @@ export function canMarch(
   const army = state.armies[armyId];
   if (!army || army.owner !== factionId) return { ok: false, reason: "That army isn't yours." };
   if (!pickRegiments(army, regimentIds)) return { ok: false, reason: "Choose which regiments to send." };
+  if (besiegedCity(state, army)) return { ok: false, reason: SHUT_IN };
   if (destination === army.tile) return { ok: false, reason: "The army is already there." };
   if (!costToTarget(ctx, state, destination, factionId).has(army.tile)) {
     return { ok: false, reason: "There's no route there over land." };
@@ -485,6 +488,9 @@ export function attackTargets(
   if (!attackers || attackers.some((r) => r.movementLeft <= 0)) return [];
   return attackableFrom(ctx, state, army.owner, army.tile).filter((t) => mayFightAt(state, army, t));
 }
+
+/** Why a besieged garrison can't be ordered out. */
+export const SHUT_IN = "A besieged garrison can't leave its walls. It can only attack the besiegers.";
 
 /** The city an army is shut up in, if it's the garrison of one of its own cities under siege. */
 export function besiegedCity(state: GameState, army: Army): City | null {

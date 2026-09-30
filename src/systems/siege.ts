@@ -14,6 +14,7 @@ import {
 } from "@/core/state.js";
 import { SIEGE } from "@/data/siege.js";
 import type { TileId } from "@/map/topology.js";
+import { besiegedCity, SHUT_IN } from "@/systems/armies.js";
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
 import { applyLosses } from "@/systems/combat.js";
 
@@ -36,6 +37,7 @@ export function besiegeTargets(ctx: GameContext, state: GameState, army: Army): 
 export function canBesiege(ctx: GameContext, state: GameState, factionId: FactionId, armyId: ArmyId, cityTile: TileId): Check {
   const army = state.armies[armyId];
   if (!army || army.owner !== factionId) return { ok: false, reason: "That army isn't yours." };
+  if (besiegedCity(state, army)) return { ok: false, reason: SHUT_IN };
   const city = besiegeTargets(ctx, state, army).find((c) => c.tile === cityTile);
   if (!city) return { ok: false, reason: "Armies can only besiege an enemy city next to them." };
   if (city.besiegedBy === factionId) return { ok: false, reason: `You're already besieging ${city.name}.` };
