@@ -29,6 +29,9 @@ curl -L -o tools/ne_50m_land.geojson https://raw.githubusercontent.com/nvkelso/n
 python3 tools/build_europe_map.py        # rewrites src/map/europe/europeTerrain.ts
 ```
 
+Coastlines come from Natural Earth; mountain ranges, deserts, forests and
+hills are rough outlines inside the script, so edit them there.
+
 ## Architecture
 
 Game state is plain data. Rules are pure functions. Everything else reads
@@ -65,8 +68,13 @@ models/        optional .glb models listed in models/models.json
 ```
 
 Imports use the `@/` alias with a `.js` extension (`@/systems/combat.js`),
-resolved by tsconfig `paths` and the import map in `index.html` (`@/` →
-`dist/`, `three` → `node_modules`). Keep it bundler-free.
+never `../`, resolved by tsconfig `paths` and the import map in `index.html`
+(`@/` → `dist/`, `three` → `node_modules`). Keep it bundler-free.
+
+`core`, `data`, `map`, `systems`, `ai` and `game` never import from `render`.
+Only the map engine's own files may assume hexes; everything else uses
+`MapTopology` (`map/topology.ts`) and the tile data, so a new `MapEngine` can
+be swapped in through a scenario.
 
 ## Rules that must not break
 

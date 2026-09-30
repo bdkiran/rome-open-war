@@ -79,6 +79,17 @@ so.
   even odds, and its garrison sallies at even odds, at 0.6 when two turns
   from surrender, and at any odds on its last turn ("last stand").
 
+- **AI priorities**, one action at a time from a fresh look at the game:
+  merge damaged regiments; attack at good odds (20% stronger, counting joined
+  armies; garrisons only with regiments they can spare unless besieged);
+  retreat field armies from stronger enemies; launch surplus regiments from
+  the muster city (nearest the target) once they'd survive a sally; advance
+  on the target and besiege it; defend (replenish and size garrisons to
+  nearby enemy field armies); build; train field regiments that counter the
+  target's defenders, keeping upkeep under 75% of income. The target is the
+  enemy city cheapest to take (fewest defenders, short distance), reachable
+  over land and not besieged by someone else.
+
 ## Armies and recruitment
 
 - **Regiment sizes differ by unit** (spearmen 200, archers 160, cavalry 120)
