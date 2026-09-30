@@ -503,7 +503,7 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
  */
 export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boolean): BuildingType[] {
   const mine: BuildingType[] = mineableTiles(state, cityId) >= AI.mineWorthTiles ? ["mine"] : [];
-  const port: BuildingType[] = state.cities[cityId].fishingGrounds > 0 ? ["port"] : [];
+  const port: BuildingType[] = state.cities[cityId].coast > 0 ? ["port"] : [];
   const military: BuildingType[] = ["spearYard", "archeryRange", "stables"];
   return threatened
     ? ["walls", "government", "market", ...military, ...mine, "farms", ...port, "roads"]

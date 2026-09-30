@@ -7,7 +7,7 @@ import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, UNITS, regimentSize } from "@/data/units.js";
 import type { GameMap } from "@/map/mapEngine.js";
 import type { TileId } from "@/map/topology.js";
-import { createCity } from "@/systems/cities.js";
+import { createCity, measureCoasts } from "@/systems/cities.js";
 
 /**
  * Builds the starting state for a scenario: every faction's cities at their
@@ -37,7 +37,7 @@ export function createGame(ctx: GameContext, map: GameMap, scenario: Scenario): 
     rngState: scenario.seed >>> 0,
   };
 
-  state = placeCities(ctx, state, map, factions);
+  state = measureCoasts(ctx, placeCities(ctx, state, map, factions));
   return placeStartingArmies(state);
 }
 

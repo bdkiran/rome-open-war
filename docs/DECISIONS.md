@@ -158,9 +158,12 @@ so.
   threshold). This, more than anything, fixed late-game runaway growth and AI
   gold hoarding.
 - **Farms only speed growth** (they used to add capacity too).
-- **Ports** are for coastal cities (any fishing grounds) and add +20/40/60%
-  growth, like farms, but scaled by the city's sea share (fishing grounds
-  against all its tiles). A flat bonus would have given a city with one sea
+- **Ports** are for any city with sea on its coast (`City.coast`: sea within
+  its reach, or touching any of its land, counted once at the start) and
+  add +20/40/60% growth, like farms, but scaled by the city's sea share
+  (coast against coast and land). They first required fishing grounds (sea
+  within 2 tiles), which shut out Amaseia, Treva and Sardis, whose land
+  reaches the sea further out. Fishing grounds (capacity) are unchanged. A flat bonus would have given a city with one sea
   tile a full farm's worth. In full games coastal cities don't run away:
   they average ~9.9k people against ~8k inland at turn 100.
 - **Land capacity** was cut ~47% (plains 3,200/tile) so the largest city
@@ -213,7 +216,14 @@ The economy was retuned several times; the lesson each time:
      The AI enslaves, or exterminates when short of gold; it never occupies.
    - Population caps (8k / 20k by level, then the land) matter: a city at
      its level cap gains nothing from low taxes.
-   `tests/balance.test.ts` keeps these trade-offs from collapsing.
+   - Accepted exception: exterminating a big city (near its level's cap)
+     can pay a poor conqueror more even over 50–100 turns, because the
+     plunder buys early buildings and the halved city regrows fast.
+     Camulodunon, taken by a faction with 394 gold, was +15% at 50 turns.
+     Cutting plunder (30 gold per 1,000, or no level bonus) was measured and
+     rejected: the exception is fine as long as it stays rare.
+   `tests/balance.test.ts` keeps these trade-offs from collapsing: it allows
+   exterminating to be the long-run best for only a few cities.
 Always measure with `npm run simulate` (and `npm run levers` for the
 economy) before and after.
 
