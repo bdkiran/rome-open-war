@@ -368,7 +368,8 @@ to expect from them:
   final turn of supplies.
 - They garrison cities against nearby enemies, build walls near their
   borders, advance their cities, then build markets, mines and farms.
-- They raise taxes when in debt and lower them once recovered. When they
+- They raise taxes when in debt and lower them once recovered, and tax a
+  city high once it's full (it can't grow anyway). When they
   take a city, they exterminate when short of gold, enslave when they have
   other cities to fill, and otherwise occupy.
 

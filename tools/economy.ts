@@ -14,9 +14,9 @@ import { AI } from "@/data/ai.js";
 import { LEVEL_POPULATION, MAX_CITY_LEVEL } from "@/data/buildings.js";
 import { SETTLEMENT_ORDER, type SettlementChoice } from "@/data/conquest.js";
 import type { TaxRate } from "@/data/economy.js";
-import { aiBuildOrder } from "@/ai/ai.js";
+import { aiBuildOrder, aiTaxRate } from "@/ai/ai.js";
 import { canBuild, nextLevel, progressConstruction, queueConstruction } from "@/systems/buildings.js";
-import { captureCity, cityStats, factionPopulation, processCities } from "@/systems/cities.js";
+import { captureCity, factionPopulation, processCities } from "@/systems/cities.js";
 import { settleCity } from "@/systems/conquest.js";
 
 /** Picks a city's tax rate each turn. */
@@ -28,16 +28,10 @@ function readyToAdvance(city: City): boolean {
   return level >= MAX_CITY_LEVEL || city.population >= LEVEL_POPULATION[level + 1];
 }
 
-/** Whether a city is held back by its level's population limit, and close to it: growing more does nothing. */
-function atLevelCap(state: GameState, city: City): boolean {
-  const stats = cityStats(state, city);
-  return stats.limitedByLevel && city.population >= stats.capacity * 0.95;
-}
-
 /** The tax policies the levers report compares. */
 export const TAX_POLICIES: Record<string, { description: string; policy: TaxPolicy }> = {
   "all low": { description: "Low taxes everywhere.", policy: () => "low" },
-  "all normal": { description: "Normal taxes everywhere (what the AI does).", policy: () => "normal" },
+  "all normal": { description: "Normal taxes everywhere.", policy: () => "normal" },
   "all high": { description: "High taxes everywhere.", policy: () => "high" },
   "grow, then tax": {
     description: "Low taxes until a city has the people for its next level, high after.",
@@ -47,10 +41,9 @@ export const TAX_POLICIES: Record<string, { description: string; policy: TaxPoli
     description: "Low taxes until a city has the people for its next level, normal after.",
     policy: (_state, city) => (readyToAdvance(city) ? "normal" : "low"),
   },
-  "high at the level cap": {
-    description:
-      "Normal taxes, high in a city its level's population limit is holding back. Same as all normal while every city can raise its government in time.",
-    policy: (state, city) => (atLevelCap(state, city) ? "high" : "normal"),
+  "the AI": {
+    description: "The AI's own choice in peacetime: normal taxes, high in a city at its capacity (it can't grow anyway).",
+    policy: (state, city) => aiTaxRate(state, city, getFaction(state, city.owner)?.gold ?? 0, false) ?? city.taxRate,
   },
 };
 

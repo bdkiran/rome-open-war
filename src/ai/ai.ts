@@ -8,12 +8,14 @@ import {
   citiesOf,
   getFaction,
   type Army,
+  type City,
   type CityId,
   type FactionId,
   type GameState,
   type RegimentId,
 } from "@/core/state.js";
 import { AI } from "@/data/ai.js";
+import type { TaxRate } from "@/data/economy.js";
 import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import {
@@ -32,7 +34,7 @@ import {
   reachableTiles,
   upkeepFor,
 } from "@/systems/armies.js";
-import { factionIncome, mineableTiles } from "@/systems/cities.js";
+import { cityStats, factionIncome, mineableTiles } from "@/systems/cities.js";
 import { battleSides, battleStrength, defenseBonusAt, matchup } from "@/systems/combat.js";
 import { canBesiege } from "@/systems/siege.js";
 import { canBuild, nextLevel } from "@/systems/buildings.js";
@@ -109,16 +111,26 @@ function settleAction(state: GameState, factionId: FactionId): Action | null {
 
 
 /**
- * In debt, or with a city under siege, raise taxes everywhere to pay for the
- * war; once the treasury has recovered and no city is besieged, bring them
- * back to normal.
+ * The tax rate the AI wants for a city, or null to leave it as it is. In
+ * debt, or at war for a besieged city, every city pays high taxes. A city at
+ * its capacity pays high taxes too: it can't grow anyway, so slower growth
+ * costs nothing. Otherwise taxes come back to normal, once the treasury has
+ * recovered from any debt.
  */
+export function aiTaxRate(state: GameState, city: City, gold: number, atWar: boolean): TaxRate | null {
+  if (gold < 0 || atWar) return "high";
+  if (city.population >= cityStats(state, city).capacity * AI.fullCity) return "high";
+  return gold > AI.recoveredGold ? "normal" : null;
+}
+
+/** Sets one city's taxes to what the AI wants for it (see aiTaxRate). */
 function taxAction(state: GameState, factionId: FactionId, plan: Assessment): Action | null {
   const gold = getFaction(state, factionId)?.gold ?? 0;
-  const wanted = gold < 0 || plan.relief ? "high" : gold > AI.recoveredGold ? "normal" : null;
-  if (!wanted) return null;
-  const city = citiesOf(state, factionId).find((c) => c.taxRate !== wanted);
-  return city ? { type: "setTaxRate", cityId: city.id, rate: wanted } : null;
+  for (const city of citiesOf(state, factionId)) {
+    const wanted = aiTaxRate(state, city, gold, plan.relief !== null);
+    if (wanted && wanted !== city.taxRate) return { type: "setTaxRate", cityId: city.id, rate: wanted };
+  }
+  return null;
 }
 
 

@@ -154,7 +154,9 @@ The economy was retuned several times; the lesson each time:
    - Taxes: all-high leads for most of a game, but "grow, then tax" (low
      until a city has the people for its next level, high after) overtakes
      it around turn 70 and ends 100 turns ~55% ahead. That's the intended
-     play. The AI stays on normal, so it plays neither.
+     play. The AI keeps normal taxes, except that a full city (95% of its
+     capacity) pays high: it can't grow, so that costs nothing. That lifted
+     AI income ~11% and got more of its cities to level 3 in full games.
    - Conquest: exterminating pays most for ~10 turns (its plunder is ~6
      turns of the city's income, and halved cities regrow fast); occupying
      overtakes it after ~18 turns, enslaving sits between. A real choice.
