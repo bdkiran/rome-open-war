@@ -8,6 +8,13 @@ const ART: Record<BuildingType, string> = {
     ${[14, 23, 32, 41, 50].map((x) => `<rect x="${x - 2}" y="28" width="4" height="20" fill="var(--stone)"/>`).join("")}
     <rect x="8" y="48" width="48" height="4" fill="var(--stone)"/>
     <rect x="5" y="52" width="54" height="5" fill="var(--stone-dark)"/>`,
+  barracks: `
+    <path d="M6 30 L32 18 L58 30 Z" fill="var(--roof)"/>
+    <rect x="9" y="30" width="46" height="22" fill="var(--stone)"/>
+    <path d="M27 52 V40 H37 V52 Z" fill="var(--ink)"/>
+    <path d="M14 34 V48 M20 34 V48 M44 34 V48 M50 34 V48" stroke="var(--wood)" stroke-width="2.4"/>
+    <path d="M14 34 L12 31 M20 34 L18 31 M44 34 L42 31 M50 34 L48 31" stroke="#b9c2c7" stroke-width="2"/>
+    <rect x="5" y="52" width="54" height="5" fill="var(--stone-dark)"/>`,
   walls: `
     <path d="M6 56 V24 H12 V18 H18 V24 H24 V18 H30 V24 H34 V18 H40 V24 H46 V18 H52 V24 H58 V56 Z" fill="var(--stone)"/>
     <path d="M26 56 V42 A6 6 0 0 1 38 42 V56 Z" fill="var(--ink)"/>

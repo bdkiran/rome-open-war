@@ -2,7 +2,7 @@
  * City buildings. The government building is the city's level (1 to 3): other
  * buildings can be built up to that level, and advancing it needs people.
  */
-export type BuildingType = "government" | "walls" | "farms" | "market" | "mine";
+export type BuildingType = "government" | "barracks" | "walls" | "farms" | "market" | "mine";
 
 export interface BuildingLevel {
   name: string;
@@ -10,6 +10,8 @@ export interface BuildingLevel {
   cost: number;
   /** Turns of work to finish. */
   turns: number;
+  /** The city level it needs, if not the same as this building level. */
+  cityLevel?: number;
 }
 
 export interface BuildingDef {
@@ -33,6 +35,15 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
       { name: "Council hall", cost: 0, turns: 0 },
       { name: "Forum", cost: 500, turns: 4 },
       { name: "Senate", cost: 1200, turns: 6 },
+    ],
+  },
+  barracks: {
+    name: "Barracks",
+    purpose: "Trains soldiers beyond militia: each level unlocks spearmen, archers, then cavalry. Needs a level 2 city.",
+    levels: [
+      { name: "Barracks", cost: 250, turns: 2, cityLevel: 2 },
+      { name: "Drill yard", cost: 400, turns: 3, cityLevel: 2 },
+      { name: "Military academy", cost: 600, turns: 4 },
     ],
   },
   walls: {
@@ -74,7 +85,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
 };
 
 /** The order buildings are shown in. */
-export const BUILDING_ORDER: readonly BuildingType[] = ["government", "walls", "farms", "market", "mine"];
+export const BUILDING_ORDER: readonly BuildingType[] = ["government", "barracks", "walls", "farms", "market", "mine"];
 
 /**
  * The most people a city can hold at each level (index = level), whatever

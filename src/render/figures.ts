@@ -26,7 +26,7 @@ function drawFigure(p: Painter, unit: UnitType, color: string): void {
   else drawFootSoldier(p, unit, color, 0);
 }
 
-function drawFootSoldier(p: Painter, unit: "spearmen" | "archers", color: string, stride: number): void {
+function drawFootSoldier(p: Painter, unit: "militia" | "spearmen" | "archers", color: string, stride: number): void {
   const swing = 6 * stride;
   // Legs
   p.line(29, 44, 29 + swing, 61, INK, 4);
@@ -47,6 +47,9 @@ function drawFootSoldier(p: Painter, unit: "spearmen" | "archers", color: string
   if (unit === "spearmen") {
     p.path("M25.3 15.5 A6.7 6.7 0 0 1 38.7 15.5 Z", METAL, INK, 1.2);
     p.line(32, 9, 32, 6.5, color, 2.2);
+  } else if (unit === "militia") {
+    // Bare-headed: just hair
+    p.path("M26 15 Q27 9 32 9.5 Q37 9 38 15 Q35 12.5 32 13 Q29 12.5 26 15 Z", INK, INK, 1);
   } else {
     p.path("M25.5 15 Q32 5 38.5 15 Q32 12 25.5 15 Z", color, INK, 1.2);
   }
@@ -58,6 +61,11 @@ function drawFootSoldier(p: Painter, unit: "spearmen" | "archers", color: string
     p.line(39, 29, 45, 33, SKIN, 3.4);
     p.circle(24, 34, 8.5, shade(color, -0.25), INK, 1.8);
     p.circle(24, 34, 2.2, METAL, INK, 0.8);
+  } else if (unit === "militia") {
+    // A wooden club, no shield
+    p.line(39, 30, 45, 31, SKIN, 3.4);
+    p.line(46, 36, 49, 10, WOOD, 2.6);
+    p.path("M47.3 16 L48.5 5 L53 6 L51.5 17 Z", WOOD, INK, 1.2);
   } else {
     // Bow held out in front, string drawn
     p.path("M43 12 Q56 32 43 52", null, WOOD, 2.6);

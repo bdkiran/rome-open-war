@@ -47,6 +47,7 @@ export function brokenRules(state: GameState): string[] {
   }
 
   for (const faction of state.factions) {
+    if (!Number.isInteger(faction.gold)) broken.push(`${at}: ${faction.id} has ${faction.gold} gold, not a whole number`);
     if (faction.alive && citiesOf(state, faction.id).length === 0) broken.push(`${at}: ${faction.id} is alive with no cities`);
     if (!faction.alive && armiesOf(state, faction.id).length > 0) broken.push(`${at}: fallen ${faction.id} still has armies`);
   }
