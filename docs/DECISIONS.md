@@ -54,8 +54,10 @@ so.
   cities (was 43), about 9.2k a city (was 10.9k). In 8 AI games: median AI
   income 275 a turn (was 345, with several factions down to 2 cities),
   cities at level 3 8 (was 2), cities taken 172 (was 197), factions fallen
-  11 (was 13), no invalid orders or debt. Whole games are about 3× slower
-  to simulate (`npm test` about 5 minutes).
+  11 (was 13), no invalid orders or debt. With the AI's siege commitment
+  (merged alongside): cities taken 304, factions fallen 15, level-3 cities
+  23, median AI income 391 a turn. Whole games are slower to simulate
+  (`npm test` about 3.5 minutes, was 1).
 - **The city list is the player's**: 15 factions with 2 to 7 cities each
   (Rome holds 7 in Italy and Sicily). Parthia and Armenia were left out:
   their cities are beyond the map's eastern edge; Seleucia sits on the edge.
