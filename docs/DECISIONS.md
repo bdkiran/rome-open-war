@@ -173,6 +173,19 @@ so.
   enemy city cheapest to take (fewest defenders, short distance), reachable
   over land and not besieged by someone else.
 
+- **The AI commits to a siege.** It never laid one: its target was the
+  enemy city that looked cheapest, and the garrison it saw on arrival
+  (hidden by fog until then) made another city look cheaper, so its armies
+  walked off the turn they arrived (0 sieges in a 100-turn game). Now a city
+  it's besieging, or one its field armies stand next to, stays its target.
+  In 8 test games: 60+ sieges a game, factions fallen 36 (was 13), cities
+  taken 250 (was 197), level-3 cities 27 (was 2: with less dithering the AI
+  spends more on growth), AI income 558 a turn (was 345). `npm test` runs
+  in about 45 s instead of 100, with armies no longer marching back and forth.
+- **An army can't stage an attack from inside one of its own besieged
+  cities** (except on the besiegers): marching in shuts it in. This was
+  allowed by mistake and only showed once the AI laid sieges.
+
 ## Armies and recruitment
 
 - **Regiment sizes differ by unit** (spearmen 200, archers 160, cavalry 120)
@@ -188,7 +201,7 @@ so.
   (starting capitals with one was tried and rejected). Spearmen went from 200 to 180 so militia stay a real step
   down (220 militia lose to 180 spearmen: 220 vs 270); a first proposal of
   300 militia was judged too many. A regiment of militia still beats one of
-  cavalry (220 vs 180). Retraining needs no Barracks. Training and
+  cavalry (220 vs 180). Retraining needed no Barracks then (see below). Training and
   retraining costs round up to whole gold, since militia cost half a gold.
   In full games wars move faster (34 cities taken in 100 turns, up from 16),
   AI armies are mostly militia and spearmen, and cavalry are rare (few cities
@@ -217,6 +230,12 @@ so.
   turn**, wherever it sits in the queue. A regiment that leaves the city (or
   dies) is dropped from the queue and refunded immediately.
 - Merging combines only under-strength regiments of the same type.
+
+- **Retraining needs the unit's building at the regiment's tier**, as
+  training does (militia anywhere). It used to need none, which let any
+  city refill elite regiments; the player reported it as a bug.
+- **Starting armies include militia**: two regiments in the capital, one in
+  each other city, alongside the archers and cavalry (capital) or spearmen.
 
 ## Cities and economy
 

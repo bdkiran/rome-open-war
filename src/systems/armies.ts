@@ -535,7 +535,12 @@ export function attackOptions(
 
   const best = new Map<TileId, { via: TileId; left: number }>();
   const consider = (via: TileId, left: number) => {
+    // Marching into one of our own cities under siege shuts the regiments in:
+    // from there they can only fight its besiegers.
+    const home = via === army.tile ? undefined : cityAt(state, via);
+    const shutIn = home && home.owner === army.owner && home.besiegedBy ? home.besiegedBy : null;
     for (const target of attackableFrom(ctx, state, army.owner, via)) {
+      if (shutIn && armyAt(state, target)?.owner !== shutIn) continue;
       const current = best.get(target);
       if (!current || left > current.left) best.set(target, { via, left });
     }

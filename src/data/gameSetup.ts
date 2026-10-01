@@ -17,8 +17,12 @@ type StartingArmy = ReadonlyArray<{ unit: UnitType; regiments: number }>;
  */
 export const STARTING_ARMIES: { capital: StartingArmy; city: StartingArmy } = {
   capital: [
+    { unit: "militia", regiments: 2 },
     { unit: "archers", regiments: 1 },
     { unit: "cavalry", regiments: 1 },
   ],
-  city: [{ unit: "spearmen", regiments: 1 }],
+  city: [
+    { unit: "militia", regiments: 1 },
+    { unit: "spearmen", regiments: 1 },
+  ],
 };

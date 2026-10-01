@@ -40,7 +40,7 @@ import { battlefieldAt, battleSides, battleStrength } from "@/systems/combat.js"
 import { canBesiege } from "@/systems/siege.js";
 import { canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
-import { bestTier, canRetrain, canTrain, trainableUnits } from "@/systems/recruitment.js";
+import { bestTier, canRetrain, canTrain, trainableUnits, unitUnlocked } from "@/systems/recruitment.js";
 import type { BuildingType } from "@/data/buildings.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { costToTarget } from "@/systems/pathfinding.js";
@@ -430,7 +430,7 @@ function trainingAction(
     if (army?.owner !== factionId) continue;
     const queued = new Set(city.recruitQueue.flatMap((o) => (o.kind === "retrain" ? [o.regimentId] : [])));
     const battered = army.regiments
-      .filter((r) => r.soldiers <= regimentSize(r.unit) / 2 && !queued.has(r.id))
+      .filter((r) => r.soldiers <= regimentSize(r.unit) / 2 && !queued.has(r.id) && unitUnlocked(city, r.unit, r.tier))
       .map((r) => r.id);
     if (battered.length > 0 && canRetrain(state, factionId, city.id, battered).ok) {
       return { type: "replenish", cityId: city.id, regimentIds: battered };
