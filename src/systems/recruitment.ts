@@ -78,7 +78,7 @@ export function unlockReason(unit: UnitType, tier: Tier = 1): string {
 
 /**
  * Whether a regiment of a unit type and tier can be queued for training in a
- * city. Retraining an existing regiment needs no building: see canRetrain.
+ * city. Retraining an existing regiment needs the same building: see canRetrain.
  */
 export function canTrain(state: GameState, factionId: FactionId, cityId: CityId, unit: UnitType, tier: Tier = 1): Check {
   const check = queueCheck(state, factionId, cityId, 1, regimentCost(unit, tier).gold);
@@ -108,7 +108,8 @@ export function queueTraining(state: GameState, factionId: FactionId, cityId: Ci
 
 /**
  * Whether regiments in the army standing in a city can be queued for
- * retraining: damaged, not already queued, and paid for.
+ * retraining: damaged, not already queued, trainable here (the unit's
+ * building at the regiment's tier), and paid for.
  */
 export function canRetrain(state: GameState, factionId: FactionId, cityId: CityId, regimentIds: readonly RegimentId[]): Check {
   const city = state.cities[cityId];
@@ -119,6 +120,12 @@ export function canRetrain(state: GameState, factionId: FactionId, cityId: CityI
   const regiments = regimentIds.map((id) => army.regiments.find((r) => r.id === id));
   if (regiments.some((r) => !r)) return { ok: false, reason: "Those regiments aren't in the city." };
   if (regiments.some((r) => r!.soldiers >= regimentSize(r!.unit))) return { ok: false, reason: "That regiment is already at full strength." };
+  // Retraining needs what training would: the unit's building, at the regiment's tier.
+  const untrained = regiments.find((r) => !unitUnlocked(city, r!.unit, r!.tier));
+  if (untrained) {
+    const needs = unlockReason(untrained.unit, untrained.tier);
+    return { ok: false, reason: `Retraining ${unitName(untrained.unit, untrained.tier).toLowerCase()} here ${needs[0].toLowerCase()}${needs.slice(1)}` };
+  }
   const queued = new Set(city.recruitQueue.flatMap((o) => (o.kind === "retrain" ? [o.regimentId] : [])));
   if (regiments.some((r) => queued.has(r!.id))) return { ok: false, reason: "That regiment is already queued for retraining." };
   const gold = regiments.reduce((sum, r) => sum + retrainCost(r!), 0);
