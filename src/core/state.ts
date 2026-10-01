@@ -122,6 +122,8 @@ export interface BattleReport {
   attackerLosses: number;
   defenderLosses: number;
   attackerWon: boolean;
+  /** Whether any of the beaten side got away; otherwise it fought to the death. */
+  loserFled: boolean;
   /** The defender's terrain, city and walls bonus, e.g. 0.55 = +55%. */
   defenseBonus: number;
   /** Rounds fought before one side broke. */

@@ -23,17 +23,27 @@ export function showBattleResult(el: BattleResultElements, state: GameState, rep
   el.root.dataset.outcome = playerWon ? "victory" : "defeat";
   el.title.textContent = `${playerWon ? "Victory" : "Defeat"} ${report.place}`;
 
+  const enemy = escapeHtml((playerAttacked ? defender : attacker)?.name ?? "the enemy");
+  const fled = report.loserFled;
   const headline = playerAttacked
     ? playerWon
       ? report.cityCaptured
         ? `Your troops broke the defenders and took ${escapeHtml(report.cityCaptured)}.`
-        : `Your troops destroyed the army of ${escapeHtml(defender?.name ?? "the enemy")}.`
-      : `Your attack was thrown back, and every soldier who went in was lost.`
+        : fled
+          ? `Your troops broke the army of ${enemy}, and it fled.`
+          : `Your troops destroyed the army of ${enemy}: it had nowhere to flee.`
+      : fled
+        ? `Your attack was thrown back, and your troops fled.`
+        : `Your attack was thrown back, and with nowhere to flee your troops fought to the last.`
     : playerWon
-      ? `${escapeHtml(attacker?.name ?? "The enemy")} attacked, and your troops held and destroyed them.`
+      ? fled
+        ? `${enemy} attacked, and your troops held and drove them off.`
+        : `${enemy} attacked, and your troops held and destroyed them.`
       : report.cityCaptured
-        ? `${escapeHtml(attacker?.name ?? "The enemy")} broke your defenders and took ${escapeHtml(report.cityCaptured)}.`
-        : `${escapeHtml(attacker?.name ?? "The enemy")} attacked and destroyed your army.`;
+        ? `${enemy} broke your defenders and took ${escapeHtml(report.cityCaptured)}.`
+        : fled
+          ? `${enemy} broke your army, and it fled.`
+          : `${enemy} destroyed your army: it had nowhere to flee.`;
 
   const bonus = report.defenseBonus > 0 ? `Defending with +${Math.round(report.defenseBonus * 100)}% from terrain and walls` : "";
 
@@ -69,7 +79,7 @@ function side(heading: string, name: string, color: string, forces: Forces, loss
         <dt>Lost</dt><dd class="loss">${formatNumber(losses)}</dd>
         <dt>Survived</dt><dd>${formatNumber(total - losses)}</dd>
       </dl>
-      <p class="side-verdict">${won ? "Won the field" : total - losses > 0 ? "Beaten" : "Destroyed"}</p>
+      <p class="side-verdict">${won ? "Won the field" : total - losses > 0 ? "Fled" : "Destroyed"}</p>
       ${note ? `<p class="side-note">${escapeHtml(note)}</p>` : ""}
     </section>`;
 }

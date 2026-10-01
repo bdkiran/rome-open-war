@@ -10,8 +10,16 @@ export const COMBAT = {
   volleys: 2,
   /** Arrows count this much against mounted troops, and only in the first volley: horsemen close fast. */
   rangedVsMounted: 0.5,
-  /** A side breaks, and is routed and destroyed, once it has lost this share of its soldiers. */
+  /** A side breaks, and is routed, once it has lost this share of its soldiers. */
   breakPoint: 0.5,
+  /** How far a routed army flees, in tiles. With nowhere to go, it fights to the death. */
+  fleeTiles: 3,
+  /** Share of a routed army's survivors lost as it flees, whoever chases it. */
+  routLoss: 0.1,
+  /** Fleeing soldiers cut down by each of the winner's surviving horsemen (counted at their tier's stats). */
+  cavalryPursuit: 0.5,
+  /** A fleeing regiment left with less than this share of a full regiment scatters and is lost. */
+  scatterBelow: 0.1,
   /** A battle ends after this many rounds at most; the side that lost the bigger share breaks. */
   maxRounds: 30,
   /** Losses dealt by each side in each round are multiplied by a random factor within ± this amount. */

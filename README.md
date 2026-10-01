@@ -338,9 +338,18 @@ A battle is fought in **rounds**:
    open ground (plains or desert) and never against a city.
 3. Each regiment's blows are spread over the enemy's regiments by size, and
    each round has a large element of luck.
-4. A side **breaks** once it has lost half its soldiers: it's routed and
-   wiped out. The winner keeps the losses it took, so a one-sided win is
-   cheap and a close one costly.
+4. A side **breaks** once it has lost half its soldiers. The winner keeps the
+   losses it took, so a one-sided win is cheap and a close one costly.
+
+**Routs.** A beaten army **flees** up to 3 tiles, to its nearest own city in
+reach or else as far from the enemy as it can get. It can't pass enemy
+armies or cities, or cross the sea, and arrives with no movement left. On
+the way it loses another 10% of its survivors, plus half a soldier for each
+of the winner's surviving horsemen (an elite one counts 1.6). A regiment cut
+down below a tenth of its strength scatters. An army with **nowhere to
+flee fights to the death** and is destroyed, and so is a garrison defending
+its city and a besieged garrison whose sally fails. An army that attacked
+from its own city falls back inside its walls.
 
 The defender gets its terrain's defense bonus (forest +10%, hills +15%,
 mountains +25%), plus 10% in a city and its walls (+15%, +30% or +50%).
@@ -351,13 +360,14 @@ less, so +50% makes a garrison fight like one half as big again.
 **Joint battles.** Every army within one tile of either the attacker or the
 defender joins the battle on its own side: the attacker's other armies bring
 their regiments that can still move, the defender's bring all of theirs. A
-beaten side loses every army that fought, and every attacking army uses up
-its turn. If the attackers win a battle for a city, the leading army marches
+beaten side's armies each flee (or fight to the death), and every attacking
+army uses up its turn. If the attackers win a battle for a city, the leading army marches
 in and captures it.
 
 Before any attack on an army, the **battle panel** shows who would fight,
 each side's strength, the defender's bonuses, your chance of victory
-(estimated by fighting the battle out 200 times) and the likely losses. Choose Fight or Withdraw. After any battle you take
+(estimated by fighting the battle out 200 times), the likely losses either
+way, and whether the loser could flee. Choose Fight or Withdraw. After any battle you take
 part in, including an AI's attack on you, a **result screen** shows who won
 and what each side lost.
 

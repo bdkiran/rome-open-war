@@ -18,7 +18,7 @@ import {
 import { BUILDING_EFFECTS } from "@/data/buildings.js";
 import { COMBAT } from "@/data/combat.js";
 import { TERRAIN } from "@/data/terrain.js";
-import { TIERS, unitStats, type Tier, type UnitStats, type UnitType } from "@/data/units.js";
+import { ARMY_RULES, regimentSize, TIERS, UNITS, unitStats, type Tier, type UnitStats, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import {
   armyHolding,
@@ -29,6 +29,7 @@ import {
   describeRegiments,
   moveRegiments,
   pickRegiments,
+  placeNewArmy,
   relocate,
 } from "@/systems/armies.js";
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
@@ -120,10 +121,13 @@ function dealt(from: readonly Kind[], to: readonly Kind[], round: number, chargi
 
 export interface BattleResult {
   attackerWins: boolean;
-  /** Soldiers left in each attacking regiment, in the order given: none for the loser. */
+  /**
+   * Soldiers left in each attacking regiment, in the order given, when the
+   * battle ended. The loser's survivors still have to flee (see rout).
+   */
   attackerSoldiers: number[];
   defenderSoldiers: number[];
-  /** Total soldiers each side lost. */
+  /** Total soldiers each side lost in the battle itself, before any rout. */
   attackerLosses: number;
   defenderLosses: number;
   /** Rounds fought before one side broke. */
@@ -182,8 +186,8 @@ export function resolveBattle(
     }
   }
 
-  const attackerSoldiers = attackerWins ? survivors(attackers, a) : attackers.map(() => 0);
-  const defenderSoldiers = attackerWins ? defenders.map(() => 0) : survivors(defenders, d);
+  const attackerSoldiers = survivors(attackers, a, attackerWins);
+  const defenderSoldiers = survivors(defenders, d, !attackerWins);
   const lost = (side: readonly Troops[], left: number[]) => side.reduce((sum, t, i) => sum + t.soldiers - left[i], 0);
   return {
     attackerWins,
@@ -196,11 +200,11 @@ export function resolveBattle(
 }
 
 /**
- * The winner's soldiers left in each regiment: each kind's losses, in whole
+ * A side's soldiers left in each regiment: each kind's losses, in whole
  * soldiers, spread over its regiments by size. The winner always keeps at
  * least one soldier.
  */
-function survivors(side: readonly Troops[], pooled: { kinds: Kind[]; kindOf: number[] }): number[] {
+function survivors(side: readonly Troops[], pooled: { kinds: Kind[]; kindOf: number[] }, won: boolean): number[] {
   const left = side.map((t) => t.soldiers);
   pooled.kinds.forEach((kind, k) => {
     const members = side.flatMap((_, i) => (pooled.kindOf[i] === k ? [i] : []));
@@ -208,7 +212,7 @@ function survivors(side: readonly Troops[], pooled: { kinds: Kind[]; kindOf: num
     const spread = spreadLosses(members.map((i) => side[i].soldiers), before - Math.round(kind.soldiers));
     members.forEach((i, j) => (left[i] = spread[j]));
   });
-  if (left.length > 0 && left.every((n) => n <= 0)) left[0] = 1;
+  if (won && left.length > 0 && left.every((n) => n <= 0)) left[0] = 1;
   return left;
 }
 
@@ -317,6 +321,177 @@ export function defenseBonusAt(state: GameState, tile: TileId): number {
 /** A city's own defense bonus: the base city bonus plus its walls. */
 export function cityDefense(city: { buildings: { walls: number } }): number {
   return COMBAT.cityDefenseBonus + BUILDING_EFFECTS.wallsDefense[city.buildings.walls];
+}
+
+// ---- Flight -------------------------------------------------------------
+//
+// A side that breaks is routed. Each of its armies that fought flees with its
+// survivors, up to COMBAT.fleeTiles tiles, losing more on the way. An army
+// that can't flee fights to the death and is destroyed: a garrison defending
+// its city, a besieged garrison, or one with nowhere to go. An army that
+// fought from its own city falls back inside its walls.
+
+/**
+ * Soldiers a routed side loses as it flees: a share of its survivors, plus
+ * those cut down by the winner's surviving horsemen (better tiers count for
+ * more). Never more than it has.
+ */
+export function routLosses(fleeing: number, winners: readonly Troops[]): number {
+  const horsemen = winners.reduce((sum, t) => sum + (UNITS[t.unit].mounted ? t.soldiers * TIERS[t.tier ?? 1].stats : 0), 0);
+  return Math.min(fleeing, Math.round(fleeing * COMBAT.routLoss + horsemen * COMBAT.cavalryPursuit));
+}
+
+/**
+ * Where a routed army of `owner` standing on `from` flees with `regiments`
+ * regiments: up to COMBAT.fleeTiles steps over land, ignoring terrain and
+ * zones of control, but never past or onto another faction's army or city,
+ * a besieged city, or `closed` (a city being stormed). It stops on an empty
+ * tile or joins one of its own armies with room. It makes for its nearest
+ * own city in reach; otherwise for the tile farthest from `enemy`, then the
+ * one with the fewest enemy armies next to it. Null if there's nowhere to go.
+ */
+export function fleeTile(
+  ctx: GameContext,
+  state: GameState,
+  owner: FactionId,
+  from: TileId,
+  regiments: number,
+  enemy: TileId,
+  closed: TileId | null = null,
+): TileId | null {
+  const blocked = new Set<TileId>(closed ? [closed] : []);
+  const room = new Map<TileId, number>();
+  for (const army of Object.values(state.armies)) {
+    if (army.owner !== owner) blocked.add(army.tile);
+    else room.set(army.tile, ARMY_RULES.maxRegiments - army.regiments.length);
+  }
+  for (const city of Object.values(state.cities)) {
+    if (city.owner !== owner || city.besiegedBy) blocked.add(city.tile);
+  }
+
+  const steps = new Map<TileId, number>([[from, 0]]);
+  const queue: TileId[] = [from];
+  while (queue.length > 0) {
+    const tile = queue.shift()!;
+    const d = steps.get(tile)!;
+    if (d >= COMBAT.fleeTiles) continue;
+    for (const n of ctx.topology.neighbors(tile)) {
+      // Next door only: a routed army doesn't take a sea crossing.
+      if (steps.has(n) || blocked.has(n) || !TERRAIN[state.tiles[n].terrain].passable) continue;
+      if (ctx.topology.distance(tile, n) !== 1) continue;
+      steps.set(n, d + 1);
+      queue.push(n);
+    }
+  }
+
+  const candidates = [...steps].filter(([t, d]) => d > 0 && (room.get(t) ?? ARMY_RULES.maxRegiments) >= regiments);
+  if (candidates.length === 0) return null;
+  const homes = candidates.filter(([t]) => cityAt(state, t)?.owner === owner).sort((a, b) => a[1] - b[1] || compareTiles(a[0], b[0]));
+  if (homes.length > 0) return homes[0][0];
+
+  const threats = (t: TileId) => ctx.topology.neighbors(t).filter((n) => blocked.has(n) && armyAt(state, n)).length;
+  candidates.sort(
+    ([a], [b]) =>
+      ctx.topology.distance(b, enemy) - ctx.topology.distance(a, enemy) || threats(a) - threats(b) || compareTiles(a, b),
+  );
+  return candidates[0][0];
+}
+
+const compareTiles = (a: TileId, b: TileId) => (a < b ? -1 : a > b ? 1 : 0);
+
+/** What became of a routed side. */
+interface Routed {
+  state: GameState;
+  /** Soldiers it lost in all, battle and rout. */
+  losses: number;
+  /** Whether any of it got away. */
+  fled: boolean;
+}
+
+/**
+ * Routs a beaten side (see the top of this section). `left` holds each of
+ * `regiments`' survivors at the end of the battle, `winners` the winning
+ * side's survivors, `enemy` where the winners stand, and `stormed` the city
+ * being stormed, if any. Regiments of its armies that didn't fight stay where
+ * they are.
+ */
+function rout(
+  ctx: GameContext,
+  state: GameState,
+  group: readonly BattleSide[],
+  regiments: readonly Regiment[],
+  left: readonly number[],
+  winners: readonly Troops[],
+  enemy: TileId,
+  stormed: TileId | null,
+): Routed {
+  const survivors = new Map(regiments.map((r, i) => [r.id, { ...r, soldiers: left[i], movementLeft: 0 }]));
+
+  // Take everyone who fought off the map; regiments that didn't fight stay.
+  const armies = { ...state.armies };
+  for (const side of group) {
+    const fought = new Set(side.regiments.map((r) => r.id));
+    const kept = side.army.regiments.filter((r) => !fought.has(r.id));
+    if (kept.length > 0) armies[side.army.id] = { ...side.army, regiments: kept };
+    else delete armies[side.army.id];
+  }
+  let next: GameState = { ...state, armies };
+
+  // Decide where each army goes, placing them one at a time so they share
+  // the room on any tile.
+  const placed: { side: BattleSide; tile: TileId; regiments: Regiment[] }[] = [];
+  for (const side of group) {
+    const alive = side.regiments.map((r) => survivors.get(r.id)!).filter((r) => r.soldiers > 0);
+    if (alive.length === 0) continue;
+    const home = cityAt(state, side.army.tile);
+    let tile: TileId | null;
+    if (home && home.owner === side.army.owner) {
+      // In its own city: a stormed or besieged garrison is trapped; any other falls back inside.
+      tile = side.army.tile === stormed || home.besiegedBy ? null : side.army.tile;
+      const there = armyAt(next, side.army.tile);
+      if (tile && there && there.regiments.length + alive.length > ARMY_RULES.maxRegiments) tile = null;
+    } else {
+      tile = fleeTile(ctx, next, side.army.owner, side.army.tile, alive.length, enemy, stormed);
+    }
+    if (!tile) continue;
+    next = placeRegiments(next, side.army, tile, alive);
+    placed.push({ side, tile, regiments: alive });
+  }
+
+  // The rout: losses on the way, spread over everyone who got away.
+  const away = placed.flatMap((p) => p.regiments);
+  const fleeing = away.reduce((sum, r) => sum + r.soldiers, 0);
+  const spread = spreadLosses(away.map((r) => r.soldiers), routLosses(fleeing, winners)).map((n, i) => scatter(away[i], n));
+  const after = new Map(away.map((r, i) => [r.id, spread[i]]));
+  const armiesAfter = { ...next.armies };
+  for (const army of Object.values(next.armies)) {
+    if (!army.regiments.some((r) => after.has(r.id))) continue;
+    const kept = army.regiments.flatMap((r) => {
+      const n = after.get(r.id);
+      return n === undefined ? [r] : n > 0 ? [{ ...r, soldiers: n }] : [];
+    });
+    if (kept.length > 0) armiesAfter[army.id] = { ...army, regiments: kept };
+    else delete armiesAfter[army.id];
+  }
+
+  const total = regiments.reduce((sum, r) => sum + r.soldiers, 0);
+  const kept = spread.reduce((sum, n) => sum + n, 0);
+  return { state: { ...next, armies: armiesAfter }, losses: total - kept, fled: kept > 0 };
+}
+
+/** What's left of a fleeing regiment: nothing if it's down to less than COMBAT.scatterBelow of a full one. */
+function scatter(regiment: Troops, soldiers: number): number {
+  return soldiers < regimentSize(regiment.unit) * COMBAT.scatterBelow ? 0 : soldiers;
+}
+
+/** Puts regiments on a tile: into the owner's army there, or as the given army if its id is free, or as a new army. */
+function placeRegiments(state: GameState, army: Army, tile: TileId, regiments: Regiment[]): GameState {
+  const host = Object.values(state.armies).find((a) => a.tile === tile && a.owner === army.owner);
+  if (host) return { ...state, armies: { ...state.armies, [host.id]: { ...host, regiments: [...host.regiments, ...regiments] } } };
+  if (!state.armies[army.id]) {
+    return { ...state, armies: { ...state.armies, [army.id]: { ...army, tile, destination: null, regiments } } };
+  }
+  return placeNewArmy(state, army.owner, tile, regiments);
 }
 
 // ---- Attacking ----------------------------------------------------------
@@ -445,7 +620,7 @@ export function attack(
   const rng = createRng(state.rngState);
   const result = resolveBattle(fighting, holding, battlefieldAt(state, target), rng);
 
-  // Put the survivors of each regiment back in their own armies.
+  // The winners' survivors go back to their own armies.
   const armies = { ...state.armies };
   const settle = (group: BattleSide[], regiments: Regiment[], left: number[]) => {
     const survivors = new Map(regiments.flatMap((r, i) => (left[i] > 0 ? [[r.id, { ...r, soldiers: left[i] }] as const] : [])));
@@ -460,25 +635,37 @@ export function attack(
       else delete armies[side.army.id];
     }
   };
-  settle(sides, fighting, result.attackerSoldiers);
-  settle(defending, holding, result.defenderSoldiers);
+  const won = result.attackerWins;
+  if (won) settle(sides, fighting, result.attackerSoldiers);
+  else settle(defending, holding, result.defenderSoldiers);
+  const winners = won
+    ? fighting.map((r, i) => ({ ...r, soldiers: result.attackerSoldiers[i] }))
+    : holding.map((r, i) => ({ ...r, soldiers: result.defenderSoldiers[i] }));
+
+  // The losers are routed: they flee, or fight to the death.
+  const city = cityAt(state, target);
+  const routed = won
+    ? rout(ctx, { ...state, armies }, defending, holding, result.defenderSoldiers, winners, army.tile, city ? target : null)
+    : rout(ctx, { ...state, armies }, sides, fighting, result.attackerSoldiers, winners, target, null);
+  const attackerLosses = won ? result.attackerLosses : routed.losses;
+  const defenderLosses = won ? routed.losses : result.defenderLosses;
 
   const defenderName = getFaction(state, defender.owner)?.shortName ?? "Unknown";
   const joined = sides.length > 1 ? ` from ${sides.length} armies` : "";
   const helped = defending.length > 1 ? ` from ${defending.length} armies` : "";
-  const report = result.attackerWins
+  const flight = routed.fled ? `They fled, losing ${fmt(routed.losses)}.` : "They fought to the death.";
+  const report = won
     ? `${possessive(attackerName)} ${describeRegiments(fighting)}${joined} defeated ${possessive(defenderName)} ` +
-      `${describeRegiments(holding)}${helped} ${placeName(state, target)}, losing ${fmt(result.attackerLosses)}.`
+      `${describeRegiments(holding)}${helped} ${placeName(state, target)}, losing ${fmt(attackerLosses)}. ${flight}`
     : `${possessive(defenderName)} ${describeRegiments(holding)}${helped} repelled ${possessive(attackerName)} ` +
-      `${describeRegiments(fighting)}${joined} ${placeName(state, target)}, losing ${fmt(result.defenderLosses)}.`;
+      `${describeRegiments(fighting)}${joined} ${placeName(state, target)}, losing ${fmt(defenderLosses)}. ${flight}`;
 
-  let afterBattle = addLog({ ...state, armies, rngState: rng.state }, report, {
+  let afterBattle = addLog({ ...routed.state, rngState: rng.state }, report, {
     kind: "battle",
     factions: [army.owner, defender.owner],
   });
 
-  // Won a siege: the defenders are gone, so the leading army's survivors take the city.
-  const city = cityAt(state, target);
+  // Won a siege: the garrison fought to the death, so the leading army's survivors take the city.
   const leadAfter = afterBattle.armies[army.id];
   let captured: string | null = null;
   if (result.attackerWins && city && city.owner !== army.owner && leadAfter) {
@@ -500,9 +687,10 @@ export function attack(
     defendingArmies: defending.length,
     attackerForces: forcesOf(fighting),
     defenderForces: forcesOf(holding),
-    attackerLosses: result.attackerLosses,
-    defenderLosses: result.defenderLosses,
-    attackerWon: result.attackerWins,
+    attackerLosses,
+    defenderLosses,
+    attackerWon: won,
+    loserFled: routed.fled,
     defenseBonus: defenseBonusAt(state, target),
     rounds: result.rounds,
     cityCaptured: captured,
@@ -560,38 +748,94 @@ export interface BattleOdds {
   lossesIfWin: number;
   /** Soldiers the defenders lose, on average, in the battles they hold. */
   defenderLossesIfHold: number;
+  /** Soldiers the attackers lose, on average, when beaten: the battle, the rout, and any that can't flee. */
+  lossesIfBeaten: number;
+  /** The same for the defenders. */
+  defenderLossesIfBeaten: number;
+}
+
+/** Which regiments on each side could get away if beaten (see escapes). All of them if not given. */
+export interface Escapes {
+  attackers: readonly boolean[];
+  defenders: readonly boolean[];
 }
 
 /**
  * Estimates the odds by fighting the battle out COMBAT.previewBattles times
  * with dice seeded from `seed`, so the same situation always shows the same
- * odds. Where one side never wins, its losses in victory are taken as the
- * most a winner can lose: up to the break point.
+ * odds. A beaten side loses its regiments that can't get away, and the rout
+ * from the rest. Where one side never wins (or never loses), its losses are
+ * taken as the most a winner can lose (or the least a loser can): up to the
+ * break point.
  */
 export function estimateBattle(
   attackers: readonly Troops[],
   defenders: readonly Troops[],
   field: Battlefield,
   seed: number,
+  escapes?: Escapes,
 ): BattleOdds {
   const rng = createRng(seed ^ 0x5bd1e995);
+  const away = {
+    attackers: escapes?.attackers ?? attackers.map(() => true),
+    defenders: escapes?.defenders ?? defenders.map(() => true),
+  };
+  /** A beaten side's losses: everyone who can't flee, and the rout from those who do. */
+  const beaten = (side: readonly Troops[], left: readonly number[], free: readonly boolean[], winners: readonly Troops[]) => {
+    const fleeing = side.flatMap((_, i) => (free[i] ? [i] : []));
+    const survivors = fleeing.map((i) => left[i]);
+    const total = survivors.reduce((sum, n) => sum + n, 0);
+    const after = spreadLosses(survivors, routLosses(total, winners)).map((n, j) => scatter(side[fleeing[j]], n));
+    const kept = after.reduce((sum, n) => sum + n, 0);
+    return side.reduce((sum, t) => sum + t.soldiers, 0) - kept;
+  };
+  const withSoldiers = (side: readonly Troops[], left: readonly number[]) => side.map((t, i) => ({ ...t, soldiers: left[i] }));
+
   let wins = 0;
-  let winLosses = 0;
-  let holdLosses = 0;
+  const sum = { winLosses: 0, holdLosses: 0, beaten: 0, defenderBeaten: 0 };
   for (let i = 0; i < COMBAT.previewBattles; i++) {
     const r = resolveBattle(attackers, defenders, field, rng);
     if (r.attackerWins) {
       wins++;
-      winLosses += r.attackerLosses;
-    } else holdLosses += r.defenderLosses;
+      sum.winLosses += r.attackerLosses;
+      sum.defenderBeaten += beaten(defenders, r.defenderSoldiers, away.defenders, withSoldiers(attackers, r.attackerSoldiers));
+    } else {
+      sum.holdLosses += r.defenderLosses;
+      sum.beaten += beaten(attackers, r.attackerSoldiers, away.attackers, withSoldiers(defenders, r.defenderSoldiers));
+    }
   }
   const holds = COMBAT.previewBattles - wins;
-  const mostLost = (side: readonly Troops[]) => Math.round(side.reduce((sum, t) => sum + t.soldiers, 0) * COMBAT.breakPoint);
+  const share = (side: readonly Troops[], k: number) => side.map((t) => Math.round(t.soldiers * k));
+  const mostLost = (side: readonly Troops[]) => Math.round(side.reduce((total, t) => total + t.soldiers, 0) * COMBAT.breakPoint);
   return {
     winChance: wins / COMBAT.previewBattles,
-    lossesIfWin: wins > 0 ? Math.round(winLosses / wins) : mostLost(attackers),
-    defenderLossesIfHold: holds > 0 ? Math.round(holdLosses / holds) : mostLost(defenders),
+    lossesIfWin: wins > 0 ? Math.round(sum.winLosses / wins) : mostLost(attackers),
+    defenderLossesIfHold: holds > 0 ? Math.round(sum.holdLosses / holds) : mostLost(defenders),
+    lossesIfBeaten: holds > 0
+      ? Math.round(sum.beaten / holds)
+      : beaten(attackers, share(attackers, 1 - COMBAT.breakPoint), away.attackers, share(defenders, 1 - COMBAT.breakPoint).map((n, i) => ({ ...defenders[i], soldiers: n }))),
+    defenderLossesIfBeaten: wins > 0
+      ? Math.round(sum.defenderBeaten / wins)
+      : beaten(defenders, share(defenders, 1 - COMBAT.breakPoint), away.defenders, share(attackers, 1 - COMBAT.breakPoint).map((n, i) => ({ ...attackers[i], soldiers: n }))),
   };
+}
+
+/**
+ * Which of a side's regiments would get away if it were beaten here: the
+ * battle's rout played out with every soldier alive and no pursuit, to see
+ * who finds somewhere to flee.
+ */
+function escapes(
+  ctx: GameContext,
+  state: GameState,
+  group: readonly BattleSide[],
+  enemy: TileId,
+  stormed: TileId | null,
+): boolean[] {
+  const regiments = group.flatMap((s) => s.regiments);
+  const routed = rout(ctx, state, group, regiments, regiments.map((r) => r.soldiers), [], enemy, stormed);
+  const alive = new Set(Object.values(routed.state.armies).flatMap((a) => a.regiments.map((r) => r.id)));
+  return regiments.map((r) => alive.has(r.id));
 }
 
 export interface BattlePreview {
@@ -610,10 +854,18 @@ export interface BattlePreview {
   strength: BattleStrength;
   /** 0 to 1, estimated by fighting the battle out many times (see estimateBattle). */
   winChance: number;
-  /** Soldiers we'd likely lose if we win. If we lose, every attacker is lost. */
+  /** Soldiers we'd likely lose if we win. */
   lossesIfWin: number;
-  /** Soldiers the defender would likely lose if it wins. If it loses, all of them. */
+  /** Soldiers the defender would likely lose if it wins. */
   defenderLossesIfHold: number;
+  /** Soldiers we'd likely lose if beaten, rout included. */
+  lossesIfBeaten: number;
+  /** Soldiers the defender would likely lose if beaten, rout included. */
+  defenderLossesIfBeaten: number;
+  /** Whether any of us could flee if beaten; otherwise we'd fight to the death. */
+  attackersCanFlee: boolean;
+  /** Whether any of the defenders could flee if beaten. */
+  defendersCanFlee: boolean;
   /** Where the battle would be fought, e.g. "near Vostgrad". */
   place: string;
   /** Whether winning would take a city. */
@@ -656,7 +908,11 @@ export function previewBattle(
   const city = cityAt(staged, target);
   const cityBonus = city ? cityDefense(city) : 0;
   const field = battlefieldAt(staged, target);
-  const odds = estimateBattle(attackers, defenders, field, staged.rngState);
+  const away: Escapes = {
+    attackers: escapes(ctx, staged, sides.attackers, target, null),
+    defenders: escapes(ctx, staged, sides.defenders, lead.tile, city ? target : null),
+  };
+  const odds = estimateBattle(attackers, defenders, field, staged.rngState, away);
 
   return {
     attackers,
@@ -668,6 +924,8 @@ export function previewBattle(
     cityBonus,
     strength: battleStrength(attackers, defenders, field),
     ...odds,
+    attackersCanFlee: away.attackers.some(Boolean),
+    defendersCanFlee: away.defenders.some(Boolean),
     place: placeName(staged, target),
     cityAtStake: city && city.owner !== army.owner ? city.name : null,
   };
