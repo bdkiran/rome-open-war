@@ -30,6 +30,7 @@ export const SEA_CROSSINGS: readonly { name: string; from: [number, number]; to:
   { name: "Fretum Gallicum", from: [1.6, 50.95], to: [1.35, 51.15] },
   { name: "Corsica to Sardinia", from: [9.2, 41.4], to: [9.25, 41.2] },
   { name: "Corsica to Italy", from: [9.45, 42.8], to: [10.5, 42.95] },
+  { name: "Sardinia to Africa", from: [8.9, 39.0], to: [8.75, 36.95] },
 ];
 
 /**

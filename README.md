@@ -25,33 +25,36 @@ instead, see `models/README.md`.
 
 ## The scenario
 
-You play the **Roman Republic** on the eve of the Second Punic War. Thirteen
-AI powers share the map with you:
+You play the **Roman Republic** on the eve of the Second Punic War. Fourteen
+AI powers share the map with you, some with many cities and some with few:
 
-| Faction                | Cities                                 |
-|------------------------|----------------------------------------|
-| Roman Republic (you)   | Roma, Ariminum, Tarentum, Syracusae    |
-| Carthage               | Carthago, Carthago Nova, Lilybaeum     |
-| Kingdom of Macedon     | Pella, Demetrias, Corinthus            |
-| Seleucid Empire        | Antiochia, Tarsus, Sardis              |
-| Ptolemaic Egypt        | Alexandria, Memphis, Cyrene            |
-| Arverni Confederation  | Gergovia, Lutetia, Tolosa              |
-| Kingdom of Numidia     | Cirta, Siga, Iol                       |
-| Germanic Tribes        | Lupfurdum, Treva, Budorigum            |
-| Scythian Kingdom       | Neapolis Scythica, Olbia, Tanais       |
-| Odrysian Thrace        | Seuthopolis, Odessos, Byzantion        |
-| Celtiberian Confederation | Numantia, Toletum, Olisipo          |
-| Britons                | Camulodunon, Durnovaria, Isurium       |
-| Dacian Kingdom         | Sarmizegetusa, Porolissum, Piroboridava |
-| Kingdom of Pontus      | Amaseia, Sinope, Trapezus              |
+| Faction                | Cities (capital first)                  |
+|------------------------|-----------------------------------------|
+| Roman Republic (you) | Roma, Arretium, Ariminum, Capua, Tarentum, Croton, Messana |
+| Carthage | Carthago, Lilybaeum, Thapsus, Carales, Palma, Corduba |
+| Kingdom of Macedon | Pella, Bylazora |
+| Greek Leagues | Corinthus, Syracusae, Sparta, Pergamum, Rhodos |
+| Seleucid Empire | Antiochia, Seleucia, Damascus, Sardis, Tarsus, Sidon |
+| Ptolemaic Egypt | Alexandria, Memphis, Salamis, Cyrene |
+| Gallic Tribes | Alesia, Lemonum, Mediolanum, Patavium, Narbo Martius, Numantia |
+| Kingdom of Numidia | Cirta, Tingis |
+| Germanic Tribes | Batavodurum, Damme, Marcomannia |
+| Scythian Kingdom | Tanais, Alania, Sarmatia |
+| Odrysian Thrace | Tylis, Getae, Byzantion |
+| Iberian Tribes | Asturica, Carthago Nova, Osca |
+| Britons | Londinium, Eburacum, Deva, Samarobriva |
+| Dacian Kingdom | Porolissum, Iazyges |
+| Kingdom of Pontus | Amaseia, Sinope, Trapezus |
 
-The map runs from Iberia to Syria and from Egypt to the North Sea. Dashed
-lines mark **sea crossings** that armies can step across like any other
-move: the Pillars of Hercules, the Strait of Messina (Sicily to Italy),
-Sicily to Africa, the Channel, Corsica to Sardinia, and Corsica to Italy.
-Sicily is its own island, shared by Rome (Syracusae) and Carthage
-(Lilybaeum). (At this scale the Hellespont is already joined by land.) Every
-city can be reached from every other.
+The map runs from Iberia to Syria and from Egypt to the North Sea; Seleucia,
+beyond its eastern edge, stands on the edge. A few crowded cities stand a
+little way from their real sites, so each has land enough to grow. Dashed lines mark **sea
+crossings** that armies can step across like any other move: the Pillars of
+Hercules, the Strait of Messina (Sicily to Italy), Sicily to Africa, the
+Channel, Corsica to Sardinia, Corsica to Italy, and Sardinia to Africa.
+Sicily is a round island shared by Rome (Messana), the Greeks (Syracusae) and
+Carthage (Lilybaeum). (At this scale the Hellespont is already joined by
+land.) Every city can be reached from every other.
 
 The game is won by being the **last faction standing**: when every rival has
 fallen, a victory screen appears. If Rome loses its last city, it's defeat.
@@ -128,9 +131,14 @@ tells you when that happens.
 
 ## Cities and economy
 
-Each faction starts with three cities: a capital of 6,000 people and two more
-of 3,000 nearby. No other cities are ever created. Each city claims the land
-within 2 tiles at the start, and its territory never changes.
+Each faction starts with its cities: a capital of 6,000 people and the rest
+of 3,000. No other cities are ever created. Each city claims the land within
+3 tiles at the start, and its territory never changes. Cities are spread
+apart so their land doesn't overlap: a city closer than 7 tiles to another is
+moved up to 4 tiles from its real spot. Where even that isn't enough (in
+crowded Italy, Greece or Sicily), neighbours split the land between them,
+each tile going to the nearer city. So some cities hold far more land than
+others.
 
 Population grows every turn using a carrying capacity:
 
@@ -139,11 +147,10 @@ growth = baseGrowthRate × population × (1 − population / capacity)
 ```
 
 - **Capacity** is the total number of people the city's land supports. Each
-  terrain type supports a set amount: plains 3,200, forest 1,600, hills 1,300,
-  mountains 400, desert 150. The sea is never claimed as land, but every sea
-  tile within a city's reach (2 tiles) counts as **fishing grounds**, adding
-  1,000. The largest city on the map, all-plains Lutetia, has land for about
-  60,000.
+  terrain type supports a set amount: plains 1,600, forest 800, hills 650,
+  mountains 200, desert 75. The sea is never claimed as land, but every sea
+  tile within a city's reach (3 tiles) counts as **fishing grounds**, adding
+  500.
 - **The city's level caps it.** Whatever its land supports, a city can't grow
   past its level's limit until its government is raised: 8,000 people with a
   Council hall (level 1), 20,000 with a Forum (level 2), and only its land
@@ -182,10 +189,10 @@ militia until it builds one.
 | Archery range | Trains basic / advanced / elite archers  | 200 / 350 / 550 gold | 2 / 3 / 4 |
 | Stables       | Trains basic / advanced / elite cavalry  | 250 / 400 / 650 gold | 2 / 3 / 4 |
 | Walls    | +15% / +30% / +50% defense, on top of the city's 10%       | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Farms    | +20% / +40% / +60% population growth, and +0.5 / +1 / +1.5 gold per plains tile in its land | 150 / 300 / 550 gold | 2 / 3 / 4 |
+| Farms    | +20% / +40% / +60% population growth, and +0.25 / +0.5 / +0.75 gold per plains tile in its land | 150 / 300 / 550 gold | 2 / 3 / 4 |
 | Market   | +30% / +60% / +100% gold                                   | 150 / 300 / 500 gold | 2 / 3 / 4 |
-| Mine     | +2 / +4 / +6 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Port     | +30% / +60% / +90% growth, times the city's share of sea, and +0.5 / +1 / +1.5 gold per sea tile on its coast (cities whose land touches the sea) | 200 / 400 / 650 gold | 2 / 3 / 4 |
+| Mine     | +1 / +2 / +3 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
+| Port     | +30% / +60% / +90% growth, times the city's share of sea, and +0.25 / +0.5 / +0.75 gold per sea tile on its coast (cities whose land touches the sea) | 200 / 400 / 650 gold | 2 / 3 / 4 |
 | Roads    | Faster movement across the city's land, for every army (see Movement) | 150 / 300 / 500 gold | 2 / 3 / 4 |
 
 A mine can only be built in a city whose territory has hills or mountains, so

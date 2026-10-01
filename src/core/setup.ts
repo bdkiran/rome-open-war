@@ -1,13 +1,13 @@
 import type { GameContext } from "@/core/context.js";
 import { citiesOf, type Army, type GameState, type Regiment } from "@/core/state.js";
 import { ECONOMY } from "@/data/economy.js";
-import { STARTING_ARMIES } from "@/data/gameSetup.js";
+import { GAME_SETUP, STARTING_ARMIES } from "@/data/gameSetup.js";
 import type { Scenario, ScenarioFaction } from "@/data/scenarios/types.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, UNITS, regimentSize } from "@/data/units.js";
 import type { GameMap } from "@/map/mapEngine.js";
 import type { TileId } from "@/map/topology.js";
-import { createCity, measureCoasts } from "@/systems/cities.js";
+import { claimTerritory, createCity, measureCoasts } from "@/systems/cities.js";
 
 /**
  * Builds the starting state for a scenario: every faction's cities at their
@@ -37,14 +37,18 @@ export function createGame(ctx: GameContext, map: GameMap, scenario: Scenario): 
     rngState: scenario.seed >>> 0,
   };
 
-  state = measureCoasts(ctx, placeCities(ctx, state, map, factions));
+  state = measureCoasts(ctx, claimTerritory(ctx, placeCities(ctx, state, map, factions)));
   return placeStartingArmies(state);
 }
 
 /**
  * Places each faction's cities at their real locations: capitals first, then
- * one city per faction per round, so land between rivals is claimed fairly.
- * A location that falls on a sea tile moves to the nearest land.
+ * one city per faction per round. A location that falls on a sea tile moves
+ * to the nearest land. A city closer than GAME_SETUP.minCitySpacing to one
+ * already placed moves over land to the nearest tile that isn't, at most
+ * GAME_SETUP.maxCityShift steps away, so their land doesn't overlap;
+ * if there's none, as far from its neighbours as it can get, and they share
+ * their land (claimTerritory).
  */
 function placeCities(ctx: GameContext, state: GameState, map: GameMap, factions: readonly ScenarioFaction[]): GameState {
   if (!map.locate) throw new Error("This scenario places cities by location, but its map can't locate places");
@@ -59,15 +63,52 @@ function placeCities(ctx: GameContext, state: GameState, map: GameMap, factions:
     factions.forEach((faction, i) => {
       const city = ordered[i][round];
       if (!city) return;
-      const tile = nearestFreeLand(ctx, next, map.locate!(city.lon, city.lat));
-      if (!tile) {
+      const real = nearestFreeLand(ctx, next, map.locate!(city.lon, city.lat));
+      if (!real) {
         console.warn(`Couldn't place ${city.name}: no land near ${city.lon}, ${city.lat}`);
         return;
       }
+      const tile = spacedTile(ctx, next, real);
       next = createCity(ctx, next, faction.id, tile, Boolean(city.capital), city.name);
     });
   }
   return next;
+}
+
+/**
+ * Where to put a city whose real location is `real`: the nearest tile, over
+ * land, that's at least GAME_SETUP.minCitySpacing from every city already
+ * placed, at most GAME_SETUP.maxCityShift steps from `real`. Steps go to
+ * adjacent land only, so a city never moves across the sea. If no tile is
+ * that far, the one in reach that's farthest from its nearest neighbour (the
+ * nearest such tile on a tie), so crowded cities still get what room they can.
+ */
+function spacedTile(ctx: GameContext, state: GameState, real: TileId): TileId {
+  const cities = Object.values(state.cities).map((c) => c.tile);
+  if (cities.length === 0) return real;
+  const room = (t: TileId) => Math.min(GAME_SETUP.minCitySpacing, ...cities.map((c) => ctx.topology.distance(c, t)));
+
+  let best = { tile: real, room: room(real) };
+  const seen = new Set([real]);
+  let frontier = [real];
+  for (let step = 1; step <= GAME_SETUP.maxCityShift && best.room < GAME_SETUP.minCitySpacing; step++) {
+    const next: TileId[] = [];
+    for (const tile of frontier) {
+      for (const n of ctx.topology.neighbors(tile)) {
+        if (seen.has(n) || ctx.topology.distance(tile, n) !== 1 || !TERRAIN[state.tiles[n].terrain].passable) continue;
+        seen.add(n);
+        next.push(n);
+      }
+    }
+    // Tiles in reach at this many steps, in a fixed order; a nearer tile wins a tie.
+    for (const tile of next.sort()) {
+      if (cities.includes(tile)) continue;
+      const r = room(tile);
+      if (r > best.room) best = { tile, room: r };
+    }
+    frontier = next;
+  }
+  return best.tile;
 }
 
 /** The closest passable tile without a city, searching outward from `tile`. */
