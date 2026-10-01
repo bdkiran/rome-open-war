@@ -224,34 +224,35 @@ goes back to normal taxes.
 
 ## Armies
 
-Spearmen, archers and cavalry form a rock-paper-scissors triangle. Militia
-stand outside it: big, cheap regiments that beat nothing, and that every
-other unit beats.
+Every unit is a set of battle stats (see **Battles** for how they're used).
+They make spearmen beat cavalry, archers beat spearmen and cavalry beat
+archers. Militia are big, cheap regiments of poor fighters.
 
-| Unit     | Movement | Beats             | Loses to             | Regiment     | Cost per regiment (basic) | Upkeep per regiment (basic) | Trained in       |
-|----------|----------|-------------------|----------------------|--------------|---------------------------|-----------------------------|------------------|
-| Militia  | 12       | nothing           | everything else      | 220 soldiers | 110 gold                  | about 2 gold a turn         | any city         |
-| Spearmen | 12       | Cavalry, militia  | Archers              | 180 soldiers | 180 gold                  | about 4 gold a turn         | a Spear yard     |
-| Archers  | 12       | Spearmen, militia | Cavalry              | 160 soldiers | 320 gold                  | 5 gold a turn               | an Archery range |
-| Cavalry  | 16       | Archers, militia  | Spearmen             | 120 soldiers | 360 gold                  | 6 gold a turn               | Stables          |
+| Unit     | Movement | Attack | Armor | Special                  | Regiment     | Cost per regiment (basic) | Upkeep per regiment (basic) | Trained in       |
+|----------|----------|--------|-------|--------------------------|--------------|---------------------------|-----------------------------|------------------|
+| Militia  | 12       | 2      | 2     | none                     | 220 soldiers | 110 gold                  | about 2 gold a turn         | any city         |
+| Spearmen | 12       | 3      | 3     | Anti-cavalry +6          | 180 soldiers | 180 gold                  | about 4 gold a turn         | a Spear yard     |
+| Archers  | 12       | 1      | 1     | Ranged 6                 | 160 soldiers | 320 gold                  | 5 gold a turn               | an Archery range |
+| Cavalry  | 16       | 6      | 2     | Charge +2, mounted       | 120 soldiers | 360 gold                  | 6 gold a turn               | Stables          |
 
 Any city can train militia. Spearmen, archers and cavalry each need their own
 building, which even a level-1 city can build. Each level of that building
 unlocks a better **tier** of its unit:
 
-| Tier     | Building level | Each soldier fights like | Gold and upkeep | People |
-|----------|----------------|--------------------------|-----------------|--------|
-| Basic    | 1              | 1 basic soldier          | ×1              | same   |
-| Advanced | 2 (level-2 city) | 1.3                    | ×1.5            | same   |
-| Elite    | 3 (level-3 city) | 1.6                    | ×2.1            | same   |
+| Tier     | Building level | Stats | Gold and upkeep | People |
+|----------|----------------|-------|-----------------|--------|
+| Basic    | 1              | ×1    | ×1              | same   |
+| Advanced | 2 (level-2 city) | ×1.3 | ×1.5           | same   |
+| Elite    | 3 (level-3 city) | ×1.6 | ×2.1           | same   |
 
-So a regiment of elite spearmen (180 soldiers, 378 gold, about 8 gold a turn)
-fights like 288 basic spearmen: a little dearer per gold, much cheaper per
-person. A regiment keeps the tier it was trained at, and is marked II or III
-in its box. Militia come in one tier. A regiment of militia loses to one of
-spearmen or archers, but beats one of cavalry: cavalry beat militia soldier
-for soldier, but a militia regiment is almost twice as big. Militia are the
-cheapest strength in gold, and the dearest in people.
+Every stat is multiplied, so a regiment of elite spearmen (180 soldiers, 378
+gold, about 8 gold a turn) fights like 288 basic spearmen: a little dearer
+per gold, much cheaper per person. A regiment keeps the tier it was trained
+at, and is marked II or III in its box. Militia come in one tier. A regiment
+of militia loses to one of spearmen or archers, and about matches one of
+cavalry: a cavalry soldier is worth nearly two militia, but a militia
+regiment is almost twice as big. Militia are the cheapest strength in gold,
+and the dearest in people.
 
 Every faction starts with a regiment each of Archers and Cavalry in its
 capital, and a regiment of Spearmen garrisoning each of its other cities,
@@ -326,17 +327,26 @@ Armies attack an enemy army, or an enemy city with no army in it, which
 captures the city. The target can be anywhere the army can reach this turn:
 it marches up and attacks, as long as it has movement left when it arrives.
 
-In a battle, each regiment's soldiers are multiplied by its matchup against
-the enemy's mix of unit types: ×1.5 against the type it beats, weighted by
-how many soldiers of each type the enemy has. Only the side with the
-advantage gets a multiplier, so an army needs about 1.5 times as many
-soldiers to beat its counter. A mixed army has no single counter. The
-defender also gets its terrain's defense bonus (forest +10%, hills +15%,
+A battle is fought in **rounds**:
+
+1. **Volleys.** For two rounds only archers fight. Arrows ignore armor, which
+   is why archers beat well-armored spearmen. Horsemen close fast: only the
+   first volley reaches them, at half effect.
+2. **Melee.** Then every regiment fights each round, killing soldiers by its
+   attack over the target's armor. Spearmen add their anti-cavalry against
+   horsemen. Attacking cavalry add their charge in the first melee round, on
+   open ground (plains or desert) and never against a city.
+3. Each regiment's blows are spread over the enemy's regiments by size, and
+   each round has a large element of luck.
+4. A side **breaks** once it has lost half its soldiers: it's routed and
+   wiped out. The winner keeps the losses it took, so a one-sided win is
+   cheap and a close one costly.
+
+The defender gets its terrain's defense bonus (forest +10%, hills +15%,
 mountains +25%), plus 10% in a city and its walls (+15%, +30% or +50%).
 They're all added, so a hill city with stone walls defends at
-15% + 10% + 30% = +55%. Each side gets a small random factor. The stronger
-side wins and the loser is wiped out; the winner loses more soldiers the
-closer the fight was.
+15% + 10% + 30% = +55%. The defenders deal that much more and take that much
+less, so +50% makes a garrison fight like one half as big again.
 
 **Joint battles.** Every army within one tile of either the attacker or the
 defender joins the battle on its own side: the attacker's other armies bring
@@ -346,8 +356,8 @@ its turn. If the attackers win a battle for a city, the leading army marches
 in and captures it.
 
 Before any attack on an army, the **battle panel** shows who would fight,
-each side's strength, the defender's bonuses, your exact chance of victory
-and the likely losses. Choose Fight or Withdraw. After any battle you take
+each side's strength, the defender's bonuses, your chance of victory
+(estimated by fighting the battle out 200 times) and the likely losses. Choose Fight or Withdraw. After any battle you take
 part in, including an AI's attack on you, a **result screen** shows who won
 and what each side lost.
 
@@ -403,11 +413,12 @@ The AI factions play by the same rules and under the same fog as you. What
 to expect from them:
 
 - They attack when the odds are good (about 20% stronger, counting every army
-  that would join in), retreat from stronger armies, and march on the enemy
+  that would join in), march up to a city they can't see into before
+  storming it, retreat from stronger armies, and march on the enemy
   city that's cheapest to take, whoever owns it. They besiege it and wait for
   it to surrender or for good odds to storm it.
 - **They defend their cities hard.** When one is besieged, they raise taxes,
-  train a relief force that counters the besiegers, and march every field
+  train a relief force suited to the besiegers, and march every field
   army to it. The garrison sallies at even odds, attacks at poor odds once
   surrender is two turns away, and makes a **last stand** at any odds on its
   final turn of supplies.

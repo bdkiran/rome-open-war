@@ -20,8 +20,8 @@ import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, type Tier, type UnitType }
 import type { TileId } from "@/map/topology.js";
 import {
   assess,
-  counterFor,
   counterToNearestEnemy,
+  regimentStrengthAgainst,
   trainAgainst,
   enemyRegimentsNear,
   stackCanMove,
@@ -36,7 +36,7 @@ import {
   upkeepFor,
 } from "@/systems/armies.js";
 import { cityStats, factionIncome, mineableTiles } from "@/systems/cities.js";
-import { battleSides, battleStrength, defenseBonusAt, matchup } from "@/systems/combat.js";
+import { battlefieldAt, battleSides, battleStrength } from "@/systems/combat.js";
 import { canBesiege } from "@/systems/siege.js";
 import { canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
@@ -78,13 +78,14 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
   // The AI plays under the same fog as the player: it decides using only the
   // enemy armies it can see. Its moves are worked out against the real state
   // so they're always legal.
-  const seen = fogged(real, factionId, visibleTiles(ctx, real, factionId));
+  const visible = visibleTiles(ctx, real, factionId);
+  const seen = fogged(real, factionId, visible);
   const plan = assess(ctx, seen, factionId);
   return (
     settleAction(seen, factionId) ??
     taxAction(seen, factionId, plan) ??
     mergeAction(seen, factionId) ??
-    attackAction(ctx, real, seen, factionId, plan) ??
+    attackAction(ctx, real, seen, factionId, plan, visible) ??
     retreatAction(ctx, real, seen, factionId) ??
     launchAction(ctx, real, seen, factionId, plan) ??
     advanceAction(ctx, real, seen, factionId, plan) ??
@@ -143,7 +144,14 @@ function mergeAction(state: GameState, factionId: FactionId): Action | null {
 
 // ---- 1. Attack ----------------------------------------------------------
 
-function attackAction(ctx: GameContext, real: GameState, state: GameState, factionId: FactionId, plan: Assessment): Action | null {
+function attackAction(
+  ctx: GameContext,
+  real: GameState,
+  state: GameState,
+  factionId: FactionId,
+  plan: Assessment,
+  visible: ReadonlySet<TileId>,
+): Action | null {
   // Field armies first, so a captured city is taken by troops that aren't needed at home.
   const armies = [...armiesOf(state, factionId)].sort(
     (a, b) => Number(isHome(state, b, factionId)) - Number(isHome(state, a, factionId)),
@@ -158,7 +166,13 @@ function attackAction(ctx: GameContext, real: GameState, state: GameState, facti
       const defender = armyAt(state, target);
       // Only attack armies we can see. A city that looks empty may hide a garrison.
       if (!defender && armyAt(real, target) && !cityAt(state, target)) continue;
-      if (!defender) return { type: "attack", armyId: army.id, regimentIds, target, via };
+      if (!defender) {
+        // A city out of sight may hide a garrison: march up and look before storming it.
+        if (cityAt(state, target) && via !== army.tile && !visible.has(target)) {
+          return { type: "moveArmy", armyId: army.id, regimentIds, to: via };
+        }
+        return { type: "attack", armyId: army.id, regimentIds, target, via };
+      }
 
       // Both whole sides, as they'd stand once the army has marched up: every
       // army of ours or theirs (that we can see) within a tile of either.
@@ -166,7 +180,7 @@ function attackAction(ctx: GameContext, real: GameState, state: GameState, facti
       const strength = battleStrength(
         sides.attackers.flatMap((s) => s.regiments),
         sides.defenders.flatMap((s) => s.regiments),
-        defenseBonusAt(state, target),
+        battlefieldAt(state, target),
       );
       if (strength.attacker > strength.defender * attackMarginFor(ctx, state, factionId, army, target)) {
         return { type: "attack", armyId: army.id, regimentIds, target, via };
@@ -225,7 +239,7 @@ function retreatAction(ctx: GameContext, real: GameState, state: GameState, fact
     const outmatched = ctx.topology.neighbors(army.tile).some((tile) => {
       const enemy = armyAt(state, tile);
       if (!enemy || enemy.owner === factionId) return false;
-      const s = battleStrength(enemy.regiments, army.regiments, defenseBonusAt(state, army.tile));
+      const s = battleStrength(enemy.regiments, army.regiments, battlefieldAt(state, army.tile));
       return s.attacker > s.defender * AI.retreatMargin;
     });
     if (!outmatched) continue;
@@ -268,16 +282,15 @@ function launchAction(ctx: GameContext, real: GameState, state: GameState, facti
 
   // Send the regiments best suited to the target's defenders; the rest stay home.
   const defenders = armyAt(state, target.tile);
-  const counter = counterFor(defenders);
   const ready = army.regiments
     .filter((r) => r.movementLeft > 0)
-    .sort((a, b) => (counter ? rank(b.unit, counter) - rank(a.unit, counter) : 0));
+    .sort((a, b) => (defenders ? regimentStrengthAgainst(b, defenders) - regimentStrengthAgainst(a, defenders) : 0));
   const group = ready.slice(0, surplus);
   if (group.length < AI.minLaunchRegiments) return null;
 
   // Big enough to hold its ground if the defenders sally out against it in the open.
   if (defenders) {
-    const sally = battleStrength(defenders.regiments, group, 0);
+    const sally = battleStrength(defenders.regiments, group, { defenseBonus: 0, openGround: true });
     if (sally.attacker * AI.launchMargin > sally.defender) return null;
   }
 
@@ -302,12 +315,6 @@ function launchRelief(ctx: GameContext, real: GameState, state: GameState, facti
   const regimentIds = group.map((r) => r.id);
   const step = stepToward(ctx, real, state, army, regimentIds, relief.city.tile);
   return step ? { type: "moveArmy", armyId: army.id, regimentIds, to: step } : null;
-}
-
-/** Higher for units that do better against the counter's victim. */
-function rank(unit: UnitType, counter: UnitType): number {
-  // The counter's victim is the first type it beats (the triangle one; every type beats militia).
-  return unit === counter ? 2 : matchup(unit, UNITS[counter].beats[0]) >= 1 ? 1 : 0;
 }
 
 // ---- 4. Advance ---------------------------------------------------------

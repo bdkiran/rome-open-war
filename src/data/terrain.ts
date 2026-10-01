@@ -35,15 +35,17 @@ export interface TerrainDef {
   growth: number;
   /** Whether a mine (data/buildings.ts) earns gold from this tile. */
   mineable: boolean;
+  /** Open ground, where attacking cavalry can charge (see data/units.ts). */
+  openGround: boolean;
 }
 
 export const TERRAIN: Record<TerrainType, TerrainDef> = {
-  water:     { name: "Sea",       moveCost: Infinity, passable: false, defenseBonus: 0,    capacity: 1000, growth: 0.035, mineable: false },
-  plains:    { name: "Plains",    moveCost: 2,        passable: true,  defenseBonus: 0,    capacity: 3200, growth: 0.05,  mineable: false },
-  forest:    { name: "Forest",    moveCost: 3,        passable: true,  defenseBonus: 0.1,  capacity: 1600, growth: 0.035, mineable: false },
-  hills:     { name: "Hills",     moveCost: 3,        passable: true,  defenseBonus: 0.15, capacity: 1300, growth: 0.025, mineable: true },
-  mountains: { name: "Mountains", moveCost: 4,        passable: true,  defenseBonus: 0.25, capacity: 400,  growth: 0.01,  mineable: true },
-  desert:    { name: "Desert",    moveCost: 3,        passable: true,  defenseBonus: 0,    capacity: 150,  growth: 0.01,  mineable: false },
+  water:     { name: "Sea",       moveCost: Infinity, passable: false, defenseBonus: 0,    capacity: 1000, growth: 0.035, mineable: false, openGround: false },
+  plains:    { name: "Plains",    moveCost: 2,        passable: true,  defenseBonus: 0,    capacity: 3200, growth: 0.05,  mineable: false, openGround: true },
+  forest:    { name: "Forest",    moveCost: 3,        passable: true,  defenseBonus: 0.1,  capacity: 1600, growth: 0.035, mineable: false, openGround: false },
+  hills:     { name: "Hills",     moveCost: 3,        passable: true,  defenseBonus: 0.15, capacity: 1300, growth: 0.025, mineable: true, openGround: false },
+  mountains: { name: "Mountains", moveCost: 4,        passable: true,  defenseBonus: 0.25, capacity: 400,  growth: 0.01,  mineable: true, openGround: false },
+  desert:    { name: "Desert",    moveCost: 3,        passable: true,  defenseBonus: 0,    capacity: 150,  growth: 0.01,  mineable: false, openGround: true },
 };
 
 /**

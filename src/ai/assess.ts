@@ -9,9 +9,8 @@ import {
   type GameState,
 } from "@/core/state.js";
 import { AI } from "@/data/ai.js";
-import { ARMY_RULES, counterTo, LINE_UNITS, UNIT_TYPES, type UnitType, UNITS } from "@/data/units.js";
-import { mainUnit } from "@/systems/armies.js";
-import { matchup } from "@/systems/combat.js";
+import { ARMY_RULES, LINE_UNITS, regimentSize, UNIT_TYPES, type UnitType, UNITS } from "@/data/units.js";
+import { sideStrength, type Troops } from "@/systems/combat.js";
 import { trainableUnits } from "@/systems/recruitment.js";
 import { landmasses } from "@/systems/pathfinding.js";
 
@@ -128,23 +127,24 @@ function cityOwnedBy(state: GameState, tile: string, owner: FactionId): boolean 
   return Object.values(state.cities).some((c) => c.tile === tile && c.owner === owner);
 }
 
-/** The unit type that best counters an army, by its main type. */
-export function counterFor(army: Army | undefined): UnitType | null {
-  return army ? counterTo(mainUnit(army)) : null;
+/**
+ * How much a regiment adds against an enemy army: its quick strength
+ * (sideStrength) against the army's actual mix of troops. An army holds only
+ * so many regiments, so this is per regiment, not per gold.
+ */
+export function regimentStrengthAgainst(regiment: Troops, enemy: Army): number {
+  return sideStrength([regiment], enemy.regiments, true);
 }
 
 /**
- * The unit a city should train against an enemy army: the counter to its
- * main type if the city can train it, otherwise whichever unit it can train
- * does best against that type (the dearer one on a tie). Null with no enemy.
+ * The unit a city should train against an enemy army: whichever of those it
+ * can train makes the strongest regiment against it (the dearer one on a
+ * tie). Null with no enemy.
  */
 export function trainAgainst(city: City, army: Army | undefined): UnitType | null {
   if (!army) return null;
-  const enemy = mainUnit(army);
-  const options = trainableUnits(city);
-  const counter = counterTo(enemy);
-  if (options.includes(counter)) return counter;
-  return [...options].sort((a, b) => matchup(b, enemy) - matchup(a, enemy) || UNIT_TYPES.indexOf(b) - UNIT_TYPES.indexOf(a))[0];
+  const value = (unit: UnitType) => regimentStrengthAgainst({ unit, soldiers: regimentSize(unit) }, army);
+  return [...trainableUnits(city)].sort((a, b) => value(b) - value(a) || UNIT_TYPES.indexOf(b) - UNIT_TYPES.indexOf(a))[0];
 }
 
 /** What a city should train against the nearest enemy army, or a rotating choice of what it can train when none are near. */

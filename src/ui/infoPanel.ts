@@ -27,7 +27,7 @@ import { cityDefense, defenseBonusAt } from "@/systems/combat.js";
 import { enterCost } from "@/systems/pathfinding.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
-import { formatNumber, formatPercent } from "@/render/format.js";
+import { describeAttackArmor, describeSpecials, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg } from "@/render/figures.js";
 import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
 import { canRetrain, canTrain, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
@@ -347,19 +347,21 @@ function recruitmentTab(input: InfoPanelInput, city: City): string {
     const name = unitName(unit, tier);
     const cost = regimentCost(unit, tier);
     const check = canTrain(state, humanId, city.id, unit, tier);
-    // Every type beats militia; name the one that matters.
-    const beats = def.beats.filter((b) => b !== "militia");
-    const strength = tier > 1 ? ` Each soldier fights like ${TIERS[tier].strength} basic ones.` : "";
+    const specials = describeSpecials(unit, tier);
+    const stats = `${describeAttackArmor(unit, tier)}${specials ? ` · ${specials}` : ""}.`;
+    const drilled = tier > 1 ? ` Stats ×${TIERS[tier].stats}.` : "";
+    const short = describeStatsShort(unit, tier);
     return `
       <button type="button" class="unit-box" data-train="${unit}" data-tier="${tier}" ${check.ok ? "" : "disabled"}
-        title="${escapeHtml(check.ok ? `Queue a regiment of ${name}: ${cost.gold} gold, ${cost.population} people, upkeep ${formatUpkeep(upkeepFor(unit, regimentSize(unit), tier))} a turn.${strength}` : check.reason)}">
+        title="${escapeHtml(check.ok ? `Queue a regiment of ${name}: ${cost.gold} gold, ${cost.population} people, upkeep ${formatUpkeep(upkeepFor(unit, regimentSize(unit), tier))} a turn. ${stats}${drilled}` : check.reason)}">
         ${tierMark(tier)}
         ${figureSvg(unit, color)}
         <span class="unit-name">${escapeHtml(name)}</span>
         <span class="unit-stat">${regimentSize(unit)} soldiers</span>
         <span class="unit-stat">${formatNumber(cost.gold)} gold</span>
         <span class="unit-stat">Move ${def.movement}</span>
-        <span class="unit-stat">${beats.length ? `Beats ${beats.map((b) => UNITS[b].name.toLowerCase()).join(", ")}` : "Beats nothing"}</span>
+        <span class="unit-stat">${short[0]}</span>
+        <span class="unit-stat">${short[1]}</span>
       </button>`;
   }).join("");
 

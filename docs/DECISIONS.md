@@ -69,9 +69,53 @@ so.
 
 ## Combat
 
-- Rock-paper-scissors: spearmen beat cavalry, cavalry beat archers, archers
-  beat spearmen (×1.5 for the advantaged side only). Small random factor;
-  battle odds shown in the battle panel are computed exactly.
+- **Units are stats; battles are fought in rounds.** This replaced a
+  rock-paper-scissors table (×1.5 for the advantaged side, one roll decides),
+  because the player wanted units to be a combination of attack, armor and
+  so on. Each unit has attack, armor, and one special: ranged (archers),
+  charge (cavalry, attacking on open ground only, never against a city),
+  anti-cavalry (spearmen). Two volley rounds, then melee rounds (attack ÷
+  armor) until a side has lost half its soldiers and breaks; the loser is
+  still destroyed, as before.
+- **The stats were fitted to the old matchups** (regiment against regiment,
+  attacking) so balance didn't jump: spearmen against cavalry 2.25 → 2.22,
+  archers against spearmen 1.33 → 1.38, cavalry against archers 1.13 → 1.36,
+  spearmen against militia 1.23 → 1.22. Arrows **ignore armor**: without
+  that, no set of stats let archers beat spearmen and lose to cavalry.
+  Arrows hit horsemen only in the first volley, at half effect, since they
+  close fast. A militia regiment about matches a cavalry one now (it used to
+  beat it).
+- **Tiers multiply every stat**, so an elite regiment fights exactly like
+  1.6 times as many basic soldiers. The defense bonus works the same way:
+  the defender deals ×(1 + bonus) and takes ÷(1 + bonus), so +50% walls make
+  a garrison fight like one 1.5 times its size, as before. Arrows are divided
+  by the target's tier for the same reason.
+- **A side breaks partway through a round** when its losses reach the break
+  point. Judging at the end of the round let a side overshoot and skewed
+  close fights.
+- **Luck is per round and large** (±90% on each side's blows each round):
+  luck averages out over rounds, and this gives about the same odds as
+  before (a side 10% stronger wins 76% of the time, was 77%; 25% stronger
+  93%, was 97%). The battle panel's odds are an estimate from 200 battles
+  fought with dice seeded from the game state, so the same situation always
+  shows the same odds.
+- **The AI's strength measure** (`battleStrength`) fights the battle once
+  with no luck and reads each side's losses back through the square law, so
+  its ratio means what the old one did (attack at 1.2). A formula averaging
+  the stats over a typical battle misjudged short fights (archers can break
+  militia in the volleys alone); it's still used to choose what to train
+  (`sideStrength`), per regiment against the enemy's actual mix.
+- **Big wins are cheap now.** The winner loses only what it took before the
+  enemy broke: about 40% in an even fight, 20% at 1.5 to 1 (it was 60% and
+  40%). In 100-turn games, AI winners lose a median 10–15% (was about 27%),
+  and more armies survive (about a third more regiments alive at turn 100).
+- **The AI looks before storming.** It used to march up to a city out of
+  sight and storm it in one order, and most of its battles were such blind
+  storms against hidden garrisons. Under the new combat they failed more
+  often (cities taken fell from 295 to 165 over 8 test games), so it now
+  marches up first and decides once it sees the garrison: 201 taken, and 11
+  factions fallen (was 9). With more armies alive and marching, AI turns and
+  `npm test` are about three times slower (pathfinding, not combat).
 - **Defense bonuses are additive and small:** city +10%, walls +15/30/50%,
   terrain forest +10%, hills +15%, mountains +25%. They were softened twice;
   walls are now the main source of a city's strength.
@@ -113,8 +157,8 @@ so.
   units holds. Keeping regiment prices at 100/200/300 was rejected: it would
   have made spearmen twice as good per gold.
 - **Militia and the Barracks.** Level-1 cities train only militia: 220 to a
-  regiment at 0.5 gold and 0.01 upkeep per soldier, beating nothing, with
-  every other type getting its ×1.5 against them. So they're the cheapest
+  regiment at 0.5 gold and 0.01 upkeep per soldier, poor fighters that every
+  other type beats soldier for soldier. So they're the cheapest
   strength in gold and the dearest in people. A Barracks (level-2 city)
   unlocks spearmen, level 2 archers, level 3 (level-3 city) cavalry. No city
   starts with one, capitals included: building it is the player's choice
@@ -132,7 +176,8 @@ so.
   cavalry each have a building (Spear yard, Archery range, Stables) that even
   a level-1 city can build; its levels unlock basic, advanced and elite
   tiers (advanced and elite need a level-2 and level-3 city, as for any
-  building). Tiers make each soldier fight like 1 / 1.3 / 1.6 basic ones for
+  building). Tiers make each soldier fight like 1 / 1.3 / 1.6 basic ones (by
+  multiplying its stats; see Combat) for
   ×1 / 1.5 / 2.1 the gold and upkeep and the same people: a little worse per
   gold, much better per person. A regiment's tier is fixed; merging needs
   the same unit and tier. The AI builds its market before the unit

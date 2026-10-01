@@ -18,7 +18,7 @@ import {
 import { BUILDING_EFFECTS } from "@/data/buildings.js";
 import { COMBAT } from "@/data/combat.js";
 import { TERRAIN } from "@/data/terrain.js";
-import { TIERS, UNIT_TYPES, UNITS, type Tier, type UnitType } from "@/data/units.js";
+import { TIERS, unitStats, type Tier, type UnitStats, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import {
   armyHolding,
@@ -34,13 +34,20 @@ import {
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
 
 // ---- Battle maths -------------------------------------------------------
-
-/** Rock-paper-scissors multiplier for `unit` fighting `against`. */
-export function matchup(unit: UnitType, against: UnitType): number {
-  if (UNITS[unit].beats.includes(against)) return COMBAT.advantage;
-  if (UNITS[against].beats.includes(unit)) return COMBAT.disadvantage;
-  return 1;
-}
+//
+// A battle is fought in rounds. First come the volleys (COMBAT.volleys
+// rounds), when only ranged troops fight: arrows ignore armor, but horsemen
+// close fast, so only the first volley reaches them, at reduced effect. Then
+// the lines meet and every regiment fights in melee each round, dealing
+// losses by its attack over the target's armor; spearmen add their
+// anti-cavalry against horsemen, and attacking cavalry add their charge in
+// the first melee round on open ground. Each regiment's losses dealt are
+// spread over the enemy's regiments by their share of soldiers.
+//
+// The defender deals (1 + defense bonus) times the losses and takes that much
+// less. A side breaks once it has lost COMBAT.breakPoint of its soldiers, and
+// is routed and destroyed; the winner keeps the losses it took up to that
+// moment, which may come partway through a round.
 
 /** Anything with a unit type and a soldier count: a regiment, or a hypothetical one (basic, if no tier is given). */
 export interface Troops {
@@ -49,32 +56,203 @@ export interface Troops {
   tier?: Tier;
 }
 
-/** What a regiment's soldiers count for: more for better tiers (an elite soldier fights like 1.6 basic ones). */
-function fighters(t: Troops): number {
-  return t.soldiers * TIERS[t.tier ?? 1].strength;
+/** Where a battle is fought: the defender's bonus, and whether attacking cavalry can charge. */
+export interface Battlefield {
+  /** Terrain, city and walls together, e.g. 0.55 = +55%. */
+  defenseBonus: number;
+  /** Open ground outside a city, where attacking cavalry can charge. */
+  openGround: boolean;
+}
+
+/** One kind of troops on a side, a unit at a tier, with its soldiers pooled: they all fight alike. */
+interface Kind {
+  stats: UnitStats;
+  /** The tier's multiplier: better-drilled troops also weather arrows better. */
+  drill: number;
+  soldiers: number;
+}
+
+/** Pools a side's troops into kinds, and which kind each troop belongs to. */
+function kindsOf(side: readonly Troops[]): { kinds: Kind[]; kindOf: number[] } {
+  const keys: string[] = [];
+  const kinds: Kind[] = [];
+  const kindOf = side.map((t) => {
+    const tier = t.tier ?? 1;
+    const key = `${t.unit}:${tier}`;
+    let i = keys.indexOf(key);
+    if (i < 0) {
+      i = keys.push(key) - 1;
+      kinds.push({ stats: unitStats(t.unit, tier), drill: TIERS[tier].stats, soldiers: 0 });
+    }
+    kinds[i].soldiers += t.soldiers;
+    return i;
+  });
+  return { kinds, kindOf };
+}
+
+const soldiersIn = (kinds: readonly { soldiers: number }[]) => kinds.reduce((sum, k) => sum + k.soldiers, 0);
+
+/** Losses one soldier of `from` deals to `to` in a round, before the kill rate and the dice. */
+function blow(from: Kind, to: Kind, round: number, charging: boolean): number {
+  if (round < COMBAT.volleys) {
+    if (from.stats.ranged === 0) return 0;
+    if (!to.stats.mounted) return from.stats.ranged / to.drill;
+    return round === 0 ? (from.stats.ranged * COMBAT.rangedVsMounted) / to.drill : 0;
+  }
+  let attack = from.stats.attack + (to.stats.mounted ? from.stats.antiCavalry : 0);
+  if (charging && round === COMBAT.volleys) attack += from.stats.charge;
+  return attack / to.stats.armor;
+}
+
+/** Losses a side deals to each of the enemy's kinds in one round, spread by their share of soldiers. */
+function dealt(from: readonly Kind[], to: readonly Kind[], round: number, charging: boolean): number[] {
+  const alive = soldiersIn(to);
+  const losses = to.map(() => 0);
+  if (alive <= 0) return losses;
+  for (const f of from) {
+    if (f.soldiers <= 0) continue;
+    to.forEach((t, j) => {
+      if (t.soldiers > 0) losses[j] += f.soldiers * COMBAT.killRate * (t.soldiers / alive) * blow(f, t, round, charging);
+    });
+  }
+  return losses;
+}
+
+export interface BattleResult {
+  attackerWins: boolean;
+  /** Soldiers left in each attacking regiment, in the order given: none for the loser. */
+  attackerSoldiers: number[];
+  defenderSoldiers: number[];
+  /** Total soldiers each side lost. */
+  attackerLosses: number;
+  defenderLosses: number;
+  /** Rounds fought before one side broke. */
+  rounds: number;
 }
 
 /**
- * Strength of one side against another. Each regiment's soldiers, weighted
- * by its tier, are multiplied by its matchup against the enemy's mix of unit
- * types, weighted by how many soldiers of each type the enemy has. Against a
- * single-type enemy of basic troops this is just soldiers × matchup.
+ * Fights a battle out, round by round (see the top of this section). With
+ * an RNG, the losses each side deals in a round are thrown by the dice;
+ * without one, the battle is fought with no luck at all.
  */
-export function sideStrength(side: readonly Troops[], enemy: readonly Troops[]): number {
-  const enemyTotal = enemy.reduce((sum, t) => sum + t.soldiers, 0);
-  if (enemyTotal === 0) return side.reduce((sum, t) => sum + fighters(t), 0);
+export function resolveBattle(
+  attackers: readonly Troops[],
+  defenders: readonly Troops[],
+  field: Battlefield,
+  rng: Rng | null,
+): BattleResult {
+  const a = kindsOf(attackers);
+  const d = kindsOf(defenders);
+  const attackerStart = soldiersIn(a.kinds);
+  const defenderStart = soldiersIn(d.kinds);
+  const luck = () => (rng ? 1 + (rng.next() * 2 - 1) * COMBAT.roundRandomness : 1);
+  const edge = 1 + field.defenseBonus;
 
-  const share = new Map<UnitType, number>();
-  for (const type of UNIT_TYPES) share.set(type, 0);
-  for (const t of enemy) share.set(t.unit, share.get(t.unit)! + t.soldiers / enemyTotal);
+  let rounds = 0;
+  let attackerWins = defenderStart === 0;
+  while (attackerStart > 0 && defenderStart > 0) {
+    const attackLuck = luck();
+    const defendLuck = luck();
+    const toDefenders = dealt(a.kinds, d.kinds, rounds, field.openGround).map((n) => (n * attackLuck) / edge);
+    const toAttackers = dealt(d.kinds, a.kinds, rounds, false).map((n) => n * defendLuck * edge);
+    rounds++;
 
-  let strength = 0;
-  for (const t of side) {
-    let multiplier = 0;
-    for (const [type, s] of share) multiplier += s * matchup(t.unit, type);
-    strength += fighters(t) * multiplier;
+    // How far into the round each side reaches its breaking point, if it
+    // does: the fight stops the moment the first one breaks, so a side is
+    // never judged on losses it took after the other had already run.
+    const breaksAt = (kinds: Kind[], start: number, losses: number[]) => {
+      const room = soldiersIn(kinds) - start * (1 - COMBAT.breakPoint);
+      const total = losses.reduce((sum, n) => sum + n, 0);
+      return total > 0 && total >= room ? Math.max(0, room) / total : Infinity;
+    };
+    const attackerBreaks = breaksAt(a.kinds, attackerStart, toAttackers);
+    const defenderBreaks = breaksAt(d.kinds, defenderStart, toDefenders);
+    const lasts = Math.min(1, attackerBreaks, defenderBreaks);
+    d.kinds.forEach((k, i) => (k.soldiers = Math.max(0, k.soldiers - toDefenders[i] * lasts)));
+    a.kinds.forEach((k, i) => (k.soldiers = Math.max(0, k.soldiers - toAttackers[i] * lasts)));
+
+    if (lasts < 1 || attackerBreaks <= 1 || defenderBreaks <= 1) {
+      // The first to break loses; if both break at once, the defenders hold.
+      attackerWins = defenderBreaks < attackerBreaks;
+      break;
+    }
+    if (rounds >= COMBAT.maxRounds) {
+      attackerWins = soldiersIn(d.kinds) / defenderStart < soldiersIn(a.kinds) / attackerStart;
+      break;
+    }
   }
-  return strength;
+
+  const attackerSoldiers = attackerWins ? survivors(attackers, a) : attackers.map(() => 0);
+  const defenderSoldiers = attackerWins ? defenders.map(() => 0) : survivors(defenders, d);
+  const lost = (side: readonly Troops[], left: number[]) => side.reduce((sum, t, i) => sum + t.soldiers - left[i], 0);
+  return {
+    attackerWins,
+    attackerSoldiers,
+    defenderSoldiers,
+    attackerLosses: lost(attackers, attackerSoldiers),
+    defenderLosses: lost(defenders, defenderSoldiers),
+    rounds,
+  };
+}
+
+/**
+ * The winner's soldiers left in each regiment: each kind's losses, in whole
+ * soldiers, spread over its regiments by size. The winner always keeps at
+ * least one soldier.
+ */
+function survivors(side: readonly Troops[], pooled: { kinds: Kind[]; kindOf: number[] }): number[] {
+  const left = side.map((t) => t.soldiers);
+  pooled.kinds.forEach((kind, k) => {
+    const members = side.flatMap((_, i) => (pooled.kindOf[i] === k ? [i] : []));
+    const before = members.reduce((sum, i) => sum + side[i].soldiers, 0);
+    const spread = spreadLosses(members.map((i) => side[i].soldiers), before - Math.round(kind.soldiers));
+    members.forEach((i, j) => (left[i] = spread[j]));
+  });
+  if (left.length > 0 && left.every((n) => n <= 0)) left[0] = 1;
+  return left;
+}
+
+/** Takes `losses` from a list of soldier counts in proportion to their size. Returns what's left of each. */
+function spreadLosses(soldiers: readonly number[], losses: number): number[] {
+  const total = soldiers.reduce((sum, n) => sum + n, 0);
+  if (losses >= total) return soldiers.map(() => 0);
+  const left = soldiers.map((n) => n - Math.min(n, Math.floor((losses * n) / total)));
+  // Rounding down leaves a few soldiers over: one each from the regiments in turn.
+  let remaining = losses - (total - left.reduce((sum, n) => sum + n, 0));
+  for (let i = 0; remaining > 0; i = (i + 1) % left.length) {
+    if (left[i] > 0) {
+      left[i]--;
+      remaining--;
+    }
+  }
+  return left;
+}
+
+/**
+ * A quick measure of a side's strength against another, without fighting the
+ * battle (the AI uses it to choose what to train): its soldiers times the square root of the losses each deals per
+ * round against the enemy's mix, averaged over a typical battle
+ * (COMBAT.typicalRounds, volleys and charge included). Two sides of equal
+ * strength are an even fight. Scaled so that militia against militia is just
+ * their soldiers.
+ */
+export function sideStrength(side: readonly Troops[], enemy: readonly Troops[], charging: boolean): number {
+  const own = kindsOf(side).kinds;
+  const theirs = kindsOf(enemy).kinds;
+  const soldiers = soldiersIn(own);
+  const enemies = soldiersIn(theirs);
+  if (enemies === 0) return soldiers;
+
+  let power = 0;
+  for (const f of own) {
+    for (const t of theirs) {
+      let total = 0;
+      for (let round = 0; round < COMBAT.typicalRounds; round++) total += blow(f, t, round, charging);
+      power += (f.soldiers / soldiers) * (t.soldiers / enemies) * total;
+    }
+  }
+  const meleeRounds = COMBAT.typicalRounds - COMBAT.volleys;
+  return soldiers * Math.sqrt(power / meleeRounds);
 }
 
 export interface BattleStrength {
@@ -82,70 +260,51 @@ export interface BattleStrength {
   defender: number;
 }
 
-/** Strength of each side before randomness, with the defender's bonus applied. */
+/**
+ * Each side's strength, whose ratio says how one-sided the battle is: the
+ * battle is fought once without luck, and each side's share of losses is
+ * read back through the square law (strength² × (1 − (1 − share lost)²) is
+ * the same for both sides). Equal strengths are an even fight; 1.2 times the
+ * enemy's strength wins comfortably. The size of the numbers comes from
+ * sideStrength, so they read like soldiers.
+ */
 export function battleStrength(
   attackers: readonly Troops[],
   defenders: readonly Troops[],
-  defenseBonus: number,
+  field: Battlefield,
 ): BattleStrength {
-  return {
-    attacker: sideStrength(attackers, defenders),
-    defender: sideStrength(defenders, attackers) * (1 + defenseBonus),
-  };
+  const soldiers = (side: readonly Troops[]) => side.reduce((sum, t) => sum + t.soldiers, 0);
+  const attackerStart = soldiers(attackers);
+  const defenderStart = soldiers(defenders);
+  if (attackerStart === 0 || defenderStart === 0) return { attacker: attackerStart, defender: defenderStart };
+
+  const calm = resolveBattle(attackers, defenders, field, null);
+  const worn = (lost: number, start: number) => Math.max(1e-6, 1 - (1 - Math.min(1, lost / start)) ** 2);
+  const [attackerLost, defenderLost] = calm.attackerWins
+    ? [calm.attackerLosses, defenderStart * COMBAT.breakPoint]
+    : [attackerStart * COMBAT.breakPoint, calm.defenderLosses];
+  const ratio = Math.min(MAX_STRENGTH_RATIO, Math.max(1 / MAX_STRENGTH_RATIO,
+    Math.sqrt(worn(defenderLost, defenderStart) / worn(attackerLost, attackerStart))));
+
+  const scale = Math.sqrt(sideStrength(attackers, defenders, field.openGround) * sideStrength(defenders, attackers, false));
+  return { attacker: scale * Math.sqrt(ratio), defender: scale / Math.sqrt(ratio) };
 }
 
-export interface BattleResult {
-  attackerWins: boolean;
-  /** Total soldiers each side lost. */
-  attackerLosses: number;
-  defenderLosses: number;
-  strength: BattleStrength;
-}
+/** A battle won without loss would be infinitely one-sided: cap the ratio. */
+const MAX_STRENGTH_RATIO = 10;
 
-/**
- * Resolves a battle. The stronger side (after a little randomness) wins and
- * the loser is wiped out. The winner loses soldiers in proportion to how
- * close the fight was.
- */
-export function resolveBattle(
-  attackers: readonly Troops[],
-  defenders: readonly Troops[],
-  defenseBonus: number,
-  rng: Rng,
-): BattleResult {
-  const base = battleStrength(attackers, defenders, defenseBonus);
-  const roll = () => 1 + (rng.next() * 2 - 1) * COMBAT.randomness;
-  const strength = { attacker: base.attacker * roll(), defender: base.defender * roll() };
-
-  const attackerWins = strength.attacker > strength.defender;
-  const total = (side: readonly Troops[]) => side.reduce((sum, t) => sum + t.soldiers, 0);
-  const winnerSoldiers = total(attackerWins ? attackers : defenders);
-  const [winnerStrength, loserStrength] = attackerWins
-    ? [strength.attacker, strength.defender]
-    : [strength.defender, strength.attacker];
-
-  const closeness = Math.min(1, loserStrength / winnerStrength);
-  const winnerLosses = Math.min(winnerSoldiers - 1, Math.round(winnerSoldiers * closeness * COMBAT.winnerLossRate));
-
+/** The battlefield on a tile: its defense bonus, and whether it's open ground (never in a city). */
+export function battlefieldAt(state: GameState, tile: TileId): Battlefield {
   return {
-    attackerWins,
-    attackerLosses: attackerWins ? winnerLosses : total(attackers),
-    defenderLosses: attackerWins ? total(defenders) : winnerLosses,
-    strength,
+    defenseBonus: defenseBonusAt(state, tile),
+    openGround: TERRAIN[state.tiles[tile].terrain].openGround && !cityAt(state, tile),
   };
 }
 
 /** Spreads losses across regiments in proportion to their size. Emptied regiments are removed. */
 export function applyLosses(regiments: readonly Regiment[], losses: number): Regiment[] {
-  const total = regiments.reduce((sum, r) => sum + r.soldiers, 0);
-  if (losses >= total) return [];
-  let remaining = losses;
-  const result = regiments.map((r, i) => {
-    const share = i === regiments.length - 1 ? remaining : Math.min(remaining, Math.round((losses * r.soldiers) / total));
-    remaining -= share;
-    return { ...r, soldiers: r.soldiers - share };
-  });
-  return result.filter((r) => r.soldiers > 0);
+  const left = spreadLosses(regiments.map((r) => r.soldiers), losses);
+  return regiments.map((r, i) => ({ ...r, soldiers: left[i] })).filter((r) => r.soldiers > 0);
 }
 
 /** Terrain bonus, plus the city bonus and its walls when defending a city. */
@@ -284,13 +443,12 @@ export function attack(
   const holding = defending.flatMap((s) => s.regiments);
 
   const rng = createRng(state.rngState);
-  const result = resolveBattle(fighting, holding, defenseBonusAt(state, target), rng);
+  const result = resolveBattle(fighting, holding, battlefieldAt(state, target), rng);
 
-  // Share each side's losses across every regiment that fought on it, then
-  // put the survivors back in their own armies.
+  // Put the survivors of each regiment back in their own armies.
   const armies = { ...state.armies };
-  const settle = (group: BattleSide[], regiments: Regiment[], losses: number) => {
-    const survivors = new Map(applyLosses(regiments, losses).map((r) => [r.id, r]));
+  const settle = (group: BattleSide[], regiments: Regiment[], left: number[]) => {
+    const survivors = new Map(regiments.flatMap((r, i) => (left[i] > 0 ? [[r.id, { ...r, soldiers: left[i] }] as const] : [])));
     for (const side of group) {
       const fought = new Set(side.regiments.map((r) => r.id));
       const kept = side.army.regiments.flatMap((r) => {
@@ -302,8 +460,8 @@ export function attack(
       else delete armies[side.army.id];
     }
   };
-  settle(sides, fighting, result.attackerLosses);
-  settle(defending, holding, result.defenderLosses);
+  settle(sides, fighting, result.attackerSoldiers);
+  settle(defending, holding, result.defenderSoldiers);
 
   const defenderName = getFaction(state, defender.owner)?.shortName ?? "Unknown";
   const joined = sides.length > 1 ? ` from ${sides.length} armies` : "";
@@ -346,6 +504,7 @@ export function attack(
     defenderLosses: result.defenderLosses,
     attackerWon: result.attackerWins,
     defenseBonus: defenseBonusAt(state, target),
+    rounds: result.rounds,
     cityCaptured: captured,
   });
 }
@@ -394,27 +553,45 @@ export function placeName(state: GameState, tile: TileId): string {
 
 // ---- Preview ------------------------------------------------------------
 
-/**
- * Chance that a side with `attack` strength beats one with `defend`, given
- * that each is multiplied by an independent random factor in
- * [1 - randomness, 1 + randomness]. Worked out exactly, not by rolling dice.
- */
-export function winChance(attack: number, defend: number): number {
-  if (attack <= 0) return 0;
-  if (defend <= 0) return 1;
-  const lo = 1 - COMBAT.randomness;
-  const hi = 1 + COMBAT.randomness;
-  if (hi === lo) return attack > defend ? 1 : 0;
+export interface BattleOdds {
+  /** 0 to 1. */
+  winChance: number;
+  /** Soldiers the attackers lose, on average, in the battles they win. */
+  lossesIfWin: number;
+  /** Soldiers the defenders lose, on average, in the battles they hold. */
+  defenderLossesIfHold: number;
+}
 
-  // Average, over the defender's roll, of the chance the attacker's roll is high enough.
-  const steps = 400;
-  let total = 0;
-  for (let i = 0; i < steps; i++) {
-    const defenderRoll = lo + ((hi - lo) * (i + 0.5)) / steps;
-    const needed = (defend * defenderRoll) / attack;
-    total += Math.min(1, Math.max(0, (hi - needed) / (hi - lo)));
+/**
+ * Estimates the odds by fighting the battle out COMBAT.previewBattles times
+ * with dice seeded from `seed`, so the same situation always shows the same
+ * odds. Where one side never wins, its losses in victory are taken as the
+ * most a winner can lose: up to the break point.
+ */
+export function estimateBattle(
+  attackers: readonly Troops[],
+  defenders: readonly Troops[],
+  field: Battlefield,
+  seed: number,
+): BattleOdds {
+  const rng = createRng(seed ^ 0x5bd1e995);
+  let wins = 0;
+  let winLosses = 0;
+  let holdLosses = 0;
+  for (let i = 0; i < COMBAT.previewBattles; i++) {
+    const r = resolveBattle(attackers, defenders, field, rng);
+    if (r.attackerWins) {
+      wins++;
+      winLosses += r.attackerLosses;
+    } else holdLosses += r.defenderLosses;
   }
-  return total / steps;
+  const holds = COMBAT.previewBattles - wins;
+  const mostLost = (side: readonly Troops[]) => Math.round(side.reduce((sum, t) => sum + t.soldiers, 0) * COMBAT.breakPoint);
+  return {
+    winChance: wins / COMBAT.previewBattles,
+    lossesIfWin: wins > 0 ? Math.round(winLosses / wins) : mostLost(attackers),
+    defenderLossesIfHold: holds > 0 ? Math.round(holdLosses / holds) : mostLost(defenders),
+  };
 }
 
 export interface BattlePreview {
@@ -431,7 +608,7 @@ export interface BattlePreview {
   terrainBonus: number;
   cityBonus: number;
   strength: BattleStrength;
-  /** 0 to 1. */
+  /** 0 to 1, estimated by fighting the battle out many times (see estimateBattle). */
   winChance: number;
   /** Soldiers we'd likely lose if we win. If we lose, every attacker is lost. */
   lossesIfWin: number;
@@ -478,11 +655,8 @@ export function previewBattle(
   const terrainBonus = TERRAIN[staged.tiles[target].terrain].defenseBonus;
   const city = cityAt(staged, target);
   const cityBonus = city ? cityDefense(city) : 0;
-  const strength = battleStrength(attackers, defenders, terrainBonus + cityBonus);
-
-  const total = (rs: readonly Troops[]) => rs.reduce((sum, r) => sum + r.soldiers, 0);
-  const likelyLosses = (soldiers: number, winner: number, loser: number) =>
-    Math.min(soldiers - 1, Math.round(soldiers * Math.min(1, loser / winner) * COMBAT.winnerLossRate));
+  const field = battlefieldAt(staged, target);
+  const odds = estimateBattle(attackers, defenders, field, staged.rngState);
 
   return {
     attackers,
@@ -492,10 +666,8 @@ export function previewBattle(
     defendingArmies: sides.defenders.length,
     terrainBonus,
     cityBonus,
-    strength,
-    winChance: winChance(strength.attacker, strength.defender),
-    lossesIfWin: likelyLosses(total(attackers), strength.attacker, strength.defender),
-    defenderLossesIfHold: likelyLosses(total(defenders), strength.defender, strength.attacker),
+    strength: battleStrength(attackers, defenders, field),
+    ...odds,
     place: placeName(staged, target),
     cityAtStake: city && city.owner !== army.owner ? city.name : null,
   };
