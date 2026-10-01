@@ -38,7 +38,7 @@ export function showBattleResult(el: BattleResultElements, state: GameState, rep
   const bonus = report.defenseBonus > 0 ? `Defending with +${Math.round(report.defenseBonus * 100)}% from terrain and walls` : "";
 
   el.body.innerHTML = `
-    <p class="battle-headline">${headline}</p>
+    <p class="battle-headline">${headline} ${report.rounds === 1 ? "One round" : `${report.rounds} rounds`} of fighting.</p>
     <div class="sides">
       ${side(playerAttacked ? "Your forces" : "The attackers", attacker?.name ?? "", attacker?.color ?? "#000",
         report.attackerForces, report.attackerLosses, report.attackerWon,

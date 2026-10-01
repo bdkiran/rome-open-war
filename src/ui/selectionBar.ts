@@ -2,6 +2,7 @@ import { armyAt, cityAt, getFaction, type Army, type City } from "@/core/state.j
 import { BUILDING_ORDER, BUILDINGS } from "@/data/buildings.js";
 import { UNITS, regimentSize, unitName } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
+import { describeAttackArmor, describeSpecials } from "@/render/format.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import { canMerge } from "@/systems/armies.js";
 import { levelPips, regimentBox } from "@/ui/boxes.js";
@@ -60,7 +61,8 @@ function armyCards(input: InfoPanelInput, army: Army): string {
     .map((r) => {
       const def = UNITS[r.unit];
       const status = !mine ? "" : r.pinned ? "Held" : `${r.movementLeft}/${def.movement}`;
-      const title = `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers${mine ? `, ${r.movementLeft} of ${def.movement} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
+      const specials = describeSpecials(r.unit, r.tier);
+      const title = `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers, ${describeAttackArmor(r.unit, r.tier).toLowerCase()}${specials ? `, ${specials.toLowerCase()}` : ""}${mine ? `, ${r.movementLeft} of ${def.movement} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
       return regimentBox(r, color, {
         status,
         title,

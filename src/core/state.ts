@@ -124,6 +124,8 @@ export interface BattleReport {
   attackerWon: boolean;
   /** The defender's terrain, city and walls bonus, e.g. 0.55 = +55%. */
   defenseBonus: number;
+  /** Rounds fought before one side broke. */
+  rounds: number;
   /** The city taken, if the attackers won a battle for one. */
   cityCaptured: string | null;
 }

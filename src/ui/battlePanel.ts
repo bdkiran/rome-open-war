@@ -1,4 +1,5 @@
 import { getFaction, type GameState, type Regiment } from "@/core/state.js";
+import { COMBAT } from "@/data/combat.js";
 import { UNIT_TYPES, UNITS } from "@/data/units.js";
 import { formatNumber } from "@/render/format.js";
 import type { BattlePreview } from "@/systems/combat.js";
@@ -43,7 +44,7 @@ export function showBattlePanel(
   el.body.innerHTML = `
     <div class="odds odds-${verdict}">
       <strong>${chance}%</strong>
-      <span>chance of victory</span>
+      <span title="Estimated by fighting the battle out ${COMBAT.previewBattles} times">estimated chance of victory</span>
     </div>
     <div class="sides">
       ${forceSummary("Your forces", attacker?.name ?? "", attacker?.color ?? "#000", preview.attackers, preview.strength.attacker, yourNotes)}
