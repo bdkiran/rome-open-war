@@ -245,6 +245,48 @@ def separate_islands(is_land, features):
             is_land[key] = False
         print(f"{name}: {len(on_island)} hexes, cut off from the mainland by {len(carved)} hexes of sea")
 
+# ---- Round islands ---------------------------------------------------------
+
+# Islands drawn as a disc of hexes instead of their coastline: at this scale
+# Sicily came out as a thin strip too small to share between its cities.
+# Center (lon, lat) and radius in hexes. Any other land touching the disc
+# becomes sea, so its straits stay open.
+ROUND_ISLANDS = {
+    "Sicily": ((14.1, 37.6), 2),
+}
+
+def hex_distance(a, b):
+    """Steps between two hexes, in the same axial terms as neighbors()."""
+    aq, ar = a[0] - a[1] // 2, a[1]
+    bq, br = b[0] - b[1] // 2, b[1]
+    dq, dr = aq - bq, ar - br
+    return (abs(dq) + abs(dr) + abs(dq + dr)) // 2
+
+def nearest_hex(lon, lat):
+    return min(((c, r) for r in range(HEIGHT) for c in range(WIDTH)),
+               key=lambda k: (to_lonlat(*hex_center(*k))[0] - lon) ** 2 + (to_lonlat(*hex_center(*k))[1] - lat) ** 2)
+
+def round_islands(is_land, features):
+    """Replaces each island in ROUND_ISLANDS with a disc of hexes around its center."""
+    for name, ((lon, lat), radius) in ROUND_ISLANDS.items():
+        geom = next((shape(ft["geometry"]).buffer(0) for ft in features
+                     if shape(ft["geometry"]).buffer(0).contains(Point(lon, lat))), None)
+        if geom is not None and geom.geom_type == "MultiPolygon":
+            geom = next(g for g in geom.geoms if g.contains(Point(lon, lat)))
+        if geom is not None:
+            island = prep(geom)
+            for key in is_land:
+                if is_land[key] and island.contains(Point(*to_lonlat(*hex_center(*key)))):
+                    is_land[key] = False
+        center = nearest_hex(lon, lat)
+        disc = {key for key in is_land if hex_distance(key, center) <= radius}
+        for key in disc:
+            is_land[key] = True
+        carved = {n for key in disc for n in neighbors(*key) if n not in disc and is_land[n]}
+        for key in carved:
+            is_land[key] = False
+        print(f"{name}: a disc of {len(disc)} hexes, {len(carved)} touching hexes turned to sea")
+
 # ---- Build ----------------------------------------------------------------
 
 def main():
@@ -267,6 +309,7 @@ def main():
 
     widen_narrow_land(is_land)
     separate_islands(is_land, features)
+    round_islands(is_land, features)
 
     rng = random.Random(218)                 # 218 BC
     forest_noise = smooth_rank(rng, 3)

@@ -165,11 +165,11 @@ export const BUILDING_EFFECTS = {
   /** Extra gold. */
   marketGold: [0, 0.3, 0.6, 1],
   /** Gold per hills or mountain tile in the city's territory, before taxes and the market. */
-  mineGoldPerTile: [0, 2, 4, 6],
+  mineGoldPerTile: [0, 1, 2, 3],
   /** Gold per plains tile in the city's territory, before taxes and the market. */
-  farmsGoldPerPlainsTile: [0, 0.5, 1, 1.5],
+  farmsGoldPerPlainsTile: [0, 0.25, 0.5, 0.75],
   /** Extra population growth from a port, scaled by the share of the city's reach that is sea. */
   portGrowth: [0, 0.3, 0.6, 0.9],
   /** Gold per sea tile on the city's coast, before taxes and the market. */
-  portGoldPerSeaTile: [0, 0.5, 1, 1.5],
+  portGoldPerSeaTile: [0, 0.25, 0.5, 0.75],
 } as const;

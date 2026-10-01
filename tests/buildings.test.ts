@@ -71,13 +71,11 @@ describe("ports and roads", () => {
     assert.equal(buildingAvailable(state, inland.id, "roads"), true);
   });
 
-  it("offers a port where the sea touches a city's land, even beyond its fishing grounds", () => {
+  it("offers a port to every city whose land touches the sea, even beyond its fishing grounds", () => {
     const state = newGame();
-    for (const name of ["Amaseia", "Treva", "Sardis"]) {
-      const city = cityNamed(state, name);
-      assert.equal(city.fishingGrounds, 0, `${name} has no fishing grounds`);
-      assert.ok(city.coast > 0, `${name}'s land touches the sea`);
-      assert.equal(buildingAvailable(state, city.id, "port"), true, name);
+    for (const city of Object.values(state.cities)) {
+      assert.ok(city.coast >= city.fishingGrounds, `${city.name}'s coast includes its fishing grounds`);
+      assert.equal(buildingAvailable(state, city.id, "port"), city.coast > 0, city.name);
     }
   });
 
