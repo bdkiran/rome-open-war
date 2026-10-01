@@ -83,7 +83,7 @@ Either way you can close the screen to look at the map, or play again.
 - Tab and Shift+Tab (or the ◀ Cities ▶ buttons) step through your cities
 - The top-right panel lists every faction with its people, soldiers and gold;
   click the income line under your treasury for a breakdown of where your
-  money comes from (each city's base, people and mine gold, times its taxes
+  money comes from (each city's base, people, mine, farms and port gold, times its taxes
   and market) and where it goes (each army's upkeep)
 - **Reports** (right, under the faction list): at the start of each turn, what happened since
   your last one arrives as notifications: battles, sieges and cities involving
@@ -157,8 +157,9 @@ Cities grow close to their base rate while small and slow down as they near
 capacity. A city over capacity shrinks.
 
 Each city adds a flat 5 gold per turn, plus 4 gold per 1,000 people, plus
-whatever its mine digs (see below). The land itself pays nothing: hills and
-mountains only earn gold once a city builds a mine.
+whatever its mine, farms and port bring in (see below). The land itself pays
+nothing until a city builds on it: hills and mountains need a mine, plains
+need farms and the sea a port.
 
 **City levels and buildings.** Every city has a level from 1 to 3, set by its
 government building. Other buildings can be built up to the city's level;
@@ -181,17 +182,19 @@ militia until it builds one.
 | Archery range | Trains basic / advanced / elite archers  | 200 / 350 / 550 gold | 2 / 3 / 4 |
 | Stables       | Trains basic / advanced / elite cavalry  | 250 / 400 / 650 gold | 2 / 3 / 4 |
 | Walls    | +15% / +30% / +50% defense, on top of the city's 10%       | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Farms    | +20% / +40% / +60% population growth                       | 150 / 300 / 550 gold | 2 / 3 / 4 |
+| Farms    | +20% / +40% / +60% population growth, and +0.5 / +1 / +1.5 gold per plains tile in its land | 150 / 300 / 550 gold | 2 / 3 / 4 |
 | Market   | +30% / +60% / +100% gold                                   | 150 / 300 / 500 gold | 2 / 3 / 4 |
 | Mine     | +2 / +4 / +6 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Port     | +20% / +40% / +60% growth, times the city's share of sea (cities whose land touches the sea) | 200 / 400 / 650 gold | 2 / 3 / 4 |
+| Port     | +30% / +60% / +90% growth, times the city's share of sea, and +0.5 / +1 / +1.5 gold per sea tile on its coast (cities whose land touches the sea) | 200 / 400 / 650 gold | 2 / 3 / 4 |
 | Roads    | Faster movement across the city's land, for every army (see Movement) | 150 / 300 / 500 gold | 2 / 3 / 4 |
 
 A mine can only be built in a city whose territory has hills or mountains, so
 it's worth a lot in hill country and nothing on the plains; the Construction
 tab shows how many tiles it can dig and what the next level would earn. Its
 gold counts toward the city's income before taxes and the market, so both
-multiply it.
+multiply it. Farms and ports work the same way for their plains and sea,
+on top of their growth: a trickle that pays for them while the growth
+builds up toward the next city level.
 
 A **port** can be built by any city with sea on its coast: sea within its
 reach, or touching any tile of its land, however far from the city itself.

@@ -21,6 +21,7 @@ import {
   CONSTRUCTION_QUEUE_SIZE,
   LEVEL_POPULATION,
   LEVEL_POPULATION_LIMIT,
+  type BuildingType,
 } from "@/data/buildings.js";
 import { buildingAvailable, canBuild, cityLevel, nextLevel, plannedLevel } from "@/systems/buildings.js";
 import { cityDefense, defenseBonusAt } from "@/systems/combat.js";
@@ -33,7 +34,7 @@ import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
 import { canRetrain, canTrain, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
-import { cityStats, mineableTiles, type CityStats } from "@/systems/cities.js";
+import { cityStats, mineableTiles, plainsTiles, type CityStats } from "@/systems/cities.js";
 import { levelPips, regimentBox, tierMark } from "@/ui/boxes.js";
 import { escapeHtml, ownerLine, signed } from "@/ui/html.js";
 
@@ -197,11 +198,11 @@ function citySection(input: InfoPanelInput, city: City): string {
   return html + `</div>`;
 }
 
-/** How the city's income is reached: its base, people and mine, then taxes and the market. */
+/** How the city's income is reached: its base, people, mine, farms and port, then taxes and the market. */
 function incomeLine(stats: CityStats, besieged: boolean): string {
   const i = stats.income;
   const x = (n: number) => `×${Number.isInteger(n) ? n : n.toFixed(2).replace(/0$/, "")}`;
-  const parts = [`${i.base} base`, `${i.people} people`, ...(i.mine ? [`${i.mine} mine`] : [])].join(" + ");
+  const parts = [`${i.base} base`, `${i.people} people`, ...(i.mine ? [`${i.mine} mine`] : []), ...(i.farms ? [`${i.farms} farms`] : []), ...(i.port ? [`${i.port} port`] : [])].join(" + ");
   const multipliers = [...(i.taxes !== 1 ? [`${x(i.taxes)} taxes`] : []), ...(i.market !== 1 ? [`${x(i.market)} market`] : [])];
   const text = multipliers.length ? `${parts} = ${i.subtotal}, ${multipliers.join(", ")} = ${i.total}` : `${parts} = ${i.total}`;
   return `<p class="income-line">${besieged ? `Normally ${text} gold. Besieged: nothing this turn.` : `${text} gold a turn`}</p>`;
@@ -267,9 +268,9 @@ function constructionTab(input: InfoPanelInput, city: City): string {
     const queued = plannedLevel(city, building) - built;
     // One name per box, the building's: the level's own name (Palisade, Forum...) is in the tooltip, and the pips show the level.
     const status = `${formatNumber(next.def.cost)} gold, ${next.def.turns} turns`;
-    // A mine's worth depends on the land: say what the next level would earn.
-    const mineNote = building === "mine" ? mineSummary(state, city, next.level) : "";
-    const title = `${def.name}, level ${next.level}: ${next.def.name}. ${def.purpose} ${mineNote} ${check.ok ? `Click to queue it.` : check.reason}`;
+    // A mine's, farms' or port's gold depends on the land: say what the next level would earn.
+    const goldNote = landGoldSummary(state, city, building, next.level);
+    const title = `${def.name}, level ${next.level}: ${next.def.name}. ${def.purpose} ${goldNote} ${check.ok ? `Click to queue it.` : check.reason}`;
     // Short of gold: say so in the box. (A siege or full queue is said once, below.)
     const blocked = !check.ok && !heldUp ? check.reason : "";
     return `
@@ -279,7 +280,7 @@ function constructionTab(input: InfoPanelInput, city: City): string {
         ${levelPips(built)}
         ${queued > 0 ? `<span class="unit-stat">+${queued} queued</span>` : ""}
         <span class="building-next">${status}</span>
-        ${mineNote ? `<span class="building-note">${escapeHtml(mineNote)}</span>` : ""}
+        ${goldNote ? `<span class="building-note">${escapeHtml(goldNote)}</span>` : ""}
         ${blocked ? `<span class="building-lock">${escapeHtml(blocked)}</span>` : ""}
       </button>`;
   }).join("");
@@ -319,16 +320,25 @@ function constructionTab(input: InfoPanelInput, city: City): string {
     ${advance && city.constructionQueue.length === 0 ? `<p class="hint">${advance}</p>` : ""}`;
 }
 
-/** How many tiles a city's mine can dig, and the gold the next level would bring, before taxes and the market. */
-function mineSummary(state: GameState, city: City, nextLevelNumber: number | null): string {
-  const tiles = mineableTiles(state, city.id);
-  if (tiles === 0) return "No hills or mountains to mine.";
-  const perTile = BUILDING_EFFECTS.mineGoldPerTile;
-  const now = tiles * perTile[city.buildings.mine];
-  const then = nextLevelNumber ? tiles * perTile[nextLevelNumber] : now;
+/**
+ * For a mine, farms or port: the tiles it earns from and the gold the next
+ * level would bring, before taxes and the market. Empty for other buildings.
+ */
+function landGoldSummary(state: GameState, city: City, building: BuildingType, nextLevelNumber: number | null): string {
+  const kinds = {
+    mine: { tiles: mineableTiles(state, city.id), perTile: BUILDING_EFFECTS.mineGoldPerTile as readonly number[], what: "to dig", none: "No hills or mountains to mine." },
+    farms: { tiles: plainsTiles(state, city.id), perTile: BUILDING_EFFECTS.farmsGoldPerPlainsTile as readonly number[], what: "of plains", none: "No plains to farm for gold." },
+    port: { tiles: city.coast, perTile: BUILDING_EFFECTS.portGoldPerSeaTile as readonly number[], what: "of sea", none: "" },
+  };
+  if (building !== "mine" && building !== "farms" && building !== "port") return "";
+  const { tiles, perTile, what, none } = kinds[building];
+  if (tiles === 0) return none;
+  const gold = (level: number) => Math.round(tiles * perTile[level]);
+  const now = gold(city.buildings[building]);
+  const count = `${tiles} tile${tiles === 1 ? "" : "s"} ${what}`;
   return nextLevelNumber
-    ? `${tiles} tile${tiles === 1 ? "" : "s"} to dig: +${then} gold a turn${now ? ` (now +${now})` : ""}.`
-    : `${tiles} tile${tiles === 1 ? "" : "s"}: +${now} gold a turn.`;
+    ? `${count}: +${gold(nextLevelNumber)} gold a turn${now ? ` (now +${now})` : ""}.`
+    : `${count}: +${now} gold a turn.`;
 }
 
 /**

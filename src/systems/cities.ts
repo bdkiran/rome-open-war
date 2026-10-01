@@ -111,6 +111,11 @@ export function mineableTiles(state: GameState, cityId: CityId): number {
   return cityTiles(state, cityId).filter((t) => TERRAIN[state.tiles[t].terrain].mineable).length;
 }
 
+/** Plains tiles in a city's territory: the farmland its farms earn gold from. */
+export function plainsTiles(state: GameState, cityId: CityId): number {
+  return cityTiles(state, cityId).filter((t) => state.tiles[t].terrain === "plains").length;
+}
+
 /** Tiles claimed by a city. */
 export function cityTiles(state: GameState, cityId: CityId): TileId[] {
   return Object.entries(state.territory)
@@ -150,7 +155,11 @@ export interface IncomeBreakdown {
   people: number;
   /** From its mine, for each hills or mountain tile it digs. */
   mine: number;
-  /** base + people + mine. */
+  /** From its farms, for each plains tile it farms. */
+  farms: number;
+  /** From its port, for each sea tile on its coast. */
+  port: number;
+  /** base + people + mine + farms + port. */
   subtotal: number;
   /** The tax rate's multiplier, e.g. 1.5 on high taxes. */
   taxes: number;
@@ -166,11 +175,13 @@ export function cityStats(state: GameState, city: City): CityStats {
   let capacity = city.fishingGrounds * TERRAIN.water.capacity;
   let growthSum = city.fishingGrounds * TERRAIN.water.growth;
   let mineable = 0;
+  let plains = 0;
   for (const tile of tiles) {
     const terrain = TERRAIN[state.tiles[tile].terrain];
     capacity += terrain.capacity;
     growthSum += terrain.growth;
     if (terrain.mineable) mineable++;
+    if (state.tiles[tile].terrain === "plains") plains++;
   }
   const places = tiles.length + city.fishingGrounds;
   const baseGrowthRate = places > 0 ? growthSum / places : 0;
@@ -183,7 +194,9 @@ export function cityStats(state: GameState, city: City): CityStats {
   const base = ECONOMY.cityBaseGold;
   const people = Math.floor(city.population / 1000) * ECONOMY.goldPer1000People;
   const mine = mineable * BUILDING_EFFECTS.mineGoldPerTile[city.buildings.mine];
-  const subtotal = base + people + mine;
+  const farmGold = Math.round(plains * BUILDING_EFFECTS.farmsGoldPerPlainsTile[city.buildings.farms]);
+  const portGold = Math.round(city.coast * BUILDING_EFFECTS.portGoldPerSeaTile[city.buildings.port]);
+  const subtotal = base + people + mine + farmGold + portGold;
   const market = 1 + BUILDING_EFFECTS.marketGold[city.buildings.market];
   const total = Math.round(subtotal * tax.gold * market);
 
@@ -195,7 +208,7 @@ export function cityStats(state: GameState, city: City): CityStats {
     growthRate,
     growth: populationGrowth(city.population, fedCapacity, growthRate),
     gold: total,
-    income: { base, people, mine, subtotal, taxes: tax.gold, market, total },
+    income: { base, people, mine, farms: farmGold, port: portGold, subtotal, taxes: tax.gold, market, total },
   };
 }
 
