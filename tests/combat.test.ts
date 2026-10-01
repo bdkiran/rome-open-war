@@ -94,16 +94,19 @@ describe("a battle", () => {
     { unit: "archers", soldiers: 160, tier: 1 },
   ];
 
-  it("destroys the loser and leaves the winner whole soldiers, at least one, never more than it had", () => {
+  it("breaks the loser at half its soldiers, and leaves both sides whole soldiers, the winner at least one", () => {
     const rng = createRng(7);
+    const total = (side: Troops[]) => side.reduce((sum, t) => sum + t.soldiers, 0);
     for (let i = 0; i < 300; i++) {
       const r = resolveBattle(armyA, armyB, { defenseBonus: (i % 4) * 0.2, openGround: i % 2 === 0 }, rng);
-      const [winner, loser, winnerStart] = r.attackerWins
-        ? [r.attackerSoldiers, r.defenderSoldiers, armyA]
-        : [r.defenderSoldiers, r.attackerSoldiers, armyB];
-      assert.ok(loser.every((n) => n === 0));
-      assert.ok(winner.every((n, j) => Number.isInteger(n) && n >= 0 && n <= winnerStart[j].soldiers));
+      for (const [left, start] of [[r.attackerSoldiers, armyA], [r.defenderSoldiers, armyB]] as const) {
+        assert.ok(left.every((n, j) => Number.isInteger(n) && n >= 0 && n <= start[j].soldiers));
+      }
+      const [winner, loserLosses, loserStart] = r.attackerWins
+        ? [r.attackerSoldiers, r.defenderLosses, armyB]
+        : [r.defenderSoldiers, r.attackerLosses, armyA];
       assert.ok(winner.some((n) => n > 0));
+      assert.ok(loserLosses / total(loserStart) > 0.48, `the loser lost ${loserLosses} of ${total(loserStart)}`);
       assert.ok(r.rounds >= 1);
     }
   });

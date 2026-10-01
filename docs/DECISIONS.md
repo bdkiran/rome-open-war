@@ -75,8 +75,8 @@ so.
   so on. Each unit has attack, armor, and one special: ranged (archers),
   charge (cavalry, attacking on open ground only, never against a city),
   anti-cavalry (spearmen). Two volley rounds, then melee rounds (attack ÷
-  armor) until a side has lost half its soldiers and breaks; the loser is
-  still destroyed, as before.
+  armor) until a side has lost half its soldiers and breaks; the loser
+  then flees (see below).
 - **The stats were fitted to the old matchups** (regiment against regiment,
   attacking) so balance didn't jump: spearmen against cavalry 2.25 → 2.22,
   archers against spearmen 1.33 → 1.38, cavalry against archers 1.13 → 1.36,
@@ -109,6 +109,29 @@ so.
   enemy broke: about 40% in an even fight, 20% at 1.5 to 1 (it was 60% and
   40%). In 100-turn games, AI winners lose a median 10–15% (was about 27%),
   and more armies survive (about a third more regiments alive at turn 100).
+- **Beaten armies flee** instead of being wiped out: up to 3 tiles, to
+  their nearest own city in reach or else away from the enemy, never past
+  enemy armies or cities. The player chose fleeing with a "back against the
+  wall" exception: with nowhere to go, an army fights to the death, as does a
+  garrison defending its city (its walls are a dead end) and a besieged
+  garrison whose sally fails. An army that attacked from its own city falls
+  back inside. Rout losses are 10% of the survivors plus half a soldier per
+  surviving enemy horseman (the player wanted cavalry to matter in the
+  chase). A harsher 20% and 1 per horseman took more cities (219 against
+  199 in one comparison of 8 test games) with the same number of regiments
+  alive; the milder one was kept as agreed. Fleeing never uses a sea
+  crossing.
+- **Routed regiments under a tenth of their size scatter.** Without it, a
+  remnant of a few soldiers lost nothing to the rout (10% of 2 rounds to 0)
+  and fled forever: battles went from about 900 to over 5,000 in 8 test
+  games, half of them against 2 soldiers. With it, about 2,000 battles,
+  mostly chases of fled armies (median defender about 170 soldiers);
+  cities taken 219 (was 201 with wipe-outs), factions fallen 12 (was 11),
+  regiments alive at turn 100 1,382 (was 1,416).
+- **The conquest balance test was relaxed to 15% / 10%** (exterminating
+  best long-term at 50 / 100 turns). Fleeing armies changed the turn-50
+  game it samples, and exterminating came out best for 12% / 7% of cities
+  with no change to the economy. The player chose to relax the limits.
 - **The AI looks before storming.** It used to march up to a city out of
   sight and storm it in one order, and most of its battles were such blind
   storms against hidden garrisons. Under the new combat they failed more

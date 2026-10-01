@@ -36,10 +36,16 @@ export function showBattlePanel(
     preview.cityBonus > 0 ? `City walls +${Math.round(preview.cityBonus * 100)}%` : "",
   ].filter(Boolean);
 
-  const win = preview.cityAtStake
-    ? `If you win, you'll likely lose about ${formatNumber(preview.lossesIfWin)} soldiers and take ${escapeHtml(preview.cityAtStake)}.`
-    : `If you win, you'll likely lose about ${formatNumber(preview.lossesIfWin)} soldiers and destroy their army.`;
-  const lose = `If you lose, all ${formatNumber(regimentTotal(preview.attackers))} of your attacking soldiers are lost, and they lose about ${formatNumber(preview.defenderLossesIfHold)}.`;
+  const theirs = regimentTotal(preview.defenders);
+  const outcome = preview.cityAtStake
+    ? `take ${escapeHtml(preview.cityAtStake)}`
+    : preview.defendersCanFlee
+      ? `they flee, losing about ${formatNumber(preview.defenderLossesIfBeaten)} of ${formatNumber(theirs)}`
+      : "destroy their army: they can't flee";
+  const win = `If you win, you'll likely lose about ${formatNumber(preview.lossesIfWin)} soldiers and ${outcome}.`;
+  const lose = preview.attackersCanFlee
+    ? `If you lose, your army flees, losing about ${formatNumber(preview.lossesIfBeaten)} of ${formatNumber(regimentTotal(preview.attackers))}; they lose about ${formatNumber(preview.defenderLossesIfHold)}.`
+    : `If you lose, all ${formatNumber(regimentTotal(preview.attackers))} of your attacking soldiers are lost: nowhere to flee. They lose about ${formatNumber(preview.defenderLossesIfHold)}.`;
 
   el.body.innerHTML = `
     <div class="odds odds-${verdict}">
