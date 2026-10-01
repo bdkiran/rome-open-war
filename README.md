@@ -264,9 +264,9 @@ cavalry: a cavalry soldier is worth nearly two militia, but a militia
 regiment is almost twice as big. Militia are the cheapest strength in gold,
 and the dearest in people.
 
-Every faction starts with a regiment each of Archers and Cavalry in its
-capital, and a regiment of Spearmen garrisoning each of its other cities,
-ready to move on turn 1.
+Every faction starts with two regiments of Militia and one each of Archers
+and Cavalry in its capital, and a regiment each of Militia and Spearmen
+garrisoning each of its other cities, ready to move on turn 1.
 
 **Training.** Soldiers are trained as **regiments** of one unit type from the
 Recruitment tab of a city's panel: click a unit's card to queue it. Each city
@@ -281,7 +281,8 @@ people to spare or the army there is full, and the whole queue stops while
 the city is besieged.
 
 **Retraining.** Damaged regiments in an army standing in one of your cities
-can be brought back to full strength there: in the city panel's Retraining
+can be brought back to full strength there, if that city could train them
+(the unit's building at the regiment's tier; militia anywhere): in the city panel's Retraining
 tab, choose them and queue them. They don't wait their turn: everything
 queued for retraining is back to full strength next turn, however much
 training is queued ahead of it. It costs what training the missing soldiers
@@ -436,7 +437,8 @@ to expect from them:
   that would join in), march up to a city they can't see into before
   storming it, retreat from stronger armies, and march on the enemy
   city that's cheapest to take, whoever owns it. They besiege it and wait for
-  it to surrender or for good odds to storm it.
+  it to surrender or for good odds to storm it, and once they're camped
+  outside a city they stick with it.
 - **They defend their cities hard.** When one is besieged, they raise taxes,
   train a relief force suited to the besiegers, and march every field
   army to it. The garrison sallies at even odds, attacks at poor odds once

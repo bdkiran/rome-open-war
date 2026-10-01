@@ -69,12 +69,18 @@ describe("recruitment", () => {
     assert.equal(regimentCost("spearmen", 3).gold, 378);
   });
 
-  it("retrains a regiment at its own tier, with no building needed", () => {
+  it("retrains a regiment at its own tier, only where its building is at that level", () => {
     let state = newGame();
     const ariminum = cityNamed(state, "Ariminum");
     const garrison = armyAt(state, ariminum.tile)!;
     const elite = { ...garrison.regiments[0], unit: "spearmen" as const, tier: 3 as const, soldiers: 90 };
-    state = { ...state, armies: { ...state.armies, [garrison.id]: { ...garrison, regiments: [elite] } } };
+    const militia = { ...garrison.regiments[0], id: "m", unit: "militia" as const, tier: 1 as const, soldiers: 100 };
+    state = { ...state, armies: { ...state.armies, [garrison.id]: { ...garrison, regiments: [elite, militia] } } };
+    const refused = canRetrain(state, "rome", ariminum.id, [elite.id]);
+    assert.equal(refused.ok, false);
+    assert.match(refused.ok ? "" : refused.reason, /Veterans' hall/);
+    assert.equal(canRetrain(state, "rome", ariminum.id, [militia.id]).ok, true, "militia retrain anywhere");
+    state = withCity(state, withBuildings(state.cities[ariminum.id], { government: 3, spearYard: 3 }));
     assert.equal(canRetrain(state, "rome", ariminum.id, [elite.id]).ok, true);
     assert.equal(retrainCost(elite), Math.ceil(90 * UNITS.spearmen.goldPerSoldier * TIERS[3].cost));
   });

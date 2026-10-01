@@ -83,13 +83,19 @@ export function enemyRegimentsNear(ctx: GameContext, state: GameState, factionId
 /**
  * The enemy city that's cheapest to take: weak defenders count for less than
  * distance. Any city reachable over land from one of ours will do, since a
- * city too strong to storm can be besieged until it surrenders, except one another faction is
- * already besieging.
+ * city too strong to storm can be besieged until it surrenders, except one
+ * another faction is already besieging.
+ *
+ * Once committed, the AI sticks to it: a city it's besieging, or one its
+ * field armies are already standing next to, comes before any other. Without
+ * this, the garrison it sees on arrival (hidden by fog until then) made some
+ * other city look cheaper, and its armies wandered off before laying siege.
  */
 function chooseTarget(ctx: GameContext, state: GameState, factionId: FactionId): { target: City | null; muster: City | null } {
   const own = citiesOf(state, factionId);
   const land = landmasses(ctx, state.tiles);
-  let best: { target: City; muster: City; score: number } | null = null;
+  const committed = committedTargets(ctx, state, factionId);
+  let best: { target: City; muster: City; score: number; committed: boolean } | null = null;
 
   for (const city of Object.values(state.cities)) {
     if (city.owner === factionId) continue;
@@ -106,10 +112,30 @@ function chooseTarget(ctx: GameContext, state: GameState, factionId: FactionId):
     if (!muster) continue;
     if (city.besiegedBy && city.besiegedBy !== factionId) continue;
 
+    const isCommitted = committed.has(city.id);
     const score = defenderStrength(state, city) + distance * AI.distanceWeight;
-    if (!best || score < best.score) best = { target: city, muster, score };
+    const better = !best || (isCommitted && !best.committed) || (isCommitted === best.committed && score < best.score);
+    if (better) best = { target: city, muster, score, committed: isCommitted };
   }
   return { target: best?.target ?? null, muster: best?.muster ?? null };
+}
+
+/** Enemy cities this faction has committed to: ones it's besieging, and ones its field armies stand next to. */
+function committedTargets(ctx: GameContext, state: GameState, factionId: FactionId): Set<string> {
+  const committed = new Set<string>();
+  for (const city of Object.values(state.cities)) {
+    if (city.owner === factionId) continue;
+    if (city.besiegedBy === factionId) {
+      committed.add(city.id);
+      continue;
+    }
+    const near = new Set(ctx.topology.neighbors(city.tile));
+    const camped = Object.values(state.armies).some(
+      (a) => a.owner === factionId && near.has(a.tile) && !cityOwnedBy(state, a.tile, factionId),
+    );
+    if (camped) committed.add(city.id);
+  }
+  return committed;
 }
 
 /**
