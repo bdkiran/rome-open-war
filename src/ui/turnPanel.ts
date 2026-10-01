@@ -103,7 +103,7 @@ function moneyBreakdown(state: GameState, factionId: FactionId): string {
   const x = (n: number) => `×${Number.isInteger(n) ? n : n.toFixed(2).replace(/0$/, "")}`;
   const cities = citiesOf(state, factionId).map((city) => {
     const { income } = cityStats(state, city);
-    const parts = [`${income.base} base`, `${income.people} people`, ...(income.mine ? [`${income.mine} mine`] : [])].join(" + ");
+    const parts = [`${income.base} base`, `${income.people} people`, ...(income.mine ? [`${income.mine} mine`] : []), ...(income.farms ? [`${income.farms} farms`] : []), ...(income.port ? [`${income.port} port`] : [])].join(" + ");
     const multipliers = [
       ...(income.taxes !== 1 ? [`${x(income.taxes)} ${TAX_RATES[city.taxRate].name.toLowerCase()} taxes`] : []),
       ...(income.market !== 1 ? [`${x(income.market)} market`] : []),

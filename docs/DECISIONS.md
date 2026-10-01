@@ -295,6 +295,24 @@ The economy was retuned several times; the lesson each time:
 Always measure with `npm run simulate` (and `npm run levers` for the
 economy) before and after.
 
+- **Farms and ports earn a trickle of gold** (0.5 / 1 / 1.5 per plains tile
+  and per sea tile on the coast), and the port's growth bonus went from
+  +20/40/60% to +30/60/90% (still scaled by the sea share). Growth
+  compounds through city levels (farms bring the Forum at turn 46 instead of
+  54, the Senate at 79 instead of 99, and nearly double a city's income by
+  turn 100), but on its own it only caught up with gold buildings around
+  turn 90, so Fields paid for themselves in a third of level-1 cities and a
+  Jetty almost never (its +8% growth at the median sea share hardly
+  compounds). The player chose a smaller trickle plus stronger ports over a
+  big trickle (it would make farms out-earn the market) or growth alone.
+  Modelled, one city at a time: Fields pay back by turn 41 (was never),
+  a Jetty by 38 (was never), the market (29) and quarry (15) unchanged;
+  farms + port + market earns 6,135 gold by turn 100 against 3,328, while
+  gold buildings still lead over the first 50 turns. In 8 AI games the
+  AI's median income rose 11% (311 to 345), it built more farms and ports,
+  and still nobody went into debt; cities taken 197 (was 219), factions
+  fallen 13 (was 12).
+
 ## Interface
 
 - **3D campaign map** (three.js), tilted camera, raised terrain. The 2D

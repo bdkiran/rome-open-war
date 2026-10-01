@@ -7,7 +7,7 @@ import { updateFaction, type City, type GameState } from "@/core/state.js";
 import { BUILDING_EFFECTS, LEVEL_POPULATION } from "@/data/buildings.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { buildingAvailable, canBuild } from "@/systems/buildings.js";
-import { cityStats, mineableTiles, seaShare } from "@/systems/cities.js";
+import { cityStats, mineableTiles, plainsTiles, seaShare } from "@/systems/cities.js";
 
 function newGame(): GameState {
   const map = ROMAN_WORLD.mapEngine.createMap();
@@ -91,5 +91,32 @@ describe("ports and roads", () => {
     assert.ok(share > 0 && share < 1);
     const expected = base * (1 + BUILDING_EFFECTS.farmsGrowth[1] + BUILDING_EFFECTS.portGrowth[1] * share);
     assert.ok(Math.abs(cityStats(state, withBoth).growthRate - expected) < 1e-12);
+  });
+});
+
+describe("gold from farms and ports", () => {
+  it("adds gold for every plains tile with farms, and every sea tile with a port, before taxes and the market", () => {
+    let state = newGame();
+    const city = Object.values(state.cities).find((c) => c.coast > 0 && plainsTiles(state, c.id) > 0)!;
+    const before = cityStats(state, city).income;
+    for (const level of [1, 2, 3] as const) {
+      const built = { ...city, taxRate: "high" as const, buildings: { ...city.buildings, farms: level, port: level, market: 1 } };
+      state = withCity(state, built);
+      const income = cityStats(state, built).income;
+      assert.equal(income.farms, Math.round(plainsTiles(state, city.id) * BUILDING_EFFECTS.farmsGoldPerPlainsTile[level]));
+      assert.equal(income.port, Math.round(city.coast * BUILDING_EFFECTS.portGoldPerSeaTile[level]));
+      assert.equal(income.subtotal, before.subtotal + income.farms + income.port);
+      assert.equal(income.total, Math.round(income.subtotal * income.taxes * income.market));
+    }
+  });
+
+  it("gives no farm gold to a city with no plains, and none from farms or port unbuilt", () => {
+    const state = newGame();
+    const noPlains = Object.values(state.cities).find((c) => plainsTiles(state, c.id) === 0)!;
+    assert.equal(cityStats(state, { ...noPlains, buildings: { ...noPlains.buildings, farms: 3 } }).income.farms, 0);
+    for (const city of Object.values(state.cities)) {
+      const income = cityStats(state, city).income;
+      assert.equal(income.farms + income.port, 0, city.name);
+    }
   });
 });

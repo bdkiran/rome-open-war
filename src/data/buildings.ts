@@ -85,7 +85,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   farms: {
     name: "Farms",
-    purpose: "Feed a growing city: faster population growth.",
+    purpose: "Faster population growth, and a little gold from every plains tile in the city's land.",
     levels: [
       { name: "Fields", cost: 150, turns: 2 },
       { name: "Farmsteads", cost: 300, turns: 3 },
@@ -112,7 +112,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   port: {
     name: "Port",
-    purpose: "Fishing fleets feed a coastal city: faster growth, the more of its reach is sea. Needs fishing grounds.",
+    purpose: "Faster growth, the more of the city's reach is sea, and a little gold from every sea tile on its coast. Needs sea.",
     levels: [
       { name: "Jetty", cost: 200, turns: 2 },
       { name: "Harbour", cost: 400, turns: 3 },
@@ -166,6 +166,10 @@ export const BUILDING_EFFECTS = {
   marketGold: [0, 0.3, 0.6, 1],
   /** Gold per hills or mountain tile in the city's territory, before taxes and the market. */
   mineGoldPerTile: [0, 2, 4, 6],
+  /** Gold per plains tile in the city's territory, before taxes and the market. */
+  farmsGoldPerPlainsTile: [0, 0.5, 1, 1.5],
   /** Extra population growth from a port, scaled by the share of the city's reach that is sea. */
-  portGrowth: [0, 0.2, 0.4, 0.6],
+  portGrowth: [0, 0.3, 0.6, 0.9],
+  /** Gold per sea tile on the city's coast, before taxes and the market. */
+  portGoldPerSeaTile: [0, 0.5, 1, 1.5],
 } as const;
