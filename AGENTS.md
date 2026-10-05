@@ -15,7 +15,7 @@ balance or the AI.
 npm install              # once; three.js is served straight from node_modules
 npm run dev              # tsc --watch + static server on http://localhost:3000
 npm run build            # tsc; must finish with no errors
-npm test                 # AI-vs-AI games in Node, checked as they play (~1.5 min)
+npm test                 # AI-vs-AI games in Node, checked as they play (~3.5 min)
 npm run simulate -- [--turns 100] [--garrison] [--seed N]
                          # balance report: one AI-vs-AI game's numbers
 npm run levers -- [--turns 100] [--from 50] [--seed N]

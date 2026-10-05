@@ -67,43 +67,61 @@ export function createCity(
     nextCityNumber: state.nextCityNumber + 1,
     territory: { ...state.territory, [tile]: { owner, cityId: id } },
   };
-  return claimTerritory(ctx, next, id);
+  return next;
 }
 
 // ---- Territory ----------------------------------------------------------
 
-/** Claims unowned land within the territory radius. Never takes land that is already claimed. */
-function claimTerritory(ctx: GameContext, state: GameState, cityId: CityId): GameState {
-  const city = state.cities[cityId];
-  const territory = { ...state.territory };
-  for (const tile of tilesWithin(ctx.topology, city.tile, GAME_SETUP.territoryRadius)) {
-    if (territory[tile]) continue;
-    if (!TERRAIN[state.tiles[tile].terrain].passable) continue;
-    territory[tile] = { owner: city.owner, cityId };
+/**
+ * Gives every passable tile within the territory radius of a city to the
+ * nearest city, counting steps; on a tie, the city founded first. Runs once,
+ * after every city is placed, so where two cities' reach overlaps they split
+ * the land between them rather than the first one taking it all. Territory
+ * never changes after that.
+ */
+export function claimTerritory(ctx: GameContext, state: GameState): GameState {
+  const nearest = new Map<TileId, { cityId: CityId; steps: number }>();
+  for (const city of Object.values(state.cities)) {
+    for (const [tile, steps] of stepsWithin(ctx.topology, city.tile, GAME_SETUP.territoryRadius)) {
+      if (!TERRAIN[state.tiles[tile].terrain].passable) continue;
+      const best = nearest.get(tile);
+      if (!best || steps < best.steps) nearest.set(tile, { cityId: city.id, steps });
+    }
   }
+  const territory = { ...state.territory };
+  for (const [tile, { cityId }] of nearest) territory[tile] = { owner: state.cities[cityId].owner, cityId };
   return { ...state, territory };
 }
 
 /**
- * All tiles within `radius` steps, found by walking neighbors, so it works on
- * any map topology.
+ * Tiles within `radius` steps of `start`, each with its number of steps.
+ * Steps are to adjacent tiles only: a sea crossing is for armies, and doesn't
+ * bring the land across it within a city's reach.
  */
-export function tilesWithin(topology: MapTopology, start: TileId, radius: number): TileId[] {
-  const seen = new Set<TileId>([start]);
+function stepsWithin(topology: MapTopology, start: TileId, radius: number): Map<TileId, number> {
+  const steps = new Map<TileId, number>([[start, 0]]);
   let frontier: TileId[] = [start];
-  for (let step = 0; step < radius; step++) {
+  for (let step = 1; step <= radius; step++) {
     const next: TileId[] = [];
     for (const tile of frontier) {
       for (const n of topology.neighbors(tile)) {
-        if (!seen.has(n)) {
-          seen.add(n);
+        if (!steps.has(n) && topology.distance(tile, n) === 1) {
+          steps.set(n, step);
           next.push(n);
         }
       }
     }
     frontier = next;
   }
-  return [...seen];
+  return steps;
+}
+
+/**
+ * All tiles within `radius` steps, found by walking to adjacent tiles, so it
+ * works on any map topology. Sea crossings don't count as a step.
+ */
+export function tilesWithin(topology: MapTopology, start: TileId, radius: number): TileId[] {
+  return [...stepsWithin(topology, start, radius).keys()];
 }
 
 /** How many hills and mountain tiles a city's territory has for a mine to dig. */

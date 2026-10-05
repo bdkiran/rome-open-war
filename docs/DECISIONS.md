@@ -15,25 +15,60 @@ so.
 - **No one-hex land corridors.** The generator widens any strip of land one
   hex wide between two stretches of water: they made armies file through
   single choke points.
-- **Sicily is its own island** (the generator carves the Strait of Messina
-  using Sicily's real coastline), reached by sea crossings to Italy and
-  Africa. Rome holds Syracusae, Carthage Lilybaeum.
+- **Sicily is a round island**: the generator draws it as a disc of 19 hexes
+  (`ROUND_ISLANDS`) instead of its coastline, which at this scale came out
+  as a thin strip too small to share between three cities (Rome's Messana,
+  the Greeks' Syracusae, Carthage's Lilybaeum). Land touching the disc is
+  turned to sea, so the Strait of Messina stays open.
 - **Sea crossings** (Pillars of Hercules, Messina, Sicily–Africa, the
-  Channel, Corsica–Sardinia, Corsica–Italy) are ordinary steps in the
+  Channel, Corsica–Sardinia, Corsica–Italy, Sardinia–Africa) are ordinary steps in the
   topology (`links()`), so every city is reachable by land.
   A crossing never lands on a city tile: Sicily–Africa once joined
   Lilybaeum to Carthago directly, so an army in one could besiege the other
   across the sea. `tests/map.test.ts` checks no two cities touch.
-- **Every starting city can reach level 3.** Tarsus's land held only 14,000
+- **Every starting city can reach level 3**, still true with the new city
+  list (see below). Tarsus's land held only 14,000
   people (the Senate needs 15,000) because the Taurus band buried it in
   mountains. The generator now draws the Cilician plain (`PLAINS`), which
   lifts it to 18,700 and Antiochia to 40,300; `tests/map.test.ts` keeps every
   city at least 10% above the Senate's need. Raising sea or mountain capacity
   instead was rejected: it would have shifted the economy of 20–30 cities.
-- **Fixed territory.** Each city claims land within 2 tiles at the start and
+- **Fixed territory.** Each city claims land within 3 tiles at the start and
   it never changes. Cities never claim sea, but sea tiles in reach count as
   fishing grounds (capacity and growth), because coastal cities were
-  otherwise tiny.
+  otherwise tiny. Reach is counted in steps to adjacent tiles: a sea
+  crossing doesn't bring land across it into reach (Carthago was claiming
+  Sicily through the Sicily–Africa crossing). Sight (fog of war) counts the
+  same steps, so cities and armies no longer see across a crossing.
+- **Bigger territories, cities spread apart.** With a 2-tile radius only 16%
+  of the land belonged to any city. The radius is now 3, and a city closer
+  than 7 tiles to one already placed moves up to 4 steps over land (never
+  across the sea) to keep their land apart; where it can't, it goes as far
+  from its neighbours as it can and the land is split by nearest city. The
+  player wanted cities moved rather than sharing, and cities of unequal
+  size. Median land per city went from 13 tiles to about 24.
+- **Per-tile resources were halved** to match (capacity of every terrain
+  and the sea, mine gold 1/2/3 per tile, farms and port gold 0.25/0.5/0.75
+  per tile), so a typical city's totals stay near what they were. In
+  peacetime the world earns 541k gold by turn 100 (was 470k) across 59
+  cities (was 43), about 9.2k a city (was 10.9k). In 8 AI games: median AI
+  income 275 a turn (was 345, with several factions down to 2 cities),
+  cities at level 3 8 (was 2), cities taken 172 (was 197), factions fallen
+  11 (was 13), no invalid orders or debt. With the AI's siege commitment
+  (merged alongside): cities taken 304, factions fallen 15, level-3 cities
+  23, median AI income 391 a turn. Whole games are slower to simulate
+  (`npm test` about 3.5 minutes, was 1).
+- **The city list is the player's**: 15 factions with 2 to 7 cities each
+  (Rome holds 7 in Italy and Sicily). Parthia and Armenia were left out:
+  their cities are beyond the map's eastern edge; Seleucia sits on the edge.
+  The player chose plain historical names for factions and regions.
+- **Crowded cities were moved or dropped** so every city can still reach
+  level 3 (the player chose that over letting small cities top out at 2).
+  With halved capacity, ten crowded or edge cities had too little land.
+  Seven moved up to 1.5° from their real sites (Seleucia, Sidon, Ariminum,
+  Memphis, Sparta, Mediolanum, Rhodos); three with no such site were
+  dropped (Thessalonica beside Pella, Thermon in crowded Greece, Thebae,
+  which could only fit in Sinai).
 
 ## Factions
 
