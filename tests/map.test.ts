@@ -86,6 +86,23 @@ it("draws Sicily round, cut off from Italy", () => {
   assert.ok(ring.every((t) => map.tiles[t].terrain === "water"), "sea all round it");
 });
 
+it("lets every city be reached from every other, over land and sea crossings", () => {
+  const roma = cityNamed("Roma");
+  const seen = new Set([roma.tile]);
+  const queue = [roma.tile];
+  while (queue.length > 0) {
+    const t = queue.shift()!;
+    for (const n of ctx.topology.neighbors(t)) {
+      if (seen.has(n) || map.tiles[n].terrain === "water") continue;
+      seen.add(n);
+      queue.push(n);
+    }
+  }
+  // Otherwise a faction could survive out of reach, and the game could never end.
+  const cut = Object.values(state.cities).filter((c) => !seen.has(c.tile)).map((c) => c.name);
+  assert.deepEqual(cut, []);
+});
+
 it("links Sardinia to Africa by a sea crossing", () => {
   assert.ok(SEA_CROSSINGS.some((c) => c.name === "Sardinia to Africa"));
   const carales = cityNamed("Carales");

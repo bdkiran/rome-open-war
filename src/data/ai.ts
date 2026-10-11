@@ -7,6 +7,12 @@ export const AI = {
   /** Smallest field army worth sending, in regiments. */
   minLaunchRegiments: 3,
 
+  /**
+   * A city with fewer people than this trains no regiments unless it's
+   * empty or threatened: soldiers come out of its people, and recruiting
+   * drained small border towns to nothing.
+   */
+  minRecruitPopulation: 2000,
   /** Regiments every city keeps at home, at minimum. */
   baseGarrison: 2,
   capitalGarrison: 3,

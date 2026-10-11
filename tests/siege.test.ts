@@ -1,4 +1,4 @@
-/** A besieged garrison is shut in: it can attack its besiegers, and nothing else. */
+/** Sieges: a garrison is shut in, a beaten siege ends at once, and a city restocks fully when one ends. */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { applyAction } from "@/core/actions.js";
@@ -9,6 +9,7 @@ import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize } from "@/data/units.js";
 import { attackOptions, reachableTiles, SHUT_IN } from "@/systems/armies.js";
 import { assess } from "@/ai/assess.js";
+import { maxSupplies } from "@/systems/siege.js";
 
 /** A new game with Roma besieged by a Carthaginian army standing next to it. */
 function romaBesieged(): { ctx: GameContext; state: GameState; garrison: Army; besiegerTile: string } {
@@ -102,5 +103,52 @@ describe("the AI's siege target", () => {
       },
     };
     assert.equal(assess(ctx, state, "carthage").target?.name, "Roma");
+  });
+});
+
+describe("the end of a siege", () => {
+  /** Roma besieged and down to its last turn of supplies, with Roma's garrison 8 strong regiments. */
+  function lastTurn() {
+    const setup = romaBesieged();
+    const roma = Object.values(setup.state.cities).find((c) => c.name === "Roma")!;
+    const reg = (id: string) => ({ id, unit: "spearmen" as const, tier: 3 as const, soldiers: regimentSize("spearmen"), movementLeft: 12, pinned: false });
+    const state: GameState = {
+      ...setup.state,
+      cities: { ...setup.state.cities, [roma.id]: { ...roma, supplies: 1 } },
+      armies: { ...setup.state.armies, [setup.garrison.id]: { ...setup.garrison, regiments: Array.from({ length: 8 }, (_, i) => reg(`g${i}`)) } },
+    };
+    const carthage = state.factions.findIndex((f) => f.id === "carthage");
+    return { ...setup, roma, state, carthage };
+  }
+
+  it("is broken by a failed storm, so the city doesn't surrender that turn", () => {
+    const { ctx, state, roma, carthage } = lastTurn();
+    let next: GameState = { ...state, currentFactionIndex: carthage };
+    const storm = applyAction(ctx, next, "carthage", { type: "attack", armyId: "besiegers", regimentIds: ["besieger"], target: roma.tile });
+    assert.ok(storm.ok);
+    next = storm.state;
+    assert.equal(next.battles[next.battles.length - 1].attackerWon, false);
+    assert.equal(next.cities[roma.id].besiegedBy, null, "the siege is broken");
+    assert.equal(next.cities[roma.id].supplies, maxSupplies(next.cities[roma.id]), "and the city restocked");
+    const ended = applyAction(ctx, next, "carthage", { type: "endTurn" });
+    assert.ok(ended.ok);
+    assert.equal(ended.state.cities[roma.id].owner, "rome", "Roma held");
+    assert.ok(armyAt(ended.state, roma.tile), "its garrison survived");
+  });
+
+  it("is broken when the garrison sallies and beats the besiegers", () => {
+    const { ctx, state, roma, garrison, besiegerTile } = lastTurn();
+    const ids = state.armies[garrison.id].regiments.map((r) => r.id);
+    const sally = applyAction(ctx, state, "rome", { type: "attack", armyId: garrison.id, regimentIds: ids, target: besiegerTile });
+    assert.ok(sally.ok);
+    assert.equal(sally.state.battles[sally.state.battles.length - 1].attackerWon, true);
+    assert.equal(sally.state.cities[roma.id].besiegedBy, null);
+  });
+
+  it("refills the city's supplies when lifted, so a new siege starts from full", () => {
+    const { ctx, state, roma, carthage } = lastTurn();
+    const lifted = applyAction(ctx, { ...state, currentFactionIndex: carthage }, "carthage", { type: "liftSiege", cityId: roma.id });
+    assert.ok(lifted.ok);
+    assert.equal(lifted.state.cities[roma.id].supplies, maxSupplies(roma));
   });
 });

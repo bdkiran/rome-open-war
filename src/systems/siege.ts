@@ -63,12 +63,38 @@ export function canLiftSiege(state: GameState, factionId: FactionId, cityId: str
   return { ok: true };
 }
 
-/** Calls off a siege. The besieging armies stay where they are; the city starts restocking. */
+/** Calls off a siege. The besieging armies stay where they are; the city's supplies are refilled. */
 export function liftSiege(state: GameState, factionId: FactionId, cityId: string): GameState {
-  const city = state.cities[cityId];
   const name = getFaction(state, factionId)?.shortName ?? "Unknown";
-  const next = setCity(state, { ...city, besiegedBy: null });
-  return addLog(next, `${name} lifted the siege of ${city.name}.`, { kind: "siege", factions: [factionId, city.owner] });
+  return endSiege(state, cityId, `${name} lifted the siege of ${state.cities[cityId].name}.`);
+}
+
+/**
+ * Ends a siege, however it ends short of surrender: the city is free and
+ * its supplies are refilled at once, so another siege starts from full
+ * stores rather than where the last one left off.
+ */
+function endSiege(state: GameState, cityId: string, text: string): GameState {
+  const city = state.cities[cityId];
+  const besieger = city.besiegedBy;
+  const next = setCity(state, { ...city, besiegedBy: null, supplies: maxSupplies(city) });
+  return addLog(next, text, { kind: "siege", factions: besieger ? [besieger, city.owner] : [city.owner] });
+}
+
+/**
+ * After a battle `besiegerId` lost at `tile`: any siege it holds on a city
+ * there or next to it is broken at once. A failed storm, a garrison's
+ * successful sally and a relief force beating the besiegers all end the
+ * siege, rather than leaving the city to surrender at the end of the turn.
+ */
+export function breakSieges(ctx: GameContext, state: GameState, besiegerId: FactionId, tile: TileId): GameState {
+  let next = state;
+  for (const city of Object.values(state.cities)) {
+    if (city.besiegedBy !== besiegerId) continue;
+    if (city.tile !== tile && ctx.topology.distance(city.tile, tile) !== 1) continue;
+    next = endSiege(next, city.id, `The siege of ${city.name} was broken.`);
+  }
+  return next;
 }
 
 /**
@@ -87,8 +113,7 @@ export function processSieges(ctx: GameContext, state: GameState, besiegerId: Fa
     if (!city || city.besiegedBy !== besiegerId) continue;
 
     if (!besiegerStillThere(ctx, next, besiegerId, city)) {
-      next = setCity(next, { ...city, besiegedBy: null });
-      next = addLog(next, `${name} lifted the siege of ${city.name}.`, { kind: "siege", factions: [besiegerId, city.owner] });
+      next = endSiege(next, city.id, `${name} lifted the siege of ${city.name}.`);
       continue;
     }
 
@@ -147,17 +172,6 @@ function surrender(ctx: GameContext, state: GameState, besiegerId: FactionId, ci
     { kind: "siege", factions: [besiegerId, previousOwner], major: true },
   );
   return eliminateIfDefeated(next, previousOwner);
-}
-
-/** At the end of the owner's turn, cities that aren't besieged restock a little. */
-export function restockSupplies(state: GameState, ownerId: FactionId): GameState {
-  let next = state;
-  for (const city of Object.values(state.cities)) {
-    if (city.owner !== ownerId || city.besiegedBy) continue;
-    const supplies = Math.min(maxSupplies(city), city.supplies + SIEGE.restockPerTurn);
-    if (supplies !== city.supplies) next = setCity(next, { ...city, supplies });
-  }
-  return next;
 }
 
 function besiegerStillThere(ctx: GameContext, state: GameState, besiegerId: FactionId, city: City): boolean {

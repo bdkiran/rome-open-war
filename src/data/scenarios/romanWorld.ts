@@ -35,7 +35,6 @@ export const ROMAN_WORLD: Scenario = {
         { name: "Lilybaeum", lon: 12.44, lat: 37.8 },
         { name: "Thapsus", lon: 11.05, lat: 35.62 },
         { name: "Carales", lon: 9.11, lat: 39.22 },
-        { name: "Palma", lon: 2.65, lat: 39.57 },
         { name: "Corduba", lon: -4.78, lat: 37.88 },
       ],
     },
@@ -51,9 +50,7 @@ export const ROMAN_WORLD: Scenario = {
       cities: [
         { name: "Corinthus", lon: 22.88, lat: 37.91, capital: true },
         { name: "Syracusae", lon: 15.29, lat: 37.07 },
-        { name: "Sparta", lon: 22.68, lat: 36.07 }, // moved from its real site to give it room
         { name: "Pergamum", lon: 27.18, lat: 39.12 },
-        { name: "Rhodos", lon: 27.22, lat: 35.93 }, // moved from its real site to give it room
       ],
     },
     {
@@ -72,7 +69,6 @@ export const ROMAN_WORLD: Scenario = {
       cities: [
         { name: "Alexandria", lon: 29.92, lat: 31.2, capital: true },
         { name: "Memphis", lon: 30.75, lat: 30.85 }, // moved from its real site to give it room
-        { name: "Salamis", lon: 33.9, lat: 35.18 },
         { name: "Cyrene", lon: 21.86, lat: 32.82 },
       ],
     },

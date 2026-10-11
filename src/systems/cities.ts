@@ -263,10 +263,14 @@ export function seaShare(state: GameState, city: City): number {
 /**
  * Carrying-capacity growth: close to the full rate while the city is small,
  * slowing to zero as it nears capacity, and negative if it's over capacity.
+ * A small city grows as if it had ECONOMY.growthFloorPopulation people, but
+ * never past its capacity.
  */
 export function populationGrowth(population: number, capacity: number, rate: number): number {
   if (capacity <= 0) return -population;
-  return Math.round(rate * population * (1 - population / capacity));
+  if (population >= capacity) return Math.round(rate * population * (1 - population / capacity));
+  const growing = Math.max(population, ECONOMY.growthFloorPopulation);
+  return Math.min(capacity - population, Math.round(rate * growing * (1 - population / capacity)));
 }
 
 /** Total gold a faction gains per turn. Besieged cities pay nothing. */
@@ -314,14 +318,14 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
     territory,
     cities: {
       ...state.cities,
-      // No longer a capital, so its stores are an ordinary city's.
       [cityId]: {
         ...city,
         owner: newOwner,
         isCapital: false,
         besiegedBy: null,
         taxRate: "normal",
-        supplies: Math.min(city.supplies, maxSupplies({ isCapital: false, buildings: city.buildings })),
+        // Its new owner starts with full stores, an ordinary city's (it's no longer a capital).
+        supplies: maxSupplies({ isCapital: false, buildings: city.buildings }),
         // Buildings stand; whatever was being built or trained is lost.
         constructionQueue: [],
         recruitQueue: [],
