@@ -29,7 +29,7 @@ export interface City {
   population: number;
   foundedTurn: number;
   isCapital: boolean;
-  /** Turns of food left for a siege. Used up while besieged, restocked otherwise. */
+  /** Turns of food left for a siege. Used up while besieged, refilled whenever a siege ends. */
   supplies: number;
   /** The faction besieging this city, if any. */
   besiegedBy: FactionId | null;

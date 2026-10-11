@@ -7,8 +7,6 @@ export const SIEGE = {
   supplyTurnsByLevel: [0, 3, 4, 5],
   /** Capitals are better stocked: this many more turns. */
   capitalExtraTurns: 1,
-  /** Supplies a city regains each turn when not besieged, up to its maximum. */
-  restockPerTurn: 1,
   /** From the first turn of a siege, the garrison loses this share of its soldiers each turn... */
   garrisonAttrition: 0.05,
   /** ...and the city this share of its people. */

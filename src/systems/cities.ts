@@ -314,14 +314,14 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
     territory,
     cities: {
       ...state.cities,
-      // No longer a capital, so its stores are an ordinary city's.
       [cityId]: {
         ...city,
         owner: newOwner,
         isCapital: false,
         besiegedBy: null,
         taxRate: "normal",
-        supplies: Math.min(city.supplies, maxSupplies({ isCapital: false, buildings: city.buildings })),
+        // Its new owner starts with full stores, an ordinary city's (it's no longer a capital).
+        supplies: maxSupplies({ isCapital: false, buildings: city.buildings }),
         // Buildings stand; whatever was being built or trained is lost.
         constructionQueue: [],
         recruitQueue: [],

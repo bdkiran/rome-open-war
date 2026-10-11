@@ -21,7 +21,7 @@ import {
   moveRegiments,
 } from "@/systems/armies.js";
 import { attack, canAttack } from "@/systems/combat.js";
-import { besiege, canBesiege, canLiftSiege, liftSiege } from "@/systems/siege.js";
+import { besiege, breakSieges, canBesiege, canLiftSiege, liftSiege } from "@/systems/siege.js";
 import { canBuild, cancelConstruction, queueConstruction } from "@/systems/buildings.js";
 import {
   canRetrain,
@@ -126,7 +126,12 @@ function perform(ctx: GameContext, state: GameState, factionId: FactionId, actio
     case "attack": {
       const check = canAttack(ctx, state, factionId, action.armyId, action.regimentIds, action.target, action.via);
       if (!check.ok) return check;
-      return { ok: true, state: attack(ctx, state, action.armyId, action.regimentIds, action.target, action.via) };
+      const after = attack(ctx, state, action.armyId, action.regimentIds, action.target, action.via);
+      // A battle was fought: a beaten besieger's siege there is broken at once.
+      if (after.nextBattleNumber === state.nextBattleNumber) return { ok: true, state: after };
+      const battle = after.battles[after.battles.length - 1];
+      const loser = battle.attackerWon ? battle.defender : battle.attacker;
+      return { ok: true, state: breakSieges(ctx, after, loser, battle.tile) };
     }
 
     case "march": {

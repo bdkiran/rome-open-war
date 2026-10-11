@@ -4,7 +4,7 @@ import { continueMarches, payUpkeep, refreshMovement } from "@/systems/armies.js
 import { progressConstruction } from "@/systems/buildings.js";
 import { processRecruitment } from "@/systems/recruitment.js";
 import { processCities } from "@/systems/cities.js";
-import { processSieges, restockSupplies } from "@/systems/siege.js";
+import { processSieges } from "@/systems/siege.js";
 
 /**
  * Ends the current faction's turn: runs its end-of-turn processing, then
@@ -28,7 +28,7 @@ export function endTurn(ctx: GameContext, state: GameState): GameState {
 }
 
 /**
- * Runs as a faction ends its turn: its marching armies move, and its cities pay income, grow, build, recruit and restock,
+ * Runs as a faction ends its turn: its marching armies move, and its cities pay income, grow, build and recruit,
  * its sieges tighten (or lift, if it has walked away), and its army is paid.
  * Doing it here gives every faction exactly one tick per round, whatever its
  * turn order.
@@ -39,7 +39,6 @@ function endFactionTurn(ctx: GameContext, state: GameState, factionId: FactionId
   next = processCities(ctx, next, factionId);
   next = progressConstruction(next, factionId);
   next = processRecruitment(next, factionId);
-  next = restockSupplies(next, factionId);
   next = processSieges(ctx, next, factionId);
   return payUpkeep(next, factionId);
 }

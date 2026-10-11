@@ -58,17 +58,23 @@ so.
   (merged alongside): cities taken 304, factions fallen 15, level-3 cities
   23, median AI income 391 a turn. Whole games are slower to simulate
   (`npm test` about 3.5 minutes, was 1).
-- **The city list is the player's**: 15 factions with 2 to 7 cities each
+- **The city list is the player's**: 15 factions with 2 to 7 cities each (55 cities)
   (Rome holds 7 in Italy and Sicily). Parthia and Armenia were left out:
   their cities are beyond the map's eastern edge; Seleucia sits on the edge.
   The player chose plain historical names for factions and regions.
 - **Crowded cities were moved or dropped** so every city can still reach
   level 3 (the player chose that over letting small cities top out at 2).
   With halved capacity, ten crowded or edge cities had too little land.
-  Seven moved up to 1.5° from their real sites (Seleucia, Sidon, Ariminum,
-  Memphis, Sparta, Mediolanum, Rhodos); three with no such site were
-  dropped (Thessalonica beside Pella, Thermon in crowded Greece, Thebae,
-  which could only fit in Sinai).
+  Five moved up to 1.5° from their real sites (Seleucia, Sidon, Ariminum,
+  Memphis, Mediolanum); three with no such site were dropped (Thessalonica
+  beside Pella, Thermon in crowded Greece, Thebae, which could only fit in
+  Sinai).
+- **No cities on islands out of reach.** Palma (Mallorca), Rhodos and
+  Salamis (Cyprus) had no sea crossing, so their factions could never be
+  beaten and the game couldn't end; the player chose to remove them.
+  Sparta's moved site had landed on a cut-off scrap of land, and no
+  reachable site within 1.5° gave it room to grow, so it went too.
+  `tests/map.test.ts` checks every city can be reached from every other.
 
 ## Factions
 
@@ -192,6 +198,20 @@ so.
   city level, +1 for capitals. Attrition from turn one (garrison −5%, people
   −1% a turn). When supplies run out the city surrenders and its garrison is
   destroyed. The old "starve then lose 25% a turn" model felt too abrupt.
+- **A beaten siege ends at once, and an ended siege refills the city.**
+  The siege used to be checked only at the end of the besieger's turn, and
+  only for an army next to the city: a storm lost on the city's last turn
+  of supplies still ended in surrender and the garrison's destruction, and a
+  new siege picked up the old one's supplies (cities restocked one turn a
+  turn). Now losing a battle at or next to the city breaks the siege
+  (`breakSieges`), and a lifted, broken or captured city's supplies are
+  refilled at once. The player reported both as bugs. Knock-on, not yet
+  addressed: the AI lays sieges whatever the garrison's strength, and
+  garrisons sallying out and winning used to cost a siege nothing (the
+  besieger walked back before its turn ended). Now they break it and the
+  city restocks, so AI sieges almost never end in surrender (1 of 448 in 8
+  test games, against 64 of 202 before): cities taken 210 (was 304),
+  factions fallen 11 (was 15).
 - **The AI defends its cities**: raises war taxes, trains a relief force in
   the nearest free city, marches every field army there, attacks besiegers at
   even odds, and its garrison sallies at even odds, at 0.6 when two turns

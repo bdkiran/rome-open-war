@@ -31,11 +31,11 @@ AI powers share the map with you, some with many cities and some with few:
 | Faction                | Cities (capital first)                  |
 |------------------------|-----------------------------------------|
 | Roman Republic (you) | Roma, Arretium, Ariminum, Capua, Tarentum, Croton, Messana |
-| Carthage | Carthago, Lilybaeum, Thapsus, Carales, Palma, Corduba |
+| Carthage | Carthago, Lilybaeum, Thapsus, Carales, Corduba |
 | Kingdom of Macedon | Pella, Bylazora |
-| Greek Leagues | Corinthus, Syracusae, Sparta, Pergamum, Rhodos |
+| Greek Leagues | Corinthus, Syracusae, Pergamum |
 | Seleucid Empire | Antiochia, Seleucia, Damascus, Sardis, Tarsus, Sidon |
-| Ptolemaic Egypt | Alexandria, Memphis, Salamis, Cyrene |
+| Ptolemaic Egypt | Alexandria, Memphis, Cyrene |
 | Gallic Tribes | Alesia, Lemonum, Mediolanum, Patavium, Narbo Martius, Numantia |
 | Kingdom of Numidia | Cirta, Tingis |
 | Germanic Tribes | Batavodurum, Damme, Marcomannia |
@@ -391,7 +391,7 @@ of storming the walls now:
 
 - **Continue the siege** keeps the siege going.
 - **Storm the city** opens the battle panel.
-- **Withdraw** lifts the siege, and the city starts restocking.
+- **Withdraw** lifts the siege, and the city's supplies are refilled.
 
 Clicking a city you're already besieging reopens the screen. A city in sight
 with no garrison is simply taken.
@@ -403,8 +403,11 @@ at level 1, 4 at level 2 and 5 at level 3, and a turn more for a capital.
 Each turn under siege uses one, and **when they run out the city
 surrenders**: its garrison is destroyed and the besieger's strongest army
 next to it marches in. The siege holds as long as the besieger ends its turn
-with an army next to the city; otherwise it's lifted, and the city restocks
-one turn of supplies per turn.
+with an army next to the city; otherwise it's lifted. It's also **broken at
+once if the besiegers lose a battle** at the city or next to it: a failed
+storm, a successful sally or a relief force beating them. However a siege
+ends, the city's supplies are refilled at once, so another siege starts from
+full stores.
 
 A besieged garrison is shut in: it can't leave the city, and can only attack
 the besiegers next to it and join battles against them. The defenders can break a siege by attacking the
