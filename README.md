@@ -161,7 +161,8 @@ growth = baseGrowthRate × population × (1 − population / capacity)
   2.5%, mountains and desert 1%.
 
 Cities grow close to their base rate while small and slow down as they near
-capacity. A city over capacity shrinks.
+capacity. A city over capacity shrinks. A city drained below 1,000 people
+(by sacking or recruiting) still grows as if it had 1,000, so it recovers.
 
 Each city adds a flat 5 gold per turn, plus 4 gold per 1,000 people, plus
 whatever its mine, farms and port bring in (see below). The land itself pays
@@ -444,7 +445,8 @@ to expect from them:
   army to it. The garrison sallies at even odds, attacks at poor odds once
   surrender is two turns away, and makes a **last stand** at any odds on its
   final turn of supplies.
-- They garrison cities against nearby enemies, build walls near their
+- They garrison cities against nearby enemies (a city under 2,000 people
+  trains only when it's empty or threatened), build walls near their
   borders, advance their cities, build markets, then a spear yard, archery
   range and stables, then mines, farms, ports and, last, roads. They train
   the best tier of a unit they can afford to keep.

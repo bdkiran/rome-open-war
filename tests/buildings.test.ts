@@ -7,7 +7,8 @@ import { updateFaction, type City, type GameState } from "@/core/state.js";
 import { BUILDING_EFFECTS, LEVEL_POPULATION } from "@/data/buildings.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { buildingAvailable, canBuild } from "@/systems/buildings.js";
-import { cityStats, mineableTiles, plainsTiles, seaShare } from "@/systems/cities.js";
+import { cityStats, mineableTiles, plainsTiles, populationGrowth, seaShare } from "@/systems/cities.js";
+import { ECONOMY } from "@/data/economy.js";
 
 function newGame(): GameState {
   const map = ROMAN_WORLD.mapEngine.createMap();
@@ -116,5 +117,20 @@ describe("gold from farms and ports", () => {
       const income = cityStats(state, city).income;
       assert.equal(income.farms + income.port, 0, city.name);
     }
+  });
+});
+
+describe("population growth", () => {
+  const floor = ECONOMY.growthFloorPopulation;
+
+  it("lets a city drained to a few hundred people grow as if it had the floor", () => {
+    assert.equal(populationGrowth(100, 20000, 0.05), Math.round(0.05 * floor * (1 - 100 / 20000)));
+    assert.ok(populationGrowth(100, 20000, 0.05) >= 9 * Math.round(0.05 * 100), "about ten times what 100 people would manage");
+  });
+
+  it("leaves larger cities alone, and never grows a city past its capacity", () => {
+    assert.equal(populationGrowth(5000, 20000, 0.05), Math.round(0.05 * 5000 * 0.75));
+    assert.equal(populationGrowth(990, 1000, 2), 10, "stops at capacity");
+    assert.ok(populationGrowth(9000, 8000, 0.05) < 0, "over capacity still shrinks");
   });
 });

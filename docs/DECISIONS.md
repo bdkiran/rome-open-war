@@ -308,6 +308,18 @@ so.
   room in their new cities, so the losses were the only drag; more plunder
   on top made enslaving best even short-term, so it wasn't raised.
 
+- **Growth floor: a small city grows as if it had 1,000 people.** Growth is
+  a share of the people already there, so a city drained to a few hundred
+  barely grew: Samarobriva, on the Britannia–Germania border, changed hands
+  four times in 40 turns, was put to the sword three times, and sat at 100–250
+  people growing 6–14 a turn (3–5 of 55 cities ended a game under 1,000).
+  Now it grows 40–50 a turn and recovers in about 20 turns. The AI also
+  stops training in a city under 2,000 people unless it's empty or
+  threatened (`AI.minRecruitPopulation`): its militia had drained the town
+  from 3,000 to 1,100 before it was ever taken. In 8 AI games: cities taken
+  390 (was 304), median AI income 450 a turn (was 391), factions fallen 15
+  (unchanged); peacetime numbers unchanged, since no city starts that small.
+
 ## Economy tuning history
 
 The economy was retuned several times; the lesson each time:
