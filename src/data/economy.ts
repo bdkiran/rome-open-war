@@ -6,6 +6,12 @@ export const ECONOMY = {
   cityBaseGold: 5,
   /** Extra gold per turn for every full 1,000 people in a city. */
   goldPer1000People: 4,
+  /**
+   * A city grows at least as fast as if it had this many people, so one
+   * sacked or drained down to a few hundred recovers instead of crawling
+   * (growth is otherwise a share of the people already there).
+   */
+  growthFloorPopulation: 1000,
 } as const;
 
 export type TaxRate = "low" | "normal" | "high";

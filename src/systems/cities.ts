@@ -263,10 +263,14 @@ export function seaShare(state: GameState, city: City): number {
 /**
  * Carrying-capacity growth: close to the full rate while the city is small,
  * slowing to zero as it nears capacity, and negative if it's over capacity.
+ * A small city grows as if it had ECONOMY.growthFloorPopulation people, but
+ * never past its capacity.
  */
 export function populationGrowth(population: number, capacity: number, rate: number): number {
   if (capacity <= 0) return -population;
-  return Math.round(rate * population * (1 - population / capacity));
+  if (population >= capacity) return Math.round(rate * population * (1 - population / capacity));
+  const growing = Math.max(population, ECONOMY.growthFloorPopulation);
+  return Math.min(capacity - population, Math.round(rate * growing * (1 - population / capacity)));
 }
 
 /** Total gold a faction gains per turn. Besieged cities pay nothing. */

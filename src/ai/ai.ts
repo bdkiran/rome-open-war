@@ -447,6 +447,7 @@ function trainingAction(
     const unit = counterToNearestEnemy(ctx, state, city);
     // An empty or threatened city gets its garrison even if upkeep is tight.
     const emergency = regimentsAt(city.tile) === 0 || enemyRegimentsNear(ctx, state, factionId, city.tile) > 0;
+    if (!emergency && city.population < AI.minRecruitPopulation) continue;
     const tier = affordableTier(state, factionId, city.id, unit, emergency ? Infinity : spareIncome);
     if (tier) {
       return { type: "trainRegiment", cityId: city.id, unit, tier };
@@ -458,7 +459,7 @@ function trainingAction(
 
   // Then a field regiment at the muster city, countering the target's defenders.
   const { target, muster } = plan;
-  if (target && muster && regimentsAt(muster.tile) < ARMY_RULES.maxRegiments) {
+  if (target && muster && regimentsAt(muster.tile) < ARMY_RULES.maxRegiments && muster.population >= AI.minRecruitPopulation) {
     // Counter the garrison if we can see it; otherwise build a balanced stack.
     const unit = trainAgainst(muster, armyAt(state, target.tile)) ?? leastRepresented(muster, armyAt(state, muster.tile));
     const tier = affordableTier(state, factionId, muster.id, unit, spareIncome);
