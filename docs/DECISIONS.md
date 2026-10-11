@@ -205,13 +205,16 @@ so.
   new siege picked up the old one's supplies (cities restocked one turn a
   turn). Now losing a battle at or next to the city breaks the siege
   (`breakSieges`), and a lifted, broken or captured city's supplies are
-  refilled at once. The player reported both as bugs. Knock-on, not yet
-  addressed: the AI lays sieges whatever the garrison's strength, and
+  refilled at once. The player reported both as bugs. Knock-on, accepted:
+  the AI lays sieges whatever the garrison's strength, and
   garrisons sallying out and winning used to cost a siege nothing (the
   besieger walked back before its turn ended). Now they break it and the
   city restocks, so AI sieges almost never end in surrender (1 of 448 in 8
   test games, against 64 of 202 before): cities taken 210 (was 304),
-  factions fallen 11 (was 15).
+  factions fallen 11 (was 15). The player chose to leave it: storming, not
+  starving a city out, should be the main way to take one. Making the AI
+  besiege only when it could survive a sally was tried and didn't help
+  (243–265 cities taken, 5–6 factions fallen).
 - **The AI defends its cities**: raises war taxes, trains a relief force in
   the nearest free city, marches every field army there, attacks besiegers at
   even odds, and its garrison sallies at even odds, at 0.6 when two turns
