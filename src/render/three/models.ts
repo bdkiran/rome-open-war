@@ -520,6 +520,11 @@ export function siegeRing(color: string): THREE.Mesh {
 
 // ---- Models from files --------------------------------------------------------
 
+/** How long a model from a file takes to blend between standing and walking, in seconds. */
+const FILE_MODEL_BLEND_SECONDS = 0.2;
+/** Where the next copy of a model starts its idle clip (0-1), stepped for each copy. */
+let idleStagger = 0;
+
 /** What models/models.json can list. Each value is a .glb or .gltf file name in the models folder. */
 interface ModelManifest {
   army?: string;
@@ -539,8 +544,9 @@ interface LoadedModel {
 /**
  * Supplies army and city models: from files listed in models/models.json
  * when there are any, otherwise built in code. Materials whose name contains
- * "faction" are recoloured to the owner's colour, and an animation clip whose
- * name contains "walk" plays while the army is moving.
+ * "faction" are recoloured to the owner's colour, an animation clip whose
+ * name contains "walk" plays while the army is moving, and one whose name
+ * contains "idle" while it stands.
  */
 export class ModelLibrary {
   private readonly loaded = new Map<string, LoadedModel>();
@@ -606,24 +612,49 @@ export class ModelLibrary {
       mesh.material = Array.isArray(mesh.material) ? mesh.material.map(recolor) : recolor(mesh.material);
     });
 
-    // Scale to size and stand it on the ground.
-    const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+    // Scale to size and stand it on the ground. Measured from the posed
+    // vertices ("precise"), since a rigged mesh's stored bounds ignore its bones.
+    const measure = () => {
+      object.updateMatrixWorld(true);
+      return new THREE.Box3().setFromObject(object, true);
+    };
+    const size = measure().getSize(new THREE.Vector3());
     const scale = height > 0 ? height / Math.max(size.y, 0.001) : width / Math.max(size.x, size.z, 0.001);
     object.scale.setScalar(scale);
-    const bounds = new THREE.Box3().setFromObject(object);
-    object.position.y -= bounds.min.y;
+    object.position.y -= measure().min.y;
+    // A rigged mesh's bounds don't follow its animation, so don't let them hide it.
+    object.traverse((node) => {
+      if ((node as THREE.SkinnedMesh).isSkinnedMesh) node.frustumCulled = false;
+    });
     const holder = new THREE.Group();
     holder.add(object);
 
-    const walk = model.animations.find((clip) => /walk/i.test(clip.name));
-    const mixer = walk ? new THREE.AnimationMixer(object) : null;
-    const action = walk && mixer ? mixer.clipAction(walk) : null;
+    // A "walk" clip plays while moving; an "idle" clip, if there is one, while standing.
+    const walkClip = model.animations.find((clip) => /walk/i.test(clip.name));
+    const idleClip = model.animations.find((clip) => /idle/i.test(clip.name));
+    const mixer = walkClip || idleClip ? new THREE.AnimationMixer(object) : null;
+    const walk = walkClip && mixer ? mixer.clipAction(walkClip) : null;
+    const idle = idleClip && mixer ? mixer.clipAction(idleClip) : null;
+    if (idle) {
+      idle.play();
+      // Start each copy at a different point, so a row of armies doesn't breathe in step.
+      idleStagger = (idleStagger + 0.37) % 1;
+      idle.time = idleStagger * idleClip!.duration;
+    }
+    let walking = false;
     return {
       object: holder,
       animate(stride, delta) {
-        if (!mixer || !action) return;
-        if (stride !== 0 && !action.isRunning()) action.play();
-        if (stride === 0 && action.isRunning()) action.stop();
+        if (!mixer) return;
+        const moving = stride !== 0;
+        if (moving !== walking) {
+          walking = moving;
+          const from = moving ? idle : walk;
+          const to = moving ? walk : idle;
+          if (to) to.reset().play();
+          if (from && to) from.crossFadeTo(to, FILE_MODEL_BLEND_SECONDS, false);
+          else if (from) from.stop();
+        }
         mixer.update(delta);
       },
     };
