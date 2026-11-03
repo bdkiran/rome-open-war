@@ -50,7 +50,7 @@ export function createGame(ctx: GameContext, map: GameMap, scenario: Scenario): 
  * already placed moves over land to the nearest tile that isn't, at most
  * GAME_SETUP.maxCityShift steps away, so their land doesn't overlap;
  * if there's none, as far from its neighbours as it can get, and they share
- * their land (claimTerritory).
+ * their land (claimTerritory). A city marked keepSite stays where it is.
  */
 function placeCities(ctx: GameContext, state: GameState, map: GameMap, factions: readonly ScenarioFaction[]): GameState {
   if (!map.locate) throw new Error("This scenario places cities by location, but its map can't locate places");
@@ -70,7 +70,7 @@ function placeCities(ctx: GameContext, state: GameState, map: GameMap, factions:
         console.warn(`Couldn't place ${city.name}: no land near ${city.lon}, ${city.lat}`);
         return;
       }
-      const tile = spacedTile(ctx, next, real);
+      const tile = city.keepSite ? real : spacedTile(ctx, next, real);
       next = createCity(ctx, next, faction.id, tile, Boolean(city.capital), city.name);
     });
   }

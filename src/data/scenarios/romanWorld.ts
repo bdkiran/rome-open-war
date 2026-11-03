@@ -22,7 +22,9 @@ export const ROMAN_WORLD: Scenario = {
         { name: "Roma", lon: 12.5, lat: 41.9, capital: true },
         { name: "Arretium", lon: 11.88, lat: 43.46 },
         { name: "Ariminum", lon: 13.32, lat: 44.56 }, // moved from its real site to give it room
-        { name: "Capua", lon: 14.25, lat: 41.08 },
+        // Pinned 1.35° east of its real site (14.25, 41.08), where spacing put it
+        // before Sicily grew: farther south it crowds Tarentum and Croton.
+        { name: "Capua", lon: 15.6, lat: 40.9, keepSite: true },
         { name: "Tarentum", lon: 17.24, lat: 40.47 },
         { name: "Croton", lon: 17.13, lat: 39.08 },
         { name: "Messana", lon: 15.55, lat: 38.19 },
@@ -32,7 +34,9 @@ export const ROMAN_WORLD: Scenario = {
       id: "carthage", name: "Carthage", shortName: "Carthage", color: "#7d4fb3", controller: "ai",
       cities: [
         { name: "Carthago", lon: 10.32, lat: 36.85, capital: true },
-        { name: "Lilybaeum", lon: 12.44, lat: 37.8 },
+        // Carthago is 4 tiles away across the strait: spacing pushed Lilybaeum to
+        // the east of Sicily, and Messana, placed later, to the west.
+        { name: "Lilybaeum", lon: 12.44, lat: 37.8, keepSite: true },
         { name: "Thapsus", lon: 11.05, lat: 35.62 },
         { name: "Carales", lon: 9.11, lat: 39.22 },
         { name: "Corduba", lon: -4.78, lat: 37.88 },
@@ -111,7 +115,9 @@ export const ROMAN_WORLD: Scenario = {
       cities: [
         { name: "Tylis", lon: 27.0, lat: 42.7, capital: true },
         { name: "Getae", lon: 27.5, lat: 44.6 },
-        { name: "Byzantion", lon: 28.97, lat: 41.01 },
+        // On the European shore of the Propontis, west of its real site: spacing
+        // from Tylis had pushed it across the strait into Asia.
+        { name: "Byzantion", lon: 27.55, lat: 40.98, keepSite: true },
       ],
     },
     {

@@ -51,10 +51,12 @@ beyond its eastern edge, stands on the edge. A few crowded cities stand a
 little way from their real sites, so each has land enough to grow. Dashed lines mark **sea
 crossings** that armies can step across like any other move: the Pillars of
 Hercules, the Strait of Messina (Sicily to Italy), Sicily to Africa, the
-Channel, Corsica to Sardinia, Corsica to Italy, and Sardinia to Africa.
-Sicily is a round island shared by Rome (Messana), the Greeks (Syracusae) and
-Carthage (Lilybaeum). (At this scale the Hellespont is already joined by
-land.) Every city can be reached from every other.
+Channel, Corsica to Sardinia, Corsica to Italy, Sardinia to Africa, the
+Bosporus and the Hellespont. Sicily is a round island shared by Rome
+(Messana, in the north-east), the Greeks (Syracusae, south-east) and
+Carthage (Lilybaeum, west). A narrow sea from the Hellespont to the
+Bosporus divides Europe from Asia, with Byzantion on the European shore.
+Every city can be reached from every other.
 
 The game is won by being the **last faction standing**: when every rival has
 fallen, a victory screen appears. If Rome loses its last city, it's defeat.

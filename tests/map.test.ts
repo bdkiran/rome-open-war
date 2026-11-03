@@ -92,10 +92,17 @@ it("draws regions that fill the land between territories without changing them",
 
 it("draws Sicily round, cut off from Italy", () => {
   const center = map.locate!(14.1, 37.6)!;
-  const disc = ctx.topology.allTiles().filter((t) => ctx.topology.distance(t, center) <= 2);
+  const disc = ctx.topology.allTiles().filter((t) => ctx.topology.distance(t, center) <= 3);
   assert.ok(disc.every((t) => map.tiles[t].terrain !== "water"), "the whole disc is land");
-  const ring = ctx.topology.allTiles().filter((t) => ctx.topology.distance(t, center) === 3);
+  const ring = ctx.topology.allTiles().filter((t) => ctx.topology.distance(t, center) === 4);
   assert.ok(ring.every((t) => map.tiles[t].terrain === "water"), "sea all round it");
+});
+
+it("puts Sicily's cities where they really stand: Lilybaeum west, Messana north-east, Syracusae south-east", () => {
+  const at = (name: string) => ctx.topology.tileCenter(Object.values(state.cities).find((c) => c.name === name)!.tile);
+  const [lilybaeum, messana, syracusae] = [at("Lilybaeum"), at("Messana"), at("Syracusae")];
+  assert.ok(lilybaeum.x < messana.x && lilybaeum.x < syracusae.x, "Lilybaeum is the westernmost");
+  assert.ok(messana.y < syracusae.y, "Messana is north of Syracusae");
 });
 
 it("lets every city be reached from every other, over land and sea crossings", () => {

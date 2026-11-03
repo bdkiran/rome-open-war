@@ -15,13 +15,28 @@ so.
 - **No one-hex land corridors.** The generator widens any strip of land one
   hex wide between two stretches of water: they made armies file through
   single choke points.
-- **Sicily is a round island**: the generator draws it as a disc of 19 hexes
+- **Sicily is a round island**: the generator draws it as a disc of 37 hexes
   (`ROUND_ISLANDS`) instead of its coastline, which at this scale came out
   as a thin strip too small to share between three cities (Rome's Messana,
   the Greeks' Syracusae, Carthage's Lilybaeum). Land touching the disc is
   turned to sea, so the Strait of Messina stays open.
+  It was 19 hexes (radius 2) until the player saw Messana and Lilybaeum on
+  the wrong sides: spacing pushed Lilybaeum away from Carthago (4 tiles,
+  across the sea) into the east, and Messana, placed last, into the west.
+  Now Lilybaeum keeps its site (`keepSite`, for a city whose only close
+  neighbour is across the sea) and the disc has radius 3, so all three
+  cities sit near their real sites with land to reach level 3. With
+  Lilybaeum out of the way Capua slid south and crowded Tarentum, so Capua
+  is pinned to the tile spacing gave it before (1.35° east of its site).
+  The player prefers playable over exact geography.
+- **The Hellespont, Propontis and Bosporus are carved as sea**
+  (`STRAITS` in the generator): at this scale they closed, joining Europe
+  to Asia, and spacing from Tylis pushed Byzantion onto the Asian side.
+  Byzantion keeps a site on the European shore (west of its real one), with
+  crossings at the Bosporus and the Hellespont beside it.
 - **Sea crossings** (Pillars of Hercules, Messina, Sicily–Africa, the
-  Channel, Corsica–Sardinia, Corsica–Italy, Sardinia–Africa) are ordinary steps in the
+  Channel, Corsica–Sardinia, Corsica–Italy, Sardinia–Africa, Bosporus,
+  Hellespont) are ordinary steps in the
   topology (`links()`), so every city is reachable by land.
   A crossing never lands on a city tile: Sicily–Africa once joined
   Lilybaeum to Carthago directly, so an army in one could besiege the other
@@ -440,6 +455,10 @@ in detail, and `npm run levers` covers the economy.
 - **Panels**: box grids for regiments, units and
   buildings, with queues below. Minimal explanatory text (the player found
   the UI too wordy): show what's blocked and why; details go in tooltips.
+- **No army block in the side panel.** Its size, owner, upkeep and "Choose
+  regiments to order" took space the regiment cards in the bar already
+  cover; the panel keeps only an army's orders (march, what blocks it,
+  Besiege).
 - **Cards in a bottom bar, facts and city work in the side panel.** One panel
   held too much. The selection bar (bottom centre) shows what's selected as
   cards: Army (regiments, ticked for orders) and Town (buildings built), for

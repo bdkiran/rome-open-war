@@ -245,6 +245,27 @@ def separate_islands(is_land, features):
             is_land[key] = False
         print(f"{name}: {len(on_island)} hexes, cut off from the mainland by {len(carved)} hexes of sea")
 
+# ---- Straits ----------------------------------------------------------------
+
+# Narrow seas drawn by hand as a line (lon, lat) and a width in degrees of
+# latitude: at this scale they'd close into land bridges. Every hex whose
+# center is within half the width of the line becomes sea. Sea crossings in
+# europeMapEngine.ts let armies cross them.
+STRAITS = {
+    # The Hellespont, the Propontis (Sea of Marmara) and the Bosporus: Europe
+    # and Asia were joined, and Byzantion was pushed onto the Asian side.
+    "Hellespont to Bosporus": ([(25.9, 39.85), (26.5, 40.25), (27.4, 40.6), (28.3, 40.75), (29.0, 41.05), (29.2, 41.4)], 0.5),
+}
+
+def carve_straits(is_land):
+    """Turns the hexes along each strait in STRAITS into sea."""
+    for name, (points, width) in STRAITS.items():
+        carved = [key for key, land in is_land.items()
+                  if land and dist_to_polyline(*to_lonlat(*hex_center(*key)), points) <= width / 2]
+        for key in carved:
+            is_land[key] = False
+        print(f"{name}: {len(carved)} hexes turned to sea")
+
 # ---- Round islands ---------------------------------------------------------
 
 # Islands drawn as a disc of hexes instead of their coastline: at this scale
@@ -252,7 +273,7 @@ def separate_islands(is_land, features):
 # Center (lon, lat) and radius in hexes. Any other land touching the disc
 # becomes sea, so its straits stay open.
 ROUND_ISLANDS = {
-    "Sicily": ((14.1, 37.6), 2),
+    "Sicily": ((14.1, 37.6), 3),
 }
 
 def hex_distance(a, b):
@@ -310,6 +331,7 @@ def main():
     widen_narrow_land(is_land)
     separate_islands(is_land, features)
     round_islands(is_land, features)
+    carve_straits(is_land)
 
     rng = random.Random(218)                 # 218 BC
     forest_noise = smooth_rank(rng, 3)
