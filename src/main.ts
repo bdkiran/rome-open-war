@@ -19,8 +19,8 @@ import type { Scenario } from "@/data/scenarios/types.js";
 import type { TaxRate } from "@/data/economy.js";
 import type { BuildingType } from "@/data/buildings.js";
 import { ARMY_RULES, type Tier, type UnitType, regimentSize } from "@/data/units.js";
-import { GameController } from "@/game/controller.js";
-import type { TileId } from "@/map/topology.js";
+import { GameController, type AiStep } from "@/game/controller.js";
+import type { Point, TileId } from "@/map/topology.js";
 import { attachInput } from "@/render/input.js";
 import type { ViewState } from "@/render/mapView.js";
 import { MapView3D } from "@/render/three/mapView3d.js";
@@ -31,6 +31,7 @@ import { renderSelectionBar, type BarTab } from "@/ui/selectionBar.js";
 import { hideBattlePanel, showBattlePanel } from "@/ui/battlePanel.js";
 import { hideSiegePanel, showSiegePanel } from "@/ui/siegePanel.js";
 import { hideBattleResult, showBattleResult } from "@/ui/battleResult.js";
+import { describeStep } from "@/ui/playbackBanner.js";
 import { hideSettlement, showSettlement } from "@/ui/settlementPanel.js";
 import { unsettledCities } from "@/systems/conquest.js";
 import type { SettlementChoice } from "@/data/conquest.js";
@@ -49,7 +50,12 @@ const map = scenario.mapEngine.createMap();
 const { topology } = map;
 const ctx: GameContext = { topology };
 
-const controller = new GameController(ctx, createGame(ctx, map, scenario));
+// AI actions the player can see are played one at a time (see "Watching the enemy's turns"),
+// so the pause before each AI turn can be short.
+const controller = new GameController(ctx, createGame(ctx, map, scenario), {
+  aiTurnDelayMs: 40,
+  showAiAction: (step) => showAiStep(step),
+});
 /** The faction the person at the keyboard controls, if any. */
 const humanId = controller.getState().factions.find((f) => f.controller === "human")?.id ?? null;
 
@@ -287,6 +293,8 @@ window.addEventListener("resize", () => {
   requestRedraw();
 });
 
+/** Checks run once per frame, after drawing: playback waits on the map through these. */
+const frameWaiters: (() => void)[] = [];
 let lastTime = performance.now();
 /** While the map is moving (banners always wave; armies march), it's redrawn this often (ms). */
 const ANIMATION_INTERVAL = 1000 / 30;
@@ -297,12 +305,14 @@ function frame(now: number): void {
   const dt = Math.min((now - lastTime) / 1000, 0.1);
   lastTime = now;
   if (input.update(dt)) needsRedraw = true;
+  if (camera.update(dt)) needsRedraw = true;
   if (animating && now - lastAnimationDraw >= ANIMATION_INTERVAL) needsRedraw = true;
   if (needsRedraw) {
     animating = mapView.draw(controller.getState(), view, now / 1000);
     lastAnimationDraw = now;
     needsRedraw = false;
   }
+  for (const check of frameWaiters.splice(0)) check();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
@@ -857,7 +867,205 @@ settlement.body.addEventListener("click", (e) => {
 
 battleResult.close.addEventListener("click", closeBattleResult);
 
+// ---- Watching the enemy's turns -----------------------------------------------
+
+/** How long the map holds once a step has played (ms): after a move, and after a battle, siege or city taken. */
+const HOLD_AFTER_MOVE = 80;
+const HOLD_AFTER_BATTLE = 450;
+/** How long a battle's banner says who attacks whom before it gives the outcome (ms). */
+const BANNER_SWITCH = 500;
+/** A plain move lets the next step start while this much of its walk is left (s), so moves overlap. */
+const OVERLAP_SECONDS = 0.3;
+/** A step this far from the screen's edge (a share of its size) is on screen, so the camera stays put. */
+const FOLLOW_MARGIN = 0.2;
+/** Playback never waits on the map longer than this (ms), e.g. while the tab is hidden and frames stop. */
+const MAX_WAIT = 3000;
+
+/** The player pressed Space or Esc: show nothing more until their turn. */
+let skipPlayback = false;
+/** Where the camera looked when the player ended their turn, if playback has moved it since. */
+let cameraHome: Point | null = null;
+let playbackWasPlayerTurn = isPlayerTurn();
+
+const playbackHint = document.createElement("div");
+playbackHint.className = "playback-hint";
+playbackHint.textContent = "Space to skip";
+playbackHint.hidden = true;
+document.body.append(playbackHint);
+
+/** What an AI action did that the player could see: the tiles involved, the one to look at, and whether it was a fight. */
+interface StepFocus {
+  tile: TileId;
+  dramatic: boolean;
+}
+
+/**
+ * What changed in an AI step, read from the states before and after rather
+ * than the action, so marches that move at the end of a turn count too:
+ * the faction's regiments that changed tiles, new battles, and cities that
+ * changed hands or came under siege. Only tiles the player could see before
+ * or can see now count. Null if there's nothing for the player to watch.
+ */
+function stepFocus(step: AiStep): StepFocus | null {
+  if (!humanId) return null;
+  const { before, after, factionId } = step;
+  const seen = seenDuring(step);
+
+  let focus: StepFocus | null = null;
+  const look = (tile: TileId, dramatic: boolean) => {
+    if (!seen(tile)) return;
+    if (!focus || dramatic || !focus.dramatic) focus = { tile, dramatic: dramatic || Boolean(focus?.dramatic) };
+  };
+
+  const wasAt = new Map<string, TileId>();
+  for (const army of Object.values(before.armies)) {
+    if (army.owner === factionId) for (const r of army.regiments) wasAt.set(r.id, army.tile);
+  }
+  for (const army of Object.values(after.armies)) {
+    if (army.owner !== factionId) continue;
+    const moved = army.regiments.map((r) => wasAt.get(r.id)).find((from) => from && from !== army.tile);
+    if (moved) {
+      look(moved, false);
+      look(army.tile, false);
+    }
+  }
+  for (const battle of after.battles) if (battle.id >= before.nextBattleNumber) look(battle.tile, true);
+  for (const city of Object.values(after.cities)) {
+    const old = before.cities[city.id];
+    if (old && (old.owner !== city.owner || (!old.besiegedBy && city.besiegedBy))) look(city.tile, true);
+  }
+  return focus;
+}
+
+/** Whether the player could see a tile before an AI step or can see it after. */
+function seenDuring(step: AiStep): (tile: TileId) => boolean {
+  if (!humanId) return () => true;
+  const before = visibleTiles(ctx, step.before, humanId);
+  const after = visibleTiles(ctx, step.after, humanId);
+  return (tile) => before.has(tile) || after.has(tile);
+}
+
+/** Whether a tile is well inside the screen, so following it needs no camera move. */
+function onScreen(tile: TileId): boolean {
+  const p = mapView.screenOf(tile);
+  if (!p) return false;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  return p.x > w * FOLLOW_MARGIN && p.x < w * (1 - FOLLOW_MARGIN) && p.y > h * FOLLOW_MARGIN && p.y < h * (1 - FOLLOW_MARGIN);
+}
+
+/** Resolves once `ready` holds on a frame drawn after this call, or after MAX_WAIT. */
+function waitForFrames(ready: () => boolean, timeout = MAX_WAIT): Promise<void> {
+  return new Promise((done) => {
+    const started = performance.now();
+    let frames = 0;
+    const check = () => {
+      frames++;
+      // Two frames first, so the step's new state has been drawn and its walks have started.
+      if (skipPlayback || performance.now() - started > timeout || (frames > 2 && ready())) done();
+      else frameWaiters.push(check);
+    };
+    frameWaiters.push(check);
+  });
+}
+
+const pause = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
+
+/**
+ * Plays one AI step for the player, if they could see it: the camera glides
+ * there unless it's already on screen, the armies walk (enemies at a faster
+ * pace), and the map holds a moment, longer for a fight. A battle the player
+ * fought opens its result, and the AI waits until it's closed.
+ */
+async function showAiStep(step: AiStep): Promise<void> {
+  if (skipPlayback) return;
+  const focus = stepFocus(step);
+  if (!focus) return;
+  playbackHint.hidden = false;
+  if (!onScreen(focus.tile)) {
+    cameraHome ??= savedCamera;
+    camera.glideTo(topology.tileCenter(focus.tile));
+    requestRedraw();
+  }
+  const walkLeft = focus.dramatic ? 0 : OVERLAP_SECONDS;
+  await waitForFrames(() => !camera.gliding && mapView.animationLeft() <= walkLeft);
+  if (skipPlayback) return;
+
+  const banner = focus.dramatic ? describeStep(step.before, step.after) : null;
+  if (banner?.during) {
+    playClash(step);
+    showBanner(banner.during);
+    await pause(BANNER_SWITCH);
+    if (!skipPlayback) showBanner(banner.outcome);
+    await waitForFrames(() => mapView.animationLeft() <= 0);
+  } else if (banner) {
+    showBanner(banner.outcome);
+  }
+  await pause(focus.dramatic ? HOLD_AFTER_BATTLE : HOLD_AFTER_MOVE);
+  hideBanner();
+  // Read your own battle's result before the enemy carries on.
+  await waitForFrames(() => resultQueue.length === 0 && Boolean(battleResult.root.hidden), Infinity);
+}
+
+/**
+ * The step's new battles, played on the map: a clash on each battlefield the
+ * player can see, and the attacker's armies still beside it lunge at it.
+ */
+function playClash(step: AiStep): void {
+  const seen = seenDuring(step);
+  for (const battle of step.after.battles) {
+    if (battle.id < step.before.nextBattleNumber || !seen(battle.tile)) continue;
+    mapView.clash(battle.tile, getFaction(step.after, battle.attacker)?.color ?? "#888888");
+    for (const army of Object.values(step.after.armies)) {
+      if (army.owner === battle.attacker && topology.distance(army.tile, battle.tile) === 1) mapView.lunge(army.id, battle.tile);
+    }
+  }
+  requestRedraw();
+}
+
+const playbackBanner = document.createElement("div");
+playbackBanner.className = "playback-banner";
+playbackBanner.hidden = true;
+document.body.append(playbackBanner);
+
+function showBanner(text: string): void {
+  playbackBanner.textContent = text;
+  playbackBanner.hidden = false;
+}
+
+function hideBanner(): void {
+  playbackBanner.hidden = true;
+}
+
+/** Where the camera looked when the turn was ended: playback returns there afterwards. */
+let savedCamera: Point = camera.lookingAt;
+
+/** At the start of the player's turn: playback is over, and the camera goes back to where they left it. */
+function endPlayback(): void {
+  const playerTurn = isPlayerTurn();
+  if (playerTurn && !playbackWasPlayerTurn) {
+    skipPlayback = false;
+    playbackHint.hidden = true;
+    hideBanner();
+    if (cameraHome) camera.glideTo(cameraHome);
+    cameraHome = null;
+  } else if (!playerTurn && playbackWasPlayerTurn) {
+    savedCamera = camera.lookingAt;
+  }
+  playbackWasPlayerTurn = playerTurn;
+}
+
+window.addEventListener("keydown", (e) => {
+  if (playbackHint.hidden || isPlayerTurn()) return;
+  if (e.code !== "Space" && e.code !== "Escape") return;
+  skipPlayback = true;
+  playbackHint.hidden = true;
+  hideBanner();
+  e.preventDefault();
+});
+
 controller.subscribe((state) => {
+  endPlayback();
   refreshAll(state);
   queueNewBattles(state);
   showNextResult();

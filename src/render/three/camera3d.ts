@@ -25,6 +25,8 @@ export class Camera3D implements MapCamera {
   private bounds: Bounds | null = null;
   private readonly ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   private readonly raycaster = new THREE.Raycaster();
+  /** A smooth pan under way (glideTo), or null. */
+  private glide: { from: Point; to: Point; elapsed: number; seconds: number } | null = null;
 
   get zoom(): number {
     return this.distanceAtZoom1() / this.distance;
@@ -44,6 +46,7 @@ export class Camera3D implements MapCamera {
   }
 
   panBy(dxScreen: number, dyScreen: number): void {
+    this.glide = null;
     const worldPerPixel = (2 * this.distance * Math.tan(THREE.MathUtils.degToRad(FOV) / 2)) / this.viewHeight;
     this.target.x -= dxScreen * worldPerPixel;
     // Dragging up and down moves over ground seen at a slant, so it covers more of it.
@@ -52,6 +55,7 @@ export class Camera3D implements MapCamera {
   }
 
   zoomAt(screenPoint: Point, factor: number): void {
+    this.glide = null;
     const before = this.groundAt(screenPoint);
     this.distance /= factor;
     this.clamp();
@@ -64,9 +68,44 @@ export class Camera3D implements MapCamera {
   }
 
   centerOn(worldPoint: Point, zoom?: number): void {
+    this.glide = null;
     this.target = { ...worldPoint };
     if (zoom !== undefined) this.distance = this.distanceAtZoom1() / zoom;
     this.clamp();
+  }
+
+  /** Where the camera looks now, on the map. */
+  get lookingAt(): Point {
+    return { ...this.target };
+  }
+
+  /** Whether a glide is under way. */
+  get gliding(): boolean {
+    return this.glide !== null;
+  }
+
+  /**
+   * Pans smoothly to look at a point, keeping the zoom. Any pan or zoom by
+   * the player stops it. Call update() every frame to move it along.
+   */
+  glideTo(worldPoint: Point, seconds = 0.3): void {
+    this.glide = { from: { ...this.target }, to: { ...worldPoint }, elapsed: 0, seconds };
+  }
+
+  /** Moves a glide along by dt seconds. Returns whether the camera moved. */
+  update(dt: number): boolean {
+    const glide = this.glide;
+    if (!glide) return false;
+    glide.elapsed += dt;
+    const t = Math.min(1, glide.elapsed / glide.seconds);
+    const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+    this.target = {
+      x: glide.from.x + (glide.to.x - glide.from.x) * eased,
+      y: glide.from.y + (glide.to.y - glide.from.y) * eased,
+    };
+    this.clamp();
+    if (t >= 1) this.glide = null;
+    return true;
   }
 
   fitToBounds(): void {

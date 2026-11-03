@@ -8,9 +8,23 @@ const MAX_AI_ACTIONS_PER_TURN = 200;
 
 export type StateListener = (state: GameState) => void;
 
+/** One AI action, as it happened: for the UI to play it back. */
+export interface AiStep {
+  factionId: FactionId;
+  action: Action;
+  before: GameState;
+  after: GameState;
+}
+
 export interface ControllerOptions {
   /** Pause before each AI turn so the turn order is visible. 0 for instant. */
   aiTurnDelayMs: number;
+  /**
+   * Called after every AI action, once listeners have seen the new state; the
+   * next action waits until it resolves. The browser uses it to show the
+   * enemy's moves one at a time. Without it, listeners hear once per AI turn.
+   */
+  showAiAction?: (step: AiStep) => Promise<void>;
 }
 
 /**
@@ -67,13 +81,18 @@ export class GameController {
 
         // Ask the AI for one action at a time until it ends its turn.
         for (let step = 0; step < MAX_AI_ACTIONS_PER_TURN; step++) {
-          const action = nextAction(this.ctx, this.state, faction.id);
-          const result = applyAction(this.ctx, this.state, faction.id, action);
+          const before = this.state;
+          const action = nextAction(this.ctx, before, faction.id);
+          const result = applyAction(this.ctx, before, faction.id, action);
           if (!result.ok) {
             console.warn(`${faction.name} attempted an invalid action:`, action, result.reason);
             break;
           }
           this.state = result.state;
+          if (this.options.showAiAction) {
+            this.emit();
+            await this.options.showAiAction({ factionId: faction.id, action, before, after: this.state });
+          }
           if (currentFaction(this.state).id !== faction.id) break;
         }
 

@@ -129,6 +129,14 @@ always known. The AI plays under the same fog. Because orders are planned on
 what you can see, a move can run into an army hidden in the fog; the game
 tells you when that happens.
 
+**Watching enemy turns.** Whatever the other factions do within your
+sight plays out on the map, one move at a time: the camera glides to it,
+their armies march (faster than yours), and battles flash on the
+battlefield with a banner naming who fought and how it ended. A battle you
+fought opens its result before they carry on. Moves in the fog stay
+hidden. Press Space or Esc to skip to your turn; the camera then returns to
+where you left it.
+
 **Watchtowers.** Select a tile of your own region (any land drawn in your
 colour, except a city) and build a watchtower there for 300 gold. It's
 finished at once, costs nothing to keep and sees 3 tiles around it. It's

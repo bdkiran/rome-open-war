@@ -452,6 +452,17 @@ in detail, and `npm run levers` covers the economy.
   turn, filtered to what concerns them plus world news. They last one turn:
   ending the turn clears them, and there's no history view (a running log
   piled up).
+- **Enemy turns play out on the map.** The player couldn't tell when or
+  where they were attacked: the controller ran each AI turn in one go. Now
+  it can hand each AI action to the browser (`showAiAction`), which plays
+  the ones the player can see (camera glide, faster enemy walks, a clash
+  and banner for battles) and skips the rest, so the fog gives nothing
+  away. The player chose always-on and quick over a setting: enemy walks
+  0.15 s a tile (at most 0.9 s), holds of 80 ms after a move and 450 ms
+  after a battle, and a 40 ms pause per AI turn (was 150). A round takes
+  about 2 s with nothing in sight and 3–6 s with enemies close; Space or
+  Esc skips. Banners never put a verb after a faction's name (Greeks,
+  Gauls and Pontus would need different ones).
 - **Money breakdown** under the treasury; per-city income line in the city
   panel. March routes are coloured per turn.
 
