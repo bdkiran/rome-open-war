@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { Culture } from "@/data/cultures.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { shade } from "@/render/figures.js";
@@ -285,6 +286,8 @@ export interface ArmyLook {
   faded: boolean;
   /** Where in its wave the banner starts (0-1), so neighbouring banners don't wave in step. */
   seed: number;
+  /** Which kit the soldier carries (helmet, shield, weapon), if the army model has kits. */
+  culture: Culture;
 }
 
 /**
@@ -294,7 +297,7 @@ export interface ArmyLook {
  * flutters faster while it marches.
  */
 export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
-  const custom = library.army(look.color, look.faded);
+  const custom = library.army(look.color, look.faded, look.culture);
   const figure = custom ?? standardBearer(look.color, look.faded);
 
   const resting = look.faded ? FLAG_MOTION.spent : FLAG_MOTION.idle;
@@ -303,15 +306,17 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
     tint: "#ffffff",
   });
   // The banner hangs from the top of the pole the bearer carries (or, for a
-  // model from a file, a pole planted beside it).
+  // model from a file, a pole planted behind his right shoulder, clear of a
+  // shield on his left arm).
+  const polePlace = custom ? FILE_MODEL_POLE : { x: 8, z: 0 };
   const bannerHolder = new THREE.Group();
-  bannerHolder.position.set(8, 56, 0);
+  bannerHolder.position.set(polePlace.x, 56, polePlace.z);
   banner.mesh.position.set(0.5, 0, 0);
   bannerHolder.add(banner.mesh);
   figure.object.add(bannerHolder);
   if (custom) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 64, 5), mat("#3b2c1e", look.faded));
-    pole.position.set(8, 32, 0);
+    pole.position.set(polePlace.x, 32, polePlace.z);
     figure.object.add(pole);
   }
 
@@ -564,6 +569,23 @@ export function siegeRing(color: string): THREE.Mesh {
 
 // ---- Models from files --------------------------------------------------------
 
+/** Names of kit parts in an army model: kit_<culture>_<part>. */
+const KIT_PART = /^kit_([a-z]+)_/;
+
+/** Whether a node is, or hangs from, a kit part. */
+function inKit(node: THREE.Object3D): boolean {
+  for (let n: THREE.Object3D | null = node; n; n = n.parent) if (KIT_PART.test(n.name)) return true;
+  return false;
+}
+
+/** Where the banner pole stands beside an army model from a file: behind its right shoulder. */
+const FILE_MODEL_POLE = { x: -4, z: -7 };
+
+/** How long a model from a file takes to blend between standing and walking, in seconds. */
+const FILE_MODEL_BLEND_SECONDS = 0.2;
+/** Where the next copy of a model starts its idle clip (0-1), stepped for each copy. */
+let idleStagger = 0;
+
 /** What models/models.json can list. Each value is a .glb or .gltf file name in the models folder. */
 interface ModelManifest {
   army?: string;
@@ -583,8 +605,9 @@ interface LoadedModel {
 /**
  * Supplies army and city models: from files listed in models/models.json
  * when there are any, otherwise built in code. Materials whose name contains
- * "faction" are recoloured to the owner's colour, and an animation clip whose
- * name contains "walk" plays while the army is moving.
+ * "faction" are recoloured to the owner's colour, an animation clip whose
+ * name contains "walk" plays while the army is moving, and one whose name
+ * contains "idle" while it stands.
  */
 export class ModelLibrary {
   private readonly loaded = new Map<string, LoadedModel>();
@@ -620,10 +643,13 @@ export class ModelLibrary {
     return this.loaded.size;
   }
 
-  /** The army model from a file, if one is listed. */
-  army(color: string, faded: boolean): Figure | null {
+  /**
+   * The army model from a file, if one is listed, carrying `culture`'s kit:
+   * parts named `kit_<culture>_...` show only for that culture.
+   */
+  army(color: string, faded: boolean, culture: Culture): Figure | null {
     const model = this.loaded.get("army");
-    return model ? this.fromFile(model, color, faded, this.manifest.soldierHeight ?? 36) : null;
+    return model ? this.fromFile(model, color, faded, this.manifest.soldierHeight ?? 36, 0, culture) : null;
   }
 
   city(capital: boolean): THREE.Object3D | null {
@@ -633,8 +659,13 @@ export class ModelLibrary {
   }
 
   /** A copy of a loaded model, recoloured, scaled to size, with its walk animation hooked up. */
-  private fromFile(model: LoadedModel, color: string | null, faded: boolean, height: number, width = 0): Figure {
+  private fromFile(model: LoadedModel, color: string | null, faded: boolean, height: number, width = 0, culture: Culture | null = null): Figure {
     const object = cloneSkinned(model.scene);
+    // Show only this culture's kit.
+    object.traverse((node) => {
+      const kit = KIT_PART.exec(node.name);
+      if (kit) node.visible = kit[1] === culture;
+    });
     object.traverse((node) => {
       const mesh = node as THREE.Mesh;
       if (!mesh.isMesh) return;
@@ -650,24 +681,55 @@ export class ModelLibrary {
       mesh.material = Array.isArray(mesh.material) ? mesh.material.map(recolor) : recolor(mesh.material);
     });
 
-    // Scale to size and stand it on the ground.
-    const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+    // Scale to size and stand it on the ground. Measured from the posed
+    // vertices ("precise"), since a rigged mesh's stored bounds ignore its
+    // bones, and without kit parts, so a long spear doesn't shrink the soldier.
+    const measure = () => {
+      object.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      object.traverse((node) => {
+        if (!(node as THREE.Mesh).isMesh || inKit(node)) return;
+        box.expandByObject(node, true);
+      });
+      return box.isEmpty() ? new THREE.Box3().setFromObject(object, true) : box;
+    };
+    const size = measure().getSize(new THREE.Vector3());
     const scale = height > 0 ? height / Math.max(size.y, 0.001) : width / Math.max(size.x, size.z, 0.001);
     object.scale.setScalar(scale);
-    const bounds = new THREE.Box3().setFromObject(object);
-    object.position.y -= bounds.min.y;
+    object.position.y -= measure().min.y;
+    // A rigged mesh's bounds don't follow its animation, so don't let them hide it.
+    object.traverse((node) => {
+      if ((node as THREE.SkinnedMesh).isSkinnedMesh) node.frustumCulled = false;
+    });
     const holder = new THREE.Group();
     holder.add(object);
 
-    const walk = model.animations.find((clip) => /walk/i.test(clip.name));
-    const mixer = walk ? new THREE.AnimationMixer(object) : null;
-    const action = walk && mixer ? mixer.clipAction(walk) : null;
+    // A "walk" clip plays while moving; an "idle" clip, if there is one, while standing.
+    const walkClip = model.animations.find((clip) => /walk/i.test(clip.name));
+    const idleClip = model.animations.find((clip) => /idle/i.test(clip.name));
+    const mixer = walkClip || idleClip ? new THREE.AnimationMixer(object) : null;
+    const walk = walkClip && mixer ? mixer.clipAction(walkClip) : null;
+    const idle = idleClip && mixer ? mixer.clipAction(idleClip) : null;
+    if (idle) {
+      idle.play();
+      // Start each copy at a different point, so a row of armies doesn't breathe in step.
+      idleStagger = (idleStagger + 0.37) % 1;
+      idle.time = idleStagger * idleClip!.duration;
+    }
+    let walking = false;
     return {
       object: holder,
       animate(stride, delta) {
-        if (!mixer || !action) return;
-        if (stride !== 0 && !action.isRunning()) action.play();
-        if (stride === 0 && action.isRunning()) action.stop();
+        if (!mixer) return;
+        const moving = stride !== 0;
+        if (moving !== walking) {
+          walking = moving;
+          const from = moving ? idle : walk;
+          const to = moving ? walk : idle;
+          if (to) to.reset().play();
+          if (from && to) from.crossFadeTo(to, FILE_MODEL_BLEND_SECONDS, false);
+          else if (from) from.stop();
+        }
         mixer.update(delta);
       },
     };

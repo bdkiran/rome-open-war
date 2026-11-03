@@ -361,6 +361,7 @@ export class MapView3D {
         regiments: army.regiments.length,
         faded: mine && isSpent(army),
         seed: hash(army.id),
+        culture: getFaction(state, army.owner)?.culture ?? "roman",
       };
       const key = JSON.stringify(look);
       const target = this.standingPoint(army.tile, cityTiles);

@@ -23,6 +23,8 @@ npm run levers -- [--turns 100] [--from 50] [--seed N]
 npm run compare -- [--base REF] [--seeds 4] [--turns 100] [--garrison]
                          # the same games (one per seed) with the current code
                          # and a git ref, side by side: medians and ranges
+npm run army-model       # rebuilds models/knight.glb (the army figure and
+                         # its culture kits) from models/source/
 ```
 
 Tests and tools need Node 22+. They're built by `tsconfig.node.json` into
@@ -51,8 +53,9 @@ src/
                applyAction, the ONLY way state changes), setup.ts (new game),
                context.ts (fixed info: the map topology), rng.ts (seeded)
   data/        every tunable number: terrain, units, economy, buildings,
-               combat, siege, conquest, vision, watchtowers, ai, gameSetup;
-               scenarios/romanWorld.ts (factions, cities, colours)
+               combat, siege, conquest, vision, watchtowers, ai, gameSetup,
+               cultures (how each faction's soldiers look); scenarios/
+               romanWorld.ts (factions, cities, colours, cultures)
   systems/     the rules, as pure functions of state: armies (movement,
                marches, zone of control, merging), combat (battles, battleSides,
                previews), cities (growth, income, capture), buildings
@@ -86,8 +89,10 @@ tests/         simulation.test.ts (whole games: invalid orders, debt, state
 tools/         build_europe_map.py (map generator), simulation.ts (plays a
                game in Node), simulate.ts (the balance report), compare.ts
                (several seeds, two versions side by side), economy.ts
-               (peacetime economy model), levers.ts (the levers report)
-models/        optional .glb models listed in models/models.json
+               (peacetime economy model), levers.ts (the levers report),
+               buildArmyModel.ts (builds models/knight.glb)
+models/        .glb models listed in models/models.json (models/README.md);
+               source/ holds the files they're built from
 ```
 
 Imports use the `@/` alias with a `.js` extension (`@/systems/combat.js`),
