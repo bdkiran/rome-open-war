@@ -1,4 +1,5 @@
 import type { BuildingType } from "@/data/buildings.js";
+import type { Culture } from "@/data/cultures.js";
 import type { TaxRate } from "@/data/economy.js";
 import type { Tier, UnitType } from "@/data/units.js";
 import type { TileDataMap } from "@/map/tiles.js";
@@ -15,6 +16,8 @@ export interface Faction {
   shortName: string;
   /** Used for borders, markers and UI. */
   color: string;
+  /** How its soldiers look on the map: helmet, shield and weapon. No effect on the rules. */
+  culture: Culture;
   controller: "human" | "ai";
   alive: boolean;
   gold: number;

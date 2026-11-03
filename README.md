@@ -107,8 +107,15 @@ colours and a name plate; they grow with their level, and their walls appear
 once built. Territory, fog, move and attack highlights, the selected tile,
 march routes and sea crossings are drawn on the terrain.
 
-Each army is one standard-bearer in its faction's colours, carrying a banner
-that shows the army's strength in soldiers, with a pip for each regiment.
+Each army is one soldier in its faction's colours, equipped in its culture's
+style: Romans with a crested helmet, curved shield and short sword;
+Hellenistic kingdoms (Macedon, the Greeks, the Seleucids, Egypt, Pontus) with
+a Corinthian helmet, round shield and long spear; Carthage and Numidia with a
+conical helmet, oval shield and spear; the Gauls, Iberians, Britons and
+Germans bare-headed with a tall oval shield and long sword; Thrace, Dacia and
+Scythia with a curving cap, crescent shield and curved blade. This is only a
+look; it doesn't change how they fight. Beside each soldier a banner shows the army's
+strength in soldiers, with a pip for each regiment.
 Armies stand still; when one moves (your orders, an AI's, or a march), it
 walks there tile by tile. Spent armies are faded. An army standing in its own
 city isn't drawn as a figure: the city's banner shows its garrison instead.

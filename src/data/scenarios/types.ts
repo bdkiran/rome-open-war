@@ -1,3 +1,4 @@
+import type { Culture } from "@/data/cultures.js";
 import type { MapEngine } from "@/map/mapEngine.js";
 
 /** A starting city, placed at its real-world location. */
@@ -14,6 +15,8 @@ export interface ScenarioFaction {
   /** Used in battle reports and other tight spaces. */
   shortName: string;
   color: string;
+  /** How its soldiers look on the map. */
+  culture: Culture;
   controller: "human" | "ai";
   /** Where this faction's cities start. They're the only cities it will ever found. */
   cities: readonly ScenarioCity[];

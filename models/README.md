@@ -30,6 +30,11 @@ Every entry is optional; anything not listed keeps the built-in model.
   a standing army holds the model's rest pose.
 - **Facing.** The army model should face +Z (towards the camera when
   standing); it's turned to face the way it walks.
+- **Culture kits.** Nodes named `kit_<culture>_<part>` (for example
+  `kit_roman_shield`) are shown only on armies of that culture
+  (`src/data/cultures.ts`); everything else shows on every army. Kit parts
+  are left out when the model is measured for size, so a long spear doesn't
+  shrink the soldier.
 
 Good free sources of low-poly, public-domain (CC0) models include Quaternius
 and Kenney.
@@ -38,7 +43,13 @@ and Kenney.
 
 - **`knight.glb`** (army): the *LowPoly Animated Knight* by Quaternius,
   [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
-  ([source](https://quaternius.itch.io/lowpoly-animated-knight)). Put
-  together from the pack's FBX files: `KnightCharacter`, with `Helmet1` on
-  the head bone and `ShortSword` in the right hand. The `Armor` material is
-  renamed `FactionArmor`, and only the `Idle` and `Walking` clips are kept.
+  ([source](https://quaternius.itch.io/lowpoly-animated-knight)), with a
+  kit for each culture. It's built by `npm run army-model`
+  (`tools/buildArmyModel.ts`) from the pack's FBX files in
+  `source/quaternius-knight/`: the knight, the pack's `Helmet1` (Roman) and
+  `Helmet2` (Hellenistic) in bronze, its `ShortSword` (Roman) and `Sword`
+  (Celtic), and shields, spears, crests, caps and the falx made from simple
+  shapes in the tool. The `Armor` material becomes `FactionArmor`; shields
+  (`FactionShield`) and the Hellenistic crest (`FactionCrest`) also take the
+  owner's colour. Only the `Idle` and `Walking` clips are kept. To change a
+  kit, edit the tool and run it again.
