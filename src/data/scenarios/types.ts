@@ -6,6 +6,12 @@ export interface ScenarioCity {
   lon: number;
   lat: number;
   capital?: boolean;
+  /**
+   * Stays at its real site instead of being moved away from cities placed
+   * before it (see placeCities in core/setup.ts). For a city whose only
+   * close neighbour is across the sea, so their land can't overlap anyway.
+   */
+  keepSite?: boolean;
 }
 
 export interface ScenarioFaction {

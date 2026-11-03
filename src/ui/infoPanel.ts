@@ -1,7 +1,6 @@
 import type { GameContext } from "@/core/context.js";
 import {
   armyAt,
-  armySoldiers,
   cityAt,
   getFaction,
   type Army,
@@ -71,7 +70,8 @@ export function renderInfoPanel(input: InfoPanelInput): string {
   const army = armyAt(state, tile);
   const city = cityAt(state, tile);
   const sections: string[] = [];
-  if (army) sections.push(armySection(input, army));
+  const orders = army ? armySection(input, army) : "";
+  if (orders) sections.push(orders);
   if (city) sections.push(citySection(input, city));
   sections.push(terrainSection(state, tile, Boolean(army || city)));
   const tower = watchtowerSection(input, tile);
@@ -83,23 +83,16 @@ export function renderInfoPanel(input: InfoPanelInput): string {
 }
 
 /**
- * The army's facts and orders: its size, upkeep, march and siege buttons.
- * Its regiments, to tick for orders, are in the selection bar.
+ * The army's orders: its march (with Cancel march), what's stopping it from
+ * moving, and Besiege buttons. Empty when there's nothing to say. Its size
+ * and regiments are in the selection bar.
  */
 function armySection(input: InfoPanelInput, army: Army): string {
   const { state, humanId, playerTurn, chosenRegiments } = input;
-  const owner = getFaction(state, army.owner);
   const mine = army.owner === humanId;
   const canOrder = mine && playerTurn;
-  const count = army.regiments.length;
-  const upkeep = army.regiments.reduce((sum, r) => sum + upkeepFor(r.unit, r.soldiers, r.tier), 0);
 
-  let html = `
-    <h2>${formatNumber(armySoldiers(army))} soldiers</h2>
-    ${ownerLine(owner?.name ?? "Unknown", owner?.color ?? "#000", `${count} of ${ARMY_RULES.maxRegiments} regiments`)}`;
-
-  if (mine) html += `<p class="terrain-line">Upkeep ${formatNumber(Math.round(upkeep))} gold per turn.</p>`;
-
+  let html = "";
   if (mine && army.destination) {
     html += `
       <p class="siege-note">Marching to ${escapeHtml(placeLabel(input.state, army.destination))}.</p>
@@ -158,7 +151,6 @@ function orderHint(state: GameState, army: Army, chosen: ReadonlySet<RegimentId>
   if (army.regiments.every((r) => r.movementLeft <= 0)) return "No moves left this turn.";
   if (besiegedCity(state, army)) return "Besieged: can only attack the besiegers.";
   if (ticked.some((r) => r.pinned)) return "Held by an enemy's zone of control.";
-  if (ticked.length === 0) return "Choose regiments to order.";
   if (ticked.some((r) => r.movementLeft <= 0)) return "Some chosen regiments have no moves left.";
   return "";
 }

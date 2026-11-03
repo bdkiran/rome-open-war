@@ -18,19 +18,22 @@ const TERRAIN_BY_CHAR: Record<string, TerrainType> = {
 
 /**
  * Short sea routes armies can cross, as [longitude, latitude] of each shore.
- * Each end snaps to the nearest land tile. (At this map's scale the Strait of
- * Messina and the Hellespont are narrow enough to be joined by land already.)
+ * Each end snaps to the nearest land tile. The Hellespont and Bosporus are
+ * carved as sea by tools/build_europe_map.py (STRAITS), so they need crossings.
  */
 export const SEA_CROSSINGS: readonly { name: string; from: [number, number]; to: [number, number] }[] = [
   { name: "Pillars of Hercules", from: [-5.7, 36.6], to: [-5.6, 35.4] },
   // Lands beside Lilybaeum and Carthago, not on them: a crossing between two
   // city tiles would let an army in one besiege the other across the sea.
-  { name: "Sicily to Africa", from: [12.8, 38.08], to: [9.84, 36.85] },
+  { name: "Sicily to Africa", from: [11.95, 37.35], to: [9.84, 36.85] },
   { name: "Fretum Siculum", from: [15.45, 38.2], to: [15.9, 38.3] },
   { name: "Fretum Gallicum", from: [1.6, 50.95], to: [1.35, 51.15] },
   { name: "Corsica to Sardinia", from: [9.2, 41.4], to: [9.25, 41.2] },
   { name: "Corsica to Italy", from: [9.45, 42.8], to: [10.5, 42.95] },
   { name: "Sardinia to Africa", from: [8.9, 39.0], to: [8.75, 36.95] },
+  // Beside Byzantion, not on it (see Sicily to Africa).
+  { name: "Bosporus", from: [28.54, 41.39], to: [29.52, 40.98] },
+  { name: "Hellespont", from: [26.57, 40.57], to: [27.55, 40.15] },
 ];
 
 /**
