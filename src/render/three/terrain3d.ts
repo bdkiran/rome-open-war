@@ -3,6 +3,7 @@ import type { TerrainType } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { MapTopology, Point, TileId } from "@/map/topology.js";
 import { TERRAIN_COLORS } from "@/render/colors.js";
+import { buildMountains, buildTrees } from "@/render/three/scenery.js";
 
 /** How high each kind of ground stands, in world units (a hex is 64 across). */
 export const TERRAIN_HEIGHT: Record<TerrainType, number> = {
@@ -23,7 +24,7 @@ export interface Edge {
 
 /**
  * The map as 3D terrain: a raised hex per tile with walls down to lower
- * neighbours, trees on forests and peaks on mountains, and a transparent
+ * neighbours, trees on forests and massifs on mountains (scenery.ts), and a transparent
  * layer over the hex tops that carries territory, fog and highlights.
  */
 export class Terrain3D {
@@ -36,6 +37,9 @@ export class Terrain3D {
   private readonly index = new Map<TileId, number>();
   private readonly heights: Float32Array;
   private readonly edges = new Map<TileId, Edge[]>();
+  /** Trees and peaks, rebuilt when the cities they make room for change. */
+  private readonly scenery = new THREE.Group();
+  private settlementsKey: string | null = null;
 
   /** The layer over the hex tops, recoloured per tile. */
   private readonly overlay: THREE.Mesh;
@@ -58,7 +62,24 @@ export class Terrain3D {
     this.overlayColors = overlay.colors;
     this.group.add(this.overlay);
 
-    this.group.add(this.buildTrees(), this.buildPeaks());
+    this.group.add(this.scenery);
+    this.setSettlements(new Set());
+  }
+
+  /**
+   * Rebuilds the trees and peaks to leave room for cities: a tile with a city
+   * gets no trees and no massif. Does nothing if the set hasn't changed.
+   */
+  setSettlements(tiles: ReadonlySet<TileId>): void {
+    const key = [...tiles].sort().join("|");
+    if (key === this.settlementsKey) return;
+    this.settlementsKey = key;
+    for (const child of [...this.scenery.children]) {
+      this.scenery.remove(child);
+      child.traverse((node) => (node as THREE.Mesh).geometry?.dispose());
+    }
+    const heightOf = (tile: TileId) => this.heightOf(tile);
+    this.scenery.add(buildTrees(this.topology, this.tiles, heightOf, tiles), buildMountains(this.topology, this.tiles, heightOf, tiles));
   }
 
   /** Height of a tile's top. */
@@ -164,48 +185,6 @@ export class Terrain3D {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = 1;
     return { mesh, colors };
-  }
-
-  /** A few trees on every forest tile, drawn as one instanced mesh. */
-  private buildTrees(): THREE.InstancedMesh {
-    const forests = this.ids.filter((id) => this.tiles[id].terrain === "forest");
-    const geometry = new THREE.ConeGeometry(4.5, 13, 6);
-    geometry.translate(0, 6.5, 0);
-    const material = new THREE.MeshLambertMaterial({ color: "#3f5f36", flatShading: true });
-    const trees = new THREE.InstancedMesh(geometry, material, forests.length * 4);
-    const m = new THREE.Matrix4();
-    let n = 0;
-    for (const id of forests) {
-      const c = this.topology.tileCenter(id);
-      for (let k = 0; k < 4; k++) {
-        const angle = hash(id + k) * Math.PI * 2;
-        const r = 7 + hash(id + "r" + k) * 11;
-        const s = 0.75 + hash(id + "s" + k) * 0.5;
-        m.makeScale(s, s, s).setPosition(c.x + Math.cos(angle) * r, this.heightOf(id), c.y + Math.sin(angle) * r);
-        trees.setMatrixAt(n++, m);
-      }
-    }
-    trees.count = n;
-    return trees;
-  }
-
-  /** A peak on every mountain tile, drawn as one instanced mesh. */
-  private buildPeaks(): THREE.InstancedMesh {
-    const mountains = this.ids.filter((id) => this.tiles[id].terrain === "mountains");
-    const geometry = new THREE.ConeGeometry(16, 20, 5);
-    geometry.translate(0, 10, 0);
-    const material = new THREE.MeshLambertMaterial({ color: "#8f877e", flatShading: true });
-    const peaks = new THREE.InstancedMesh(geometry, material, mountains.length);
-    const m = new THREE.Matrix4();
-    const q = new THREE.Quaternion();
-    mountains.forEach((id, n) => {
-      const c = this.topology.tileCenter(id);
-      const s = 0.8 + hash(id) * 0.45;
-      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), hash(id + "t") * Math.PI);
-      m.compose(new THREE.Vector3(c.x, this.heightOf(id), c.y), q, new THREE.Vector3(s, s * (0.9 + hash(id + "h") * 0.5), s));
-      peaks.setMatrixAt(n, m);
-    });
-    return peaks;
   }
 
   /** Which neighbour lies across each side of a tile, found by shared corners. */

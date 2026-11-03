@@ -221,6 +221,7 @@ export class MapView3D {
   // ---- Cities -------------------------------------------------------------
 
   private syncCities(state: GameState, view: ViewState): void {
+    this.terrain.setSettlements(new Set(Object.values(state.cities).map((c) => c.tile)));
     for (const city of Object.values(state.cities)) {
       const color = getFaction(state, city.owner)?.color ?? "#888888";
       const besieger = city.besiegedBy ? getFaction(state, city.besiegedBy)?.color ?? null : null;
