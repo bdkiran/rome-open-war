@@ -3,7 +3,7 @@ import type { TerrainType } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { MapTopology, Point, TileId } from "@/map/topology.js";
 import { TERRAIN_COLORS } from "@/render/colors.js";
-import { buildMountains, buildTrees } from "@/render/three/scenery.js";
+import { buildMountains, buildTrees, type Clearing } from "@/render/three/scenery.js";
 
 /** How high each kind of ground stands, in world units (a hex is 64 across). */
 export const TERRAIN_HEIGHT: Record<TerrainType, number> = {
@@ -37,9 +37,9 @@ export class Terrain3D {
   private readonly index = new Map<TileId, number>();
   private readonly heights: Float32Array;
   private readonly edges = new Map<TileId, Edge[]>();
-  /** Trees and peaks, rebuilt when the cities they make room for change. */
+  /** Trees and peaks, rebuilt when the cities and towers they make room for change. */
   private readonly scenery = new THREE.Group();
-  private settlementsKey: string | null = null;
+  private clearingsKey: string | null = null;
 
   /** The layer over the hex tops, recoloured per tile. */
   private readonly overlay: THREE.Mesh;
@@ -63,23 +63,25 @@ export class Terrain3D {
     this.group.add(this.overlay);
 
     this.group.add(this.scenery);
-    this.setSettlements(new Set());
+    this.setClearings(new Set());
   }
 
   /**
-   * Rebuilds the trees and peaks to leave room for cities: a tile with a city
-   * gets no trees and no massif. Does nothing if the set hasn't changed.
+   * Rebuilds the trees and peaks to leave room for cities (a tile with a city
+   * gets no trees and no massif) and for things standing to one side of a
+   * tile, like watchtowers. Does nothing if neither has changed.
    */
-  setSettlements(tiles: ReadonlySet<TileId>): void {
-    const key = [...tiles].sort().join("|");
-    if (key === this.settlementsKey) return;
-    this.settlementsKey = key;
+  setClearings(settlements: ReadonlySet<TileId>, spots: readonly Clearing[] = []): void {
+    const key = [...settlements].sort().join("|") + "#" + spots.map((s) => `${s.x.toFixed(1)},${s.z.toFixed(1)},${s.radius}`).sort().join("|");
+    if (key === this.clearingsKey) return;
+    this.clearingsKey = key;
     for (const child of [...this.scenery.children]) {
       this.scenery.remove(child);
       child.traverse((node) => (node as THREE.Mesh).geometry?.dispose());
     }
     const heightOf = (tile: TileId) => this.heightOf(tile);
-    this.scenery.add(buildTrees(this.topology, this.tiles, heightOf, tiles), buildMountains(this.topology, this.tiles, heightOf, tiles));
+    const clear = { settlements, spots };
+    this.scenery.add(buildTrees(this.topology, this.tiles, heightOf, clear), buildMountains(this.topology, this.tiles, heightOf, clear));
   }
 
   /** Height of a tile's top. */

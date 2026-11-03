@@ -52,4 +52,9 @@ export const AI = {
   mineWorthTiles: 3,
   /** Gold kept back for emergencies before anything is built. */
   buildReserve: 100,
+  /**
+   * Watchtowers the AI builds in the region of each city that borders
+   * another faction's land. Its own limit: the game has none.
+   */
+  watchtowersPerBorderCity: 1,
 } as const;

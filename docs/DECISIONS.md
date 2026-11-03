@@ -47,6 +47,28 @@ so.
   from its neighbours as it can and the land is split by nearest city. The
   player wanted cities moved rather than sharing, and cities of unequal
   size. Median land per city went from 13 tiles to about 24.
+- **Regions fill the gaps, for the map only.** Territory covered 38% of the
+  land, leaving empty space between factions. Giving every land tile to the
+  nearest city for real would have raised the world's carrying capacity
+  2.3x and handed it to the empty map edges (Scythians 6x, Dacians 5x,
+  Germani 4x, Numidia 3x, Rome and the Greeks 1.07x), with whole-map sight
+  and road networks for them. The player chose to draw regions (every land
+  tile walkable from a territory, `state.regions`) with borders and a faint
+  tint, while income, growth, buildings, roads and sight still count the
+  3-tile territory alone. Battles there are named after the region's city.
+- **Watchtowers make new sight.** Only armies could see past a city, so
+  most of a region sat in fog. A tower is built at once on any land tile of
+  your region (not a city) for 300 gold and sees 3 tiles. The player chose:
+  never destroyed (an enemy army standing on it sees through it instead,
+  and the owner is blinded until it leaves), taken with the city whose
+  region it's in (its owner is worked out from the region, never stored),
+  no limit, no upkeep, no build time. So the price, above any first-level
+  building, is the only brake. The AI builds one per border city, nearest
+  the closest foreign city, after its buildings. In 4 seeds (with and
+  without `--garrison`): 28–40 towers a game, median AI income and
+  factions fallen unchanged, no invalid orders or AI debt, but level-3
+  cities fell from 13 to 7–8 a game (gold that went on towers didn't go
+  on the Senate).
 - **Per-tile resources were halved** to match (capacity of every terrain
   and the sea, mine gold 1/2/3 per tile, farms and port gold 0.25/0.5/0.75
   per tile), so a typical city's totals stay near what they were. In
@@ -381,8 +403,10 @@ The economy was retuned several times; the lesson each time:
      rejected: the exception is fine as long as it stays rare.
    `tests/balance.test.ts` keeps these trade-offs from collapsing: it allows
    exterminating to be the long-run best for only a few cities.
-Always measure with `npm run simulate` (and `npm run levers` for the
-economy) before and after.
+Always measure before and after: `npm run compare -- --base master`
+plays the same seeds with both versions (one game is too noisy: a single
+early war changes everything after it), `npm run simulate` shows one game
+in detail, and `npm run levers` covers the economy.
 
 - **Farms and ports earn a trickle of gold** (0.5 / 1 / 1.5 per plains tile
   and per sea tile on the coast), and the port's growth bonus went from

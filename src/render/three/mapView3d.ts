@@ -6,8 +6,10 @@ import type { MapTopology, Point, TileId } from "@/map/topology.js";
 import { formatCompact } from "@/render/format.js";
 import type { ViewState } from "@/render/mapView.js";
 import { isSpent } from "@/systems/armies.js";
+import { regionOwner } from "@/systems/cities.js";
+import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, ModelLibrary, setFlagClock, siegeRing, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, buildWatchtower, ModelLibrary, setFlagClock, siegeRing, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
 
 /** Walking pace, in strides per second. */
@@ -19,6 +21,8 @@ const MAX_WALK_SECONDS = 2.2;
 /** Models are drawn a little larger than life so they read at campaign zoom. */
 const ARMY_SCALE = 1.4;
 const CITY_SCALE = 1.2;
+/** Watchtowers are slim, so they're drawn larger to read at campaign zoom. */
+const TOWER_SCALE = 1.9;
 /** City name plates are hidden when zoomed out further than this. */
 const LABEL_MIN_ZOOM = 0.3;
 
@@ -54,6 +58,8 @@ export class MapView3D {
   /** Where each regiment was last shown, so an army split off from another walks out from it. */
   private regimentSpots = new Map<string, { tile: TileId; position: THREE.Vector3 }>();
   private readonly cities = new Map<string, { key: string; object: THREE.Object3D }>();
+  /** Watchtowers by tile, keyed by their owner's colour. */
+  private readonly towers = new Map<TileId, { key: string; object: THREE.Object3D }>();
   private readonly cityLabels = new Map<string, { el: HTMLElement; text: string }>();
   private readonly layers = { borders: null as THREE.Object3D | null, selection: null as THREE.Object3D | null, route: null as THREE.Object3D | null };
   private seen = { territory: null as unknown, selected: null as unknown, route: "", overlay: [] as unknown[] };
@@ -112,7 +118,9 @@ export class MapView3D {
     this.syncBorders(state);
     this.syncSelection(view);
     this.syncRoute(view);
+    this.syncClearings(state);
     this.syncCities(state, view);
+    this.syncWatchtowers(state);
     this.syncArmies(state, view, time, delta);
 
     this.renderer.render(this.scene, this.camera.three);
@@ -131,8 +139,10 @@ export class MapView3D {
     const colors = new Map(state.factions.map((f) => [f.id, rgb(f.color)]));
     this.terrain.paintOverlay((tile) => {
       let c: Rgba | null = null;
+      // Worked land in full colour; the rest of the city's region fainter, so the gaps don't show.
       const claim = state.territory[tile];
-      if (claim) c = over(c, [...colors.get(claim.owner)!, 0.24]);
+      const region = claim?.owner ?? regionOwner(state, tile);
+      if (region) c = over(c, [...colors.get(region)!, claim ? 0.24 : 0.12]);
       if (view.visible && !view.visible.has(tile)) c = over(c, [0.02, 0.05, 0.07, 0.45]);
       if (view.reachable.has(tile)) c = over(c, [0.96, 0.93, 0.87, 0.32]);
       if (view.attackable.has(tile)) c = over(c, [0.84, 0.23, 0.17, 0.45]);
@@ -143,18 +153,23 @@ export class MapView3D {
 
   // ---- Borders, selection, routes, crossings --------------------------------------
 
-  /** Coloured strips along every edge where the owner changes. */
+  /**
+   * Coloured strips along every edge where the owner changes, drawn around
+   * whole regions (state.regions) so neighbouring factions' borders meet.
+   * Territory changes hands with its city, so it marks when to redraw.
+   */
   private syncBorders(state: GameState): void {
     if (state.territory === this.seen.territory) return;
     this.seen.territory = state.territory;
     const ribbons = new Ribbons();
-    for (const [tile, claim] of Object.entries(state.territory)) {
-      const color = getFaction(state, claim.owner)?.color ?? "#000000";
+    for (const tile of Object.keys(state.regions)) {
+      const owner = regionOwner(state, tile);
+      if (!owner) continue;
+      const color = getFaction(state, owner)?.color ?? "#000000";
       const center = this.topology.tileCenter(tile);
       const h = this.terrain.heightOf(tile) + 0.5;
       for (const edge of this.terrain.edgesOf(tile)) {
-        const other = edge.neighbor ? state.territory[edge.neighbor] : undefined;
-        if (other?.owner === claim.owner) continue;
+        if (edge.neighbor && regionOwner(state, edge.neighbor) === owner) continue;
         ribbons.inset(edge.a, edge.b, center, h, 3, color);
       }
     }
@@ -221,7 +236,6 @@ export class MapView3D {
   // ---- Cities -------------------------------------------------------------
 
   private syncCities(state: GameState, view: ViewState): void {
-    this.terrain.setSettlements(new Set(Object.values(state.cities).map((c) => c.tile)));
     for (const city of Object.values(state.cities)) {
       const color = getFaction(state, city.owner)?.color ?? "#888888";
       const besieger = city.besiegedBy ? getFaction(state, city.besiegedBy)?.color ?? null : null;
@@ -249,6 +263,37 @@ export class MapView3D {
       group.scale.setScalar(CITY_SCALE);
       this.scene.add(group);
       this.cities.set(city.id, { key, object: group });
+    }
+  }
+
+  /** A tower model on every watchtower's tile, in its owner's colours (it changes hands with its city). */
+  /** Keeps trees and peaks out of the way of cities and watchtowers. */
+  private syncClearings(state: GameState): void {
+    const cities = new Set(Object.values(state.cities).map((c) => c.tile));
+    const towers = Object.keys(state.watchtowers).map((tile) => {
+      const top = this.terrain.top(tile);
+      return {
+        x: top.x + WATCHTOWER_SPOT.x * TOWER_SCALE,
+        z: top.z + WATCHTOWER_SPOT.z * TOWER_SCALE,
+        radius: WATCHTOWER_SPOT.radius * TOWER_SCALE,
+      };
+    });
+    this.terrain.setClearings(cities, towers);
+  }
+
+  private syncWatchtowers(state: GameState): void {
+    for (const tile of Object.keys(state.watchtowers)) {
+      const key = getFaction(state, towerOwner(state, tile) ?? "")?.color ?? "#888888";
+      const existing = this.towers.get(tile);
+      if (existing?.key === key) continue;
+      if (existing) this.scene.remove(existing.object);
+      const object = buildWatchtower(key);
+      const group = new THREE.Group();
+      group.add(object);
+      group.position.copy(this.terrain.top(tile));
+      group.scale.setScalar(TOWER_SCALE);
+      this.scene.add(group);
+      this.towers.set(tile, { key, object: group });
     }
   }
 

@@ -20,6 +20,9 @@ npm run simulate -- [--turns 100] [--garrison] [--seed N]
                          # balance report: one AI-vs-AI game's numbers
 npm run levers -- [--turns 100] [--from 50] [--seed N]
                          # economic levers: tax policies and conquest choices
+npm run compare -- [--base REF] [--seeds 4] [--turns 100] [--garrison]
+                         # the same games (one per seed) with the current code
+                         # and a git ref, side by side: medians and ranges
 ```
 
 Tests and tools need Node 22+. They're built by `tsconfig.node.json` into
@@ -48,13 +51,14 @@ src/
                applyAction, the ONLY way state changes), setup.ts (new game),
                context.ts (fixed info: the map topology), rng.ts (seeded)
   data/        every tunable number: terrain, units, economy, buildings,
-               combat, siege, conquest, vision, ai, gameSetup; scenarios/
-               romanWorld.ts (factions, cities, colours)
+               combat, siege, conquest, vision, watchtowers, ai, gameSetup;
+               scenarios/romanWorld.ts (factions, cities, colours)
   systems/     the rules, as pure functions of state: armies (movement,
                marches, zone of control, merging), combat (battles, battleSides,
                previews), cities (growth, income, capture), buildings
                (construction queue), recruitment (training/retraining queue),
                siege, conquest (occupy/enslave/exterminate), vision (fog),
+               watchtowers (building them, who sees through them),
                turn (start/end of each faction's turn), victory, pathfinding
   ai/          ai.ts (nextAction: one action at a time), assess.ts (targets,
                threats, relief of besieged cities)
@@ -75,11 +79,12 @@ tests/         simulation.test.ts (whole games: invalid orders, debt, state
                (what must hold in any state: add to it when adding rules),
                map.test.ts (every starting city can reach level 3),
                siege.test.ts, buildings.test.ts, recruitment.test.ts,
-               combat.test.ts, flight.test.ts, movement.test.ts (rules
-               checked directly),
+               watchtowers.test.ts, combat.test.ts, flight.test.ts,
+               movement.test.ts (rules checked directly),
                balance.test.ts (no tax policy or conquest choice dominates)
 tools/         build_europe_map.py (map generator), simulation.ts (plays a
-               game in Node), simulate.ts (the balance report), economy.ts
+               game in Node), simulate.ts (the balance report), compare.ts
+               (several seeds, two versions side by side), economy.ts
                (peacetime economy model), levers.ts (the levers report)
 models/        optional .glb models listed in models/models.json
 ```
@@ -133,8 +138,11 @@ be swapped in through a scenario.
    (`tests/invariants.ts`), state changed in place, or state that isn't plain
    JSON.
 3. For rules, data or AI changes, also read the numbers:
-   `npm run simulate` (and `-- --garrison`). Check city levels spread across
-   1–3, treasuries not piling up, and factions still conquering each other.
+   `npm run compare -- --base master` (and `-- --garrison`) for the
+   before/after table over several seeds; one game is too noisy to judge
+   by. `npm run simulate` shows one game in detail. Check city levels
+   spread across 1–3, treasuries not piling up, and factions still
+   conquering each other.
    For taxes, conquest or the AI's economic choices, also `npm run levers`.
 4. For UI or map changes: check in a browser. Headless Chromium can run the
    3D map with `--use-gl=angle --use-angle=swiftshader

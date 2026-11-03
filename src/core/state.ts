@@ -163,6 +163,18 @@ export interface GameState {
   tiles: TileDataMap;
   /** Claimed tiles only. Unclaimed tiles have no entry. */
   territory: Record<TileId, TileClaim>;
+  /**
+   * The city whose region each land tile is drawn in, so the map shows no
+   * unowned gaps. For the map only: income, growth, mines, farms, roads and
+   * sight count `territory` alone. Covers every claimed tile (same city) and
+   * all other land that can be walked to from one. Never changes.
+   */
+  regions: Record<TileId, CityId>;
+  /**
+   * Watchtowers, by tile. Each belongs to whoever owns the city whose region
+   * it stands in (never stored), so taking the city takes its towers.
+   */
+  watchtowers: Record<TileId, true>;
   cities: Record<CityId, City>;
   armies: Record<ArmyId, Army>;
   /** Used to give each new city and army a unique id. */

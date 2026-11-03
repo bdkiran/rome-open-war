@@ -6,6 +6,7 @@ import { createGame } from "@/core/setup.js";
 import { LEVEL_POPULATION, MAX_CITY_LEVEL } from "@/data/buildings.js";
 import { GAME_SETUP } from "@/data/gameSetup.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
+import { TERRAIN } from "@/data/terrain.js";
 import { SEA_CROSSINGS } from "@/map/europe/europeMapEngine.js";
 import { cityStats } from "@/systems/cities.js";
 
@@ -76,6 +77,17 @@ it("gives each claimed tile to the nearest city within the territory radius", ()
   // Uncrowded cities hold far more land than before: the median city has 20+ tiles.
   const sizes = cities.map((c) => Object.values(state.territory).filter((t) => t.cityId === c.id).length).sort((a, b) => a - b);
   assert.ok(sizes[sizes.length >> 1] >= 20, `median ${sizes[sizes.length >> 1]} tiles`);
+});
+
+it("draws regions that fill the land between territories without changing them", () => {
+  for (const [tile, claim] of Object.entries(state.territory)) {
+    assert.equal(state.regions[tile], claim.cityId, `${tile} is drawn in another city's region`);
+  }
+  const land = ctx.topology.allTiles().filter((t) => TERRAIN[state.tiles[t].terrain].passable);
+  const gaps = land.filter((t) => !state.regions[t]);
+  // Only land no city can walk to (islands without a city) is left out.
+  assert.ok(gaps.length < land.length * 0.02, `${gaps.length} of ${land.length} land tiles in no region`);
+  assert.ok(Object.keys(state.regions).every((t) => TERRAIN[state.tiles[t].terrain].passable), "a region covers the sea");
 });
 
 it("draws Sicily round, cut off from Italy", () => {

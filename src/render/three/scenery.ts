@@ -12,10 +12,29 @@ import type { MapTopology, TileId } from "@/map/topology.js";
  * are massifs (a main peak and lower shoulders, snow on the highest faces),
  * joined by low ridges wherever two mountain tiles meet, so ranges read as
  * chains. The centre of each tile is kept clear for the army standing there,
- * and a tile with a city gets neither trees nor a massif.
+ * a tile with a city gets neither trees nor a massif, and nothing grows in a
+ * clearing (under a watchtower).
  */
 
 type V3 = readonly [number, number, number];
+
+/** A round patch of ground (world units) kept free of trees and peaks, e.g. under a watchtower. */
+export interface Clearing {
+  x: number;
+  z: number;
+  radius: number;
+}
+
+/** What the scenery makes room for: tiles with a city, and clearings. */
+export interface Clearings {
+  settlements: ReadonlySet<TileId>;
+  spots: readonly Clearing[];
+}
+
+/** Whether something of radius `r` at (x, z) would stand in a clearing. */
+function inClearing(clear: Clearings, x: number, z: number, r: number): boolean {
+  return clear.spots.some((s) => Math.hypot(x - s.x, z - s.z) < s.radius + r);
+}
 
 // ---- Random numbers from a tile id -------------------------------------------
 
@@ -218,14 +237,14 @@ export function buildTrees(
   topology: MapTopology,
   tiles: TileDataMap,
   heightOf: (tile: TileId) => number,
-  settlements: ReadonlySet<TileId>,
+  clear: Clearings,
 ): THREE.Group {
   const bounds = topology.bounds();
   const placed: Record<TreeKind, THREE.Matrix4[]> = { oak: [], fir: [], pine: [], cypress: [], olive: [] };
   const tints: Record<TreeKind, THREE.Color[]> = { oak: [], fir: [], pine: [], cypress: [], olive: [] };
 
   for (const id of topology.allTiles()) {
-    if (tiles[id].terrain !== "forest" || settlements.has(id)) continue;
+    if (tiles[id].terrain !== "forest" || clear.settlements.has(id)) continue;
     const rand = sequence(`trees:${id}`);
     const c = topology.tileCenter(id);
     const weights = treeWeights((c.y - bounds.minY) / (bounds.maxY - bounds.minY));
@@ -235,8 +254,11 @@ export function buildTrees(
       const r = between(rand, TREE_RING.min, TREE_RING.max);
       const kind = pick(rand, weights);
       const s = between(rand, 0.8, 1.2);
+      const x = c.x + Math.cos(angle) * r;
+      const z = c.y + Math.sin(angle) * r;
+      if (inClearing(clear, x, z, 5 * s)) continue;
       const m = new THREE.Matrix4().compose(
-        new THREE.Vector3(c.x + Math.cos(angle) * r, heightOf(id), c.y + Math.sin(angle) * r),
+        new THREE.Vector3(x, heightOf(id), z),
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), rand() * Math.PI * 2),
         new THREE.Vector3(s, s * between(rand, 0.9, 1.1), s),
       );
@@ -312,8 +334,13 @@ export function buildMountains(
   topology: MapTopology,
   tiles: TileDataMap,
   heightOf: (tile: TileId) => number,
-  settlements: ReadonlySet<TileId>,
+  clear: Clearings,
 ): THREE.Mesh {
+  const { settlements } = clear;
+  // A peak that would stand in a clearing is still worked out (into a builder
+  // that's thrown away), so the rest of its tile's random layout doesn't shift.
+  const discard = new MeshBuilder();
+  const into = (x: number, z: number, r: number) => (inClearing(clear, x, z, r * 0.8) ? discard : m);
   const m = new MeshBuilder();
   const isMountain = (id: TileId) => tiles[id]?.terrain === "mountains";
 
@@ -325,16 +352,25 @@ export function buildMountains(
 
     if (!settlements.has(id)) {
       // The main peak, behind the centre.
-      peak(m, rand, c.x + between(rand, -4, 4), top, c.y - between(rand, 10, 13), between(rand, 12.5, 15), between(rand, 28, 36));
+      const mainX = c.x + between(rand, -4, 4);
+      const mainZ = c.y - between(rand, 10, 13);
+      const mainR = between(rand, 12.5, 15);
+      peak(into(mainX, mainZ, mainR), rand, mainX, top, mainZ, mainR, between(rand, 28, 36));
       // Two shoulders at the back corners, and sometimes a small one beside the centre.
       for (const side of [-1, 1]) {
         const angle = -Math.PI / 2 + side * between(rand, 0.7, 1.3);
         const d = between(rand, 14, 19);
-        peak(m, rand, c.x + Math.cos(angle) * d, top, c.y + Math.sin(angle) * d, between(rand, 7.5, 10), between(rand, 11, 17));
+        const x = c.x + Math.cos(angle) * d;
+        const z = c.y + Math.sin(angle) * d;
+        const r = between(rand, 7.5, 10);
+        peak(into(x, z, r), rand, x, top, z, r, between(rand, 11, 17));
       }
       if (rand() < 0.5) {
         const side = rand() < 0.5 ? -1 : 1;
-        peak(m, rand, c.x + side * between(rand, 18, 21), top, c.y + between(rand, 2, 8), between(rand, 5, 7), between(rand, 7, 10));
+        const x = c.x + side * between(rand, 18, 21);
+        const z = c.y + between(rand, 2, 8);
+        const r = between(rand, 5, 7);
+        peak(into(x, z, r), rand, x, top, z, r, between(rand, 7, 10));
       }
     }
 
@@ -351,7 +387,10 @@ export function buildMountains(
         const clear = Math.min(Math.hypot(x - c.x, z - c.y), Math.hypot(x - d.x, z - d.y)) > ARMY_CLEARANCE + 6;
         if (nearCity || !clear) continue;
         const h = between(ridgeRand, 10, 15) * (1 - Math.abs(t - 0.5));
-        peak(m, ridgeRand, x + between(ridgeRand, -2, 2), Math.min(heightOf(id), heightOf(n)), z + between(ridgeRand, -2, 2), between(ridgeRand, 7, 9.5), h);
+        const px = x + between(ridgeRand, -2, 2);
+        const pz = z + between(ridgeRand, -2, 2);
+        const r = between(ridgeRand, 7, 9.5);
+        peak(into(px, pz, r), ridgeRand, px, Math.min(heightOf(id), heightOf(n)), pz, r, h);
       }
     }
   }
