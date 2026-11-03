@@ -53,6 +53,7 @@ const byType = Object.entries(result.actionsByType).sort((a, b) => b[1] - a[1]);
 
 out.push(`Final (turn ${state.turn}):\n${summary(state)}`);
 out.push(`City levels: ${levels[0]} at level 1, ${levels[1]} at level 2, ${levels[2]} at level 3`);
+out.push(`Watchtowers: ${Object.keys(state.watchtowers).length}`);
 out.push(`Largest cities: ${largest.slice(0, 5).map((c) => `${c.name} ${c.population}`).join(", ")}; median ${median}`);
 out.push(
   `AI: ${result.actions} actions in ${(result.ms / 1000).toFixed(1)}s ` +

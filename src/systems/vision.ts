@@ -3,10 +3,12 @@ import { armiesOf, citiesOf, type FactionId, type GameState } from "@/core/state
 import { VISION } from "@/data/vision.js";
 import type { TileId } from "@/map/topology.js";
 import { tilesWithin } from "@/systems/cities.js";
+import { towerSighter } from "@/systems/watchtowers.js";
 
 /**
- * Every tile a faction can currently see: around its cities and armies, and
- * all of its own territory. Everywhere else, enemy armies are hidden from it.
+ * Every tile a faction can currently see: around its cities, armies and
+ * watchtowers (or an enemy's tower one of its armies stands on), and all of
+ * its own territory. Everywhere else, enemy armies are hidden from it.
  * The map itself and the cities on it are always known.
  */
 export function visibleTiles(ctx: GameContext, state: GameState, factionId: FactionId): Set<TileId> {
@@ -24,6 +26,9 @@ export function visibleTiles(ctx: GameContext, state: GameState, factionId: Fact
   for (const army of armiesOf(state, factionId)) {
     const range = army.regiments.some((r) => r.unit === "cavalry") ? VISION.armyWithCavalry : VISION.army;
     add(tilesWithin(ctx.topology, army.tile, range));
+  }
+  for (const tile of Object.keys(state.watchtowers)) {
+    if (towerSighter(state, tile) === factionId) add(tilesWithin(ctx.topology, tile, VISION.watchtower));
   }
   return visible;
 }

@@ -6,4 +6,6 @@ export const VISION = {
   army: 2,
   /** ...or this many if it includes any cavalry. */
   armyWithCavalry: 3,
+  /** Tiles a watchtower sees around it (data/watchtowers.ts). */
+  watchtower: 3,
 } as const;

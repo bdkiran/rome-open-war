@@ -711,6 +711,8 @@ function handlePanelClick(e: MouseEvent): void {
       retrainQueue = new Set(picked);
       renderInfo(controller.getState());
     }
+  } else if (target.dataset.watchtower) {
+    dispatch({ type: "buildWatchtower", tile: target.dataset.watchtower });
   } else if (target.dataset.cancelMarch) {
     dispatch({ type: "cancelMarch", armyId: target.dataset.cancelMarch });
   } else if (target.dataset.besiege) {
