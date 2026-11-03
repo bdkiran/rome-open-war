@@ -10,6 +10,7 @@
     "serve": "serve .",
     "test": "tsc -p tsconfig.node.json && node --import ./tests/register.mjs --test \"build/tests/**/*.test.js\"",
     "simulate": "tsc -p tsconfig.node.json && node --import ./tests/register.mjs build/tools/simulate.js",
+    "compare": "tsc -p tsconfig.node.json && node --import ./tests/register.mjs build/tools/compare.js",
     "levers": "tsc -p tsconfig.node.json && node --import ./tests/register.mjs build/tools/levers.js"
   },
   "devDependencies": {

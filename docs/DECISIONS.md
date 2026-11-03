@@ -403,8 +403,10 @@ The economy was retuned several times; the lesson each time:
      rejected: the exception is fine as long as it stays rare.
    `tests/balance.test.ts` keeps these trade-offs from collapsing: it allows
    exterminating to be the long-run best for only a few cities.
-Always measure with `npm run simulate` (and `npm run levers` for the
-economy) before and after.
+Always measure before and after: `npm run compare -- --base master`
+plays the same seeds with both versions (one game is too noisy: a single
+early war changes everything after it), `npm run simulate` shows one game
+in detail, and `npm run levers` covers the economy.
 
 - **Farms and ports earn a trickle of gold** (0.5 / 1 / 1.5 per plains tile
   and per sea tile on the coast), and the port's growth bonus went from
