@@ -507,6 +507,50 @@ export function buildWatchtower(color: string): THREE.Object3D {
   return g;
 }
 
+/**
+ * A battle's clash, played once on its tile: a ring of dust spreading over
+ * the ground and two crossed blades in the attacker's colours that flash up
+ * and fade. `update` takes the progress from 0 to 1.
+ */
+export function clashBurst(color: string): { object: THREE.Object3D; update(progress: number): void } {
+  const g = new THREE.Group();
+  // The dust starts outside a city's footing (radius 25), so it isn't hidden under it.
+  const dustMaterial = new THREE.MeshBasicMaterial({ color: "#e6dcc0", transparent: true, side: THREE.DoubleSide, depthWrite: false });
+  const dust = new THREE.Mesh(new THREE.RingGeometry(26, 36, 40), dustMaterial);
+  dust.rotation.x = -Math.PI / 2;
+  dust.position.y = 2;
+  const steel = new THREE.MeshBasicMaterial({ color: "#f2f2ee", transparent: true, depthWrite: false });
+  const hilt = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false });
+  const blades = new THREE.Group();
+  for (const lean of [-0.65, 0.65]) {
+    const sword = new THREE.Group();
+    const blade = box(6, 46, 1.5, steel);
+    blade.position.y = 6;
+    const guard = box(20, 4.5, 2, hilt);
+    guard.position.y = -18;
+    const grip = box(4.5, 12, 2, hilt);
+    grip.position.y = -26;
+    sword.add(blade, guard, grip);
+    sword.rotation.z = lean;
+    blades.add(sword);
+  }
+  blades.position.y = 58;
+  g.add(dust, blades);
+  return {
+    object: g,
+    update(progress: number) {
+      const p = Math.min(1, Math.max(0, progress));
+      dust.scale.setScalar(0.8 + 1.2 * p);
+      dustMaterial.opacity = 0.85 * (1 - p);
+      // The blades pop up in the first fifth, hold, then fade over the last 40%.
+      blades.scale.setScalar(p < 0.2 ? 0.4 + 3.25 * p : 1.05);
+      const fade = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4;
+      steel.opacity = fade;
+      hilt.opacity = fade;
+    },
+  };
+}
+
 /** A ring on the ground around a besieged city, in the besieger's colour. */
 export function siegeRing(color: string): THREE.Mesh {
   const ring = new THREE.Mesh(

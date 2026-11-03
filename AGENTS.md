@@ -80,6 +80,7 @@ tests/         simulation.test.ts (whole games: invalid orders, debt, state
                map.test.ts (every starting city can reach level 3),
                siege.test.ts, buildings.test.ts, recruitment.test.ts,
                watchtowers.test.ts, combat.test.ts, flight.test.ts,
+               controller.test.ts, playbackBanner.test.ts,
                movement.test.ts (rules checked directly),
                balance.test.ts (no tax policy or conquest choice dominates)
 tools/         build_europe_map.py (map generator), simulation.ts (plays a

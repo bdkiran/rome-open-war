@@ -9,7 +9,7 @@ import { isSpent } from "@/systems/armies.js";
 import { regionOwner } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, buildWatchtower, ModelLibrary, setFlagClock, siegeRing, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, siegeRing, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
 
 /** Walking pace, in strides per second. */
@@ -18,6 +18,14 @@ const WALK_SPEED = 2.4;
 const SECONDS_PER_TILE = 0.32;
 /** A long move is sped up so it never takes longer than this. */
 const MAX_WALK_SECONDS = 2.2;
+/** Other factions' armies walk faster, so watching their turns stays quick. */
+const ENEMY_SECONDS_PER_TILE = 0.15;
+const ENEMY_MAX_WALK_SECONDS = 0.9;
+/** How long a battle's clash plays, and an attacker's lunge toward its target (seconds). */
+const CLASH_SECONDS = 0.8;
+const LUNGE_SECONDS = 0.45;
+/** How far a lunge goes toward the target tile, as a share of the way. */
+const LUNGE_REACH = 0.35;
 /** Models are drawn a little larger than life so they read at campaign zoom. */
 const ARMY_SCALE = 1.4;
 const CITY_SCALE = 1.2;
@@ -58,6 +66,8 @@ export class MapView3D {
   /** Where each regiment was last shown, so an army split off from another walks out from it. */
   private regimentSpots = new Map<string, { tile: TileId; position: THREE.Vector3 }>();
   private readonly cities = new Map<string, { key: string; object: THREE.Object3D }>();
+  /** Battle clashes playing on the map. */
+  private readonly clashes: { object: THREE.Object3D; update(progress: number): void; start: number }[] = [];
   /** Watchtowers by tile, keyed by their owner's colour. */
   private readonly towers = new Map<TileId, { key: string; object: THREE.Object3D }>();
   private readonly cityLabels = new Map<string, { el: HTMLElement; text: string }>();
@@ -122,6 +132,7 @@ export class MapView3D {
     this.syncCities(state, view);
     this.syncWatchtowers(state);
     this.syncArmies(state, view, time, delta);
+    this.syncClashes(time);
 
     this.renderer.render(this.scene, this.camera.three);
     this.placeLabels(state);
@@ -374,7 +385,7 @@ export class MapView3D {
       }
 
       if (entry.tile !== army.tile) {
-        entry.walk = this.walkBetween(entry.position, entry.tile, army.tile, target, time);
+        entry.walk = this.walkBetween(entry.position, entry.tile, army.tile, target, time, !mine);
         entry.tile = army.tile;
       }
 
@@ -411,7 +422,7 @@ export class MapView3D {
       );
       if (joined && (!view.visible || view.visible.has(joined.tile) || joined.owner === view.activeFaction)) {
         const target = this.standingPoint(joined.tile, cityTiles);
-        const walk = this.walkBetween(entry.position, entry.tile, joined.tile, target, time);
+        const walk = this.walkBetween(entry.position, entry.tile, joined.tile, target, time, joined.owner !== view.activeFaction);
         this.ghosts.push({ figure: entry.figure, position: entry.position.clone(), walk, id });
       } else {
         this.scene.remove(entry.figure.object);
@@ -456,11 +467,57 @@ export class MapView3D {
    * of the tiles on the shortest route over land (or straight across, if
    * there's no such route, as over a sea crossing's water).
    */
-  private walkBetween(from: THREE.Vector3, fromTile: TileId, toTile: TileId, to: THREE.Vector3, time: number): Walk {
+  /** A walk along the land route between two tiles; at the faster pace for another faction's army. */
+  private walkBetween(from: THREE.Vector3, fromTile: TileId, toTile: TileId, to: THREE.Vector3, time: number, fast: boolean): Walk {
     const route = this.landRoute(fromTile, toTile);
     const points = [from.clone(), ...route.slice(1, -1).map((t) => this.terrain.top(t)), to.clone()];
     const steps = Math.max(1, route.length - 1);
-    return { points, start: time, duration: Math.min(MAX_WALK_SECONDS, steps * SECONDS_PER_TILE) };
+    const duration = fast
+      ? Math.min(ENEMY_MAX_WALK_SECONDS, steps * ENEMY_SECONDS_PER_TILE)
+      : Math.min(MAX_WALK_SECONDS, steps * SECONDS_PER_TILE);
+    return { points, start: time, duration };
+  }
+
+  /** Seconds until every walk, lunge and clash on the map has finished, as of the last frame drawn. */
+  animationLeft(): number {
+    let left = 0;
+    for (const walk of [...[...this.armies.values()].map((e) => e.walk), ...this.ghosts.map((g) => g.walk)]) {
+      if (walk) left = Math.max(left, walk.start + walk.duration - this.lastTime);
+    }
+    for (const clash of this.clashes) left = Math.max(left, clash.start + CLASH_SECONDS - this.lastTime);
+    return left;
+  }
+
+  /** Plays a battle's clash on a tile, in the attacker's colour. */
+  clash(tile: TileId, color: string): void {
+    const burst = clashBurst(color);
+    burst.object.position.copy(this.terrain.top(tile));
+    burst.object.scale.setScalar(CITY_SCALE);
+    burst.update(0);
+    this.scene.add(burst.object);
+    this.clashes.push({ ...burst, start: this.lastTime });
+  }
+
+  /** An army lunges toward a tile and back, as it strikes. Ignored if it's walking or not shown. */
+  lunge(armyId: string, toward: TileId): void {
+    const entry = this.armies.get(armyId);
+    if (!entry || entry.walk) return;
+    const from = entry.position.clone();
+    const reach = from.clone().lerp(this.terrain.top(toward), LUNGE_REACH);
+    entry.walk = { points: [from, reach, from.clone()], start: this.lastTime, duration: LUNGE_SECONDS };
+  }
+
+  /** Moves the clashes along and removes finished ones. */
+  private syncClashes(time: number): void {
+    for (let i = this.clashes.length - 1; i >= 0; i--) {
+      const clash = this.clashes[i];
+      const progress = (time - clash.start) / CLASH_SECONDS;
+      clash.update(progress);
+      if (progress >= 1) {
+        this.scene.remove(clash.object);
+        this.clashes.splice(i, 1);
+      }
+    }
   }
 
   /** The shortest chain of neighbouring land tiles between two tiles, ends included. */
