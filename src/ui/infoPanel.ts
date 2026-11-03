@@ -35,6 +35,9 @@ import { canRetrain, canTrain, retrainCost, trainableOptions, unitUnlocked } fro
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
 import { cityStats, mineableTiles, plainsTiles, type CityStats } from "@/systems/cities.js";
+import { canBuildWatchtower, towerOwner, towerSighter } from "@/systems/watchtowers.js";
+import { VISION } from "@/data/vision.js";
+import { WATCHTOWER } from "@/data/watchtowers.js";
 import { levelPips, regimentBox, tierMark } from "@/ui/boxes.js";
 import { escapeHtml, ownerLine, signed } from "@/ui/html.js";
 
@@ -71,6 +74,8 @@ export function renderInfoPanel(input: InfoPanelInput): string {
   if (army) sections.push(armySection(input, army));
   if (city) sections.push(citySection(input, city));
   sections.push(terrainSection(state, tile, Boolean(army || city)));
+  const tower = watchtowerSection(input, tile);
+  if (tower) sections.push(tower);
   if (input.ctx.topology.links?.().some(([a, b]) => a === tile || b === tile)) {
     sections.push(`<p class="terrain-line">Sea crossing.</p>`);
   }
@@ -112,8 +117,8 @@ function armySection(input: InfoPanelInput, army: Army): string {
 function placeLabel(state: GameState, tile: TileId): string {
   const city = cityAt(state, tile);
   if (city) return city.name;
-  const claim = state.territory[tile];
-  if (claim && state.cities[claim.cityId]) return `near ${state.cities[claim.cityId].name}`;
+  const near = state.cities[state.territory[tile]?.cityId ?? state.regions[tile] ?? ""];
+  if (near) return `near ${near.name}`;
   return `the ${TERRAIN[state.tiles[tile].terrain].name.toLowerCase()}`;
 }
 
@@ -486,6 +491,25 @@ function recruitQueue(city: City, color: string): string {
     <div class="queue-row">${items || `<div class="queue-slot empty">Empty</div>`}</div>`;
 }
 
+/**
+ * The tile's watchtower (whose it is, and who sees through it), or a button
+ * to build one on the player's own land. Empty if neither applies.
+ */
+function watchtowerSection(input: InfoPanelInput, tile: TileId): string {
+  const { state, humanId, playerTurn } = input;
+  if (state.watchtowers[tile]) {
+    const owner = getFaction(state, towerOwner(state, tile) ?? "");
+    const sighter = towerSighter(state, tile);
+    const held = sighter && sighter !== owner?.id ? `, held by ${getFaction(state, sighter)?.shortName ?? "an enemy"}` : "";
+    return `<p class="terrain-line" title="Sees ${VISION.watchtower} tiles around it. An enemy army standing on it sees through it instead.">Watchtower${owner ? ` (${escapeHtml(owner.shortName)})` : ""}${escapeHtml(held)}.</p>`;
+  }
+  if (!humanId || towerOwner(state, tile) !== humanId || cityAt(state, tile)) return "";
+  const check = canBuildWatchtower(state, humanId, tile);
+  const enabled = check.ok && playerTurn;
+  const title = check.ok ? `Sees ${VISION.watchtower} tiles around it, for good. Taken with the city.` : check.reason;
+  return `<button type="button" class="action secondary" data-watchtower="${tile}" ${enabled ? "" : "disabled"} title="${escapeHtml(title)}">Build watchtower (${formatNumber(WATCHTOWER.cost)})</button>`;
+}
+
 function terrainSection(state: GameState, tile: TileId, compact: boolean): string {
   const terrain = TERRAIN[state.tiles[tile].terrain];
   const defense = defenseBonusAt(state, tile);
@@ -495,13 +519,16 @@ function terrainSection(state: GameState, tile: TileId, compact: boolean): strin
     return `<p class="terrain-line">${terrain.name}. Defense bonus ${defenseText}.</p>`;
   }
 
+  // Land outside every territory still shows the region it's drawn in, but earns its city nothing.
   const claim = state.territory[tile];
-  const owner = claim ? getFaction(state, claim.owner) : undefined;
+  const regionCity = state.cities[claim?.cityId ?? state.regions[tile] ?? ""];
+  const owner = regionCity ? getFaction(state, regionCity.owner) : undefined;
+  const ownerDetail = !regionCity ? "" : claim ? regionCity.name : `near ${regionCity.name}, not worked`;
   const cost = terrain.passable ? enterCost(state, tile) : 0;
   const move = !terrain.passable ? "Impassable" : cost < terrain.moveCost ? `${cost} (roads)` : `${cost}`;
   return `
     <h2>${terrain.name}</h2>
-    ${owner ? ownerLine(owner.name, owner.color, state.cities[claim!.cityId]?.name ?? "") : ""}
+    ${owner ? ownerLine(owner.name, owner.color, ownerDetail) : ""}
     <dl>
       <dt>Supports</dt><dd>${formatNumber(terrain.capacity)} people</dd>
       <dt>Growth rate</dt><dd>${formatPercent(terrain.growth)}</dd>

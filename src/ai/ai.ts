@@ -35,7 +35,9 @@ import {
   reachableTiles,
   upkeepFor,
 } from "@/systems/armies.js";
-import { cityStats, factionIncome, mineableTiles } from "@/systems/cities.js";
+import { cityStats, factionIncome, mineableTiles, regionOwner } from "@/systems/cities.js";
+import { WATCHTOWER } from "@/data/watchtowers.js";
+import { canBuildWatchtower, towersOf } from "@/systems/watchtowers.js";
 import { battlefieldAt, battleSides, battleStrength } from "@/systems/combat.js";
 import { canBesiege } from "@/systems/siege.js";
 import { canBuild, nextLevel } from "@/systems/buildings.js";
@@ -91,6 +93,7 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
     advanceAction(ctx, real, seen, factionId, plan) ??
     trainingAction(ctx, seen, factionId, plan, "defense") ??
     constructionAction(ctx, seen, factionId, plan) ??
+    watchtowerAction(ctx, real, factionId, plan) ??
     trainingAction(ctx, seen, factionId, plan, "field") ?? { type: "endTurn" }
   );
 }
@@ -530,6 +533,58 @@ function constructionAction(ctx: GameContext, state: GameState, factionId: Facti
       if (!next || gold < next.def.cost + AI.buildReserve) continue;
       if (canBuild(state, factionId, city.id, building).ok) return { type: "build", cityId: city.id, building };
     }
+  }
+  return null;
+}
+
+/**
+ * A watchtower for a border city, once its buildings are seen to: in the
+ * region of each city whose land meets another faction's, up to
+ * AI.watchtowersPerBorderCity towers, on the tile nearest the closest foreign
+ * city, to see what's coming. Checked against the real state (towers and
+ * cities are never hidden, but an enemy army in the fog could stand on the
+ * tile), so the order is always valid. Not while relieving a besieged city.
+ */
+function watchtowerAction(ctx: GameContext, real: GameState, factionId: FactionId, plan: Assessment): Action | null {
+  if (plan.relief) return null;
+  const gold = getFaction(real, factionId)?.gold ?? 0;
+  if (gold < WATCHTOWER.cost + AI.buildReserve) return null;
+  const foreign = Object.values(real.cities).filter((c) => c.owner !== factionId);
+  if (foreign.length === 0) return null;
+  const owned = towersOf(real, factionId);
+
+  const regionTiles = new Map<string, TileId[]>();
+  for (const [tile, cityId] of Object.entries(real.regions)) {
+    if (real.cities[cityId]?.owner !== factionId) continue;
+    const list = regionTiles.get(cityId) ?? [];
+    list.push(tile);
+    regionTiles.set(cityId, list);
+  }
+
+  for (const city of citiesOf(real, factionId)) {
+    if (city.besiegedBy) continue;
+    const tiles = regionTiles.get(city.id) ?? [];
+    if (owned.filter((t) => real.regions[t] === city.id).length >= AI.watchtowersPerBorderCity) continue;
+    const border = tiles.some((tile) =>
+      ctx.topology.neighbors(tile).some((n) => {
+        const other = regionOwner(real, n);
+        return other !== undefined && other !== factionId;
+      }),
+    );
+    if (!border) continue;
+    const enemy = foreign.reduce((best, c) =>
+      ctx.topology.distance(city.tile, c.tile) < ctx.topology.distance(city.tile, best.tile) ? c : best,
+    );
+    let pick: TileId | null = null;
+    let pickDistance = Infinity;
+    for (const tile of tiles) {
+      const d = ctx.topology.distance(tile, enemy.tile);
+      if (d < pickDistance && canBuildWatchtower(real, factionId, tile).ok) {
+        pick = tile;
+        pickDistance = d;
+      }
+    }
+    if (pick) return { type: "buildWatchtower", tile: pick };
   }
   return null;
 }

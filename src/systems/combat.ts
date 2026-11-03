@@ -734,8 +734,8 @@ function takeCity(state: GameState, from: Army, regiments: Regiment[], tile: Til
 export function placeName(state: GameState, tile: TileId): string {
   const city = cityAt(state, tile);
   if (city) return `at ${city.name}`;
-  const claim = state.territory[tile];
-  if (claim) return `near ${state.cities[claim.cityId]?.name ?? "a city"}`;
+  const near = state.cities[state.territory[tile]?.cityId ?? state.regions[tile] ?? ""];
+  if (near) return `near ${near.name}`;
   return `in the ${TERRAIN[state.tiles[tile].terrain].name.toLowerCase()}`;
 }
 

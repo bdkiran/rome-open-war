@@ -49,6 +49,12 @@ export function brokenRules(state: GameState): string[] {
     if (!(level >= 1 && level <= 3)) broken.push(`${at}: ${city.name} is level ${level}`);
   }
 
+  for (const tile of Object.keys(state.watchtowers)) {
+    if (!TERRAIN[state.tiles[tile].terrain].passable) broken.push(`${at}: watchtower on impassable ${tile}`);
+    if (!state.regions[tile]) broken.push(`${at}: watchtower at ${tile} is in no city's region`);
+    if (Object.values(state.cities).some((c) => c.tile === tile)) broken.push(`${at}: watchtower on a city at ${tile}`);
+  }
+
   for (const faction of state.factions) {
     if (!Number.isInteger(faction.gold)) broken.push(`${at}: ${faction.id} has ${faction.gold} gold, not a whole number`);
     if (faction.alive && citiesOf(state, faction.id).length === 0) broken.push(`${at}: ${faction.id} is alive with no cities`);

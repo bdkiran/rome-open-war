@@ -94,6 +94,38 @@ export function claimTerritory(ctx: GameContext, state: GameState): GameState {
 }
 
 /**
+ * Draws each city's region for the map: its claimed land, plus every
+ * unclaimed land tile, given to the nearest claimed land by steps over land
+ * (ties go the same way every game). Only the map uses it, so filling the
+ * gaps between territories changes how the map looks and nothing else.
+ * Land no claimed tile can walk to (an island with no city) stays empty.
+ */
+export function drawRegions(ctx: GameContext, state: GameState): GameState {
+  const regions: Record<TileId, CityId> = {};
+  for (const [tile, claim] of Object.entries(state.territory)) regions[tile] = claim.cityId;
+  let frontier = Object.keys(regions);
+  while (frontier.length > 0) {
+    const next: TileId[] = [];
+    for (const tile of frontier) {
+      for (const n of ctx.topology.neighbors(tile)) {
+        if (n in regions || ctx.topology.distance(tile, n) !== 1) continue;
+        if (!TERRAIN[state.tiles[n].terrain].passable) continue;
+        regions[n] = regions[tile];
+        next.push(n);
+      }
+    }
+    frontier = next;
+  }
+  return { ...state, regions };
+}
+
+/** The faction whose region a tile is drawn in on the map, if any. */
+export function regionOwner(state: GameState, tile: TileId): FactionId | undefined {
+  const cityId = state.regions[tile];
+  return cityId ? state.cities[cityId]?.owner : undefined;
+}
+
+/**
  * Tiles within `radius` steps of `start`, each with its number of steps.
  * Steps are to adjacent tiles only: a sea crossing is for armies, and doesn't
  * bring the land across it within a city's reach.

@@ -35,6 +35,7 @@ import { canSettle, settleCity, unsettledCities } from "@/systems/conquest.js";
 import type { SettlementChoice } from "@/data/conquest.js";
 import type { BuildingType } from "@/data/buildings.js";
 import { endTurn } from "@/systems/turn.js";
+import { buildWatchtower, canBuildWatchtower } from "@/systems/watchtowers.js";
 
 /** Everything a player (human or AI) can do. */
 export type Action =
@@ -66,6 +67,8 @@ export type Action =
   | { type: "build"; cityId: CityId; building: BuildingType }
   /** Takes a building out of a city's construction queue, refunding it (and anything that depended on it). */
   | { type: "cancelConstruction"; cityId: CityId; index: number }
+  /** Builds a watchtower on a tile of your own region, at once. */
+  | { type: "buildWatchtower"; tile: TileId }
   /** Sets a city's tax rate. */
   | { type: "setTaxRate"; cityId: CityId; rate: TaxRate }
   /**
@@ -176,6 +179,12 @@ function perform(ctx: GameContext, state: GameState, factionId: FactionId, actio
       if (!city || city.owner !== factionId) return { ok: false, reason: "That city isn't yours." };
       if (!city.constructionQueue[action.index]) return { ok: false, reason: "There's no such building in the queue." };
       return { ok: true, state: cancelConstruction(state, factionId, action.cityId, action.index) };
+    }
+
+    case "buildWatchtower": {
+      const check = canBuildWatchtower(state, factionId, action.tile);
+      if (!check.ok) return check;
+      return { ok: true, state: buildWatchtower(state, factionId, action.tile) };
     }
 
     case "liftSiege": {

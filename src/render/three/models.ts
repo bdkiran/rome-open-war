@@ -353,6 +353,32 @@ export function buildCity(
   return g;
 }
 
+/**
+ * A watchtower: a timber tower on a stone footing with a lookout platform,
+ * a roof, and a pennant in its owner's colours. It stands to one side of
+ * its tile, so an army there is still seen.
+ */
+export function buildWatchtower(color: string): THREE.Object3D {
+  const g = new THREE.Group();
+  const footing = new THREE.Mesh(new THREE.CylinderGeometry(6, 7, 2, 6), mat(STONE));
+  footing.position.y = 1;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(3, 4.2, 18, 4), mat("#8a6a45"));
+  shaft.rotation.y = Math.PI / 4;
+  shaft.position.y = 11;
+  const platform = box(10, 2, 10, mat("#a07c52"));
+  platform.position.y = 21;
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(7.5, 6, 4), mat(ROOF));
+  roof.rotation.y = Math.PI / 4;
+  roof.position.y = 25.5;
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 8, 4), mat("#5a4630"));
+  pole.position.y = 32;
+  const pennant = box(5, 3, 0.4, mat(color));
+  pennant.position.set(2.5, 34, 0);
+  g.add(footing, shaft, platform, roof, pole, pennant);
+  g.position.set(16, 0, -8);
+  return g;
+}
+
 /** A ring on the ground around a besieged city, in the besieger's colour. */
 export function siegeRing(color: string): THREE.Mesh {
   const ring = new THREE.Mesh(

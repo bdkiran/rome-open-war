@@ -129,6 +129,13 @@ always known. The AI plays under the same fog. Because orders are planned on
 what you can see, a move can run into an army hidden in the fog; the game
 tells you when that happens.
 
+**Watchtowers.** Select a tile of your own region (any land drawn in your
+colour, except a city) and build a watchtower there for 300 gold. It's
+finished at once, costs nothing to keep and sees 3 tiles around it. It's
+never destroyed: an enemy army standing on it sees through it instead of
+you until it leaves, and whoever takes the city whose region it stands in
+takes the tower too. There's no limit on how many you build.
+
 ## Cities and economy
 
 Each faction starts with its cities: a capital of 6,000 people and the rest
@@ -139,6 +146,12 @@ moved up to 4 tiles from its real spot. Where even that isn't enough (in
 crowded Italy, Greece or Sicily), neighbours split the land between them,
 each tile going to the nearer city. So some cities hold far more land than
 others.
+
+The map leaves no gaps between territories: every other land tile is drawn,
+in a fainter tint, in the region of the nearest territory, and borders run
+around whole regions. That outer land is for the map only. It earns nothing
+and adds no people, mines, farms, roads or sight; only a city's territory
+does. Islands with no city belong to no one.
 
 Population grows every turn using a carrying capacity:
 
@@ -452,7 +465,9 @@ to expect from them:
   trains only when it's empty or threatened), build walls near their
   borders, advance their cities, build markets, then a spear yard, archery
   range and stables, then mines, farms, ports and, last, roads. They train
-  the best tier of a unit they can afford to keep.
+  the best tier of a unit they can afford to keep. Once a border city's
+  buildings are seen to, they put one watchtower in its region, on the
+  tile nearest the closest foreign city.
 - They raise taxes when in debt and lower them once recovered, and tax a
   city high once it's full (it can't grow anyway). When they
   take a city, they exterminate when short of gold, enslave when they have
