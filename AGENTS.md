@@ -65,7 +65,8 @@ src/
   game/        controller.ts: holds the state, runs AI turns, notifies the UI
   map/         hex topology, sea crossings (europe/europeMapEngine.ts),
                generated terrain (europe/europeTerrain.ts: do not hand-edit)
-  render/      three/ (the 3D map: mapView3d, terrain3d, models, camera3d),
+  render/      three/ (the 3D map: mapView3d, terrain3d, scenery (trees, peaks),
+               models, camera3d),
                mapView.ts (ViewState, MapCamera), input.ts, figures.ts (SVG
                unit art for panels), colors.ts, format.ts
   ui/          panels as HTML strings: infoPanel (side panel: facts + city

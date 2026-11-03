@@ -288,7 +288,7 @@ window.addEventListener("resize", () => {
 });
 
 let lastTime = performance.now();
-/** While armies are marching across the map, it's redrawn this often (ms). */
+/** While the map is moving (banners always wave; armies march), it's redrawn this often (ms). */
 const ANIMATION_INTERVAL = 1000 / 30;
 let animating = false;
 let lastAnimationDraw = 0;

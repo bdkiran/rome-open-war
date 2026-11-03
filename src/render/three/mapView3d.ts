@@ -9,7 +9,7 @@ import { isSpent } from "@/systems/armies.js";
 import { regionOwner } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, buildWatchtower, ModelLibrary, siegeRing, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, buildWatchtower, ModelLibrary, setFlagClock, siegeRing, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
 
 /** Walking pace, in strides per second. */
@@ -112,18 +112,21 @@ export class MapView3D {
   draw(state: GameState, view: ViewState, time: number): boolean {
     const delta = Math.min(0.1, Math.max(0, time - this.lastTime));
     this.lastTime = time;
+    setFlagClock(time);
 
     this.syncOverlay(state, view);
     this.syncBorders(state);
     this.syncSelection(view);
     this.syncRoute(view);
+    this.syncClearings(state);
     this.syncCities(state, view);
     this.syncWatchtowers(state);
-    const animating = this.syncArmies(state, view, time, delta);
+    this.syncArmies(state, view, time, delta);
 
     this.renderer.render(this.scene, this.camera.three);
     this.placeLabels(state);
-    return animating;
+    // Banners are always waving, so the map keeps redrawing.
+    return true;
   }
 
   // ---- Tile colours: territory, fog and highlights ----------------------------
@@ -251,7 +254,7 @@ export class MapView3D {
       group.add(
         buildCity(
           color,
-          { capital: city.isCapital, level: city.buildings.government, walls: city.buildings.walls, garrisoned, garrison },
+          { capital: city.isCapital, level: city.buildings.government, walls: city.buildings.walls, garrisoned, garrison, seed: hash(city.id) },
           this.library,
         ),
       );
@@ -264,6 +267,20 @@ export class MapView3D {
   }
 
   /** A tower model on every watchtower's tile, in its owner's colours (it changes hands with its city). */
+  /** Keeps trees and peaks out of the way of cities and watchtowers. */
+  private syncClearings(state: GameState): void {
+    const cities = new Set(Object.values(state.cities).map((c) => c.tile));
+    const towers = Object.keys(state.watchtowers).map((tile) => {
+      const top = this.terrain.top(tile);
+      return {
+        x: top.x + WATCHTOWER_SPOT.x * TOWER_SCALE,
+        z: top.z + WATCHTOWER_SPOT.z * TOWER_SCALE,
+        radius: WATCHTOWER_SPOT.radius * TOWER_SCALE,
+      };
+    });
+    this.terrain.setClearings(cities, towers);
+  }
+
   private syncWatchtowers(state: GameState): void {
     for (const tile of Object.keys(state.watchtowers)) {
       const key = getFaction(state, towerOwner(state, tile) ?? "")?.color ?? "#888888";
@@ -332,6 +349,7 @@ export class MapView3D {
         label: formatCompact(armySoldiers(army)),
         regiments: army.regiments.length,
         faded: mine && isSpent(army),
+        seed: hash(army.id),
       };
       const key = JSON.stringify(look);
       const target = this.standingPoint(army.tile, cityTiles);
