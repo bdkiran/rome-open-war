@@ -7,7 +7,7 @@ import { formatCompact } from "@/render/format.js";
 import type { ViewState } from "@/render/mapView.js";
 import { isSpent } from "@/systems/armies.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, ModelLibrary, siegeRing, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, ModelLibrary, setFlagClock, siegeRing, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
 
 /** Walking pace, in strides per second. */
@@ -106,17 +106,19 @@ export class MapView3D {
   draw(state: GameState, view: ViewState, time: number): boolean {
     const delta = Math.min(0.1, Math.max(0, time - this.lastTime));
     this.lastTime = time;
+    setFlagClock(time);
 
     this.syncOverlay(state, view);
     this.syncBorders(state);
     this.syncSelection(view);
     this.syncRoute(view);
     this.syncCities(state, view);
-    const animating = this.syncArmies(state, view, time, delta);
+    this.syncArmies(state, view, time, delta);
 
     this.renderer.render(this.scene, this.camera.three);
     this.placeLabels(state);
-    return animating;
+    // Banners are always waving, so the map keeps redrawing.
+    return true;
   }
 
   // ---- Tile colours: territory, fog and highlights ----------------------------
@@ -237,7 +239,7 @@ export class MapView3D {
       group.add(
         buildCity(
           color,
-          { capital: city.isCapital, level: city.buildings.government, walls: city.buildings.walls, garrisoned, garrison },
+          { capital: city.isCapital, level: city.buildings.government, walls: city.buildings.walls, garrisoned, garrison, seed: hash(city.id) },
           this.library,
         ),
       );
@@ -301,6 +303,7 @@ export class MapView3D {
         label: formatCompact(armySoldiers(army)),
         regiments: army.regiments.length,
         faded: mine && isSpent(army),
+        seed: hash(army.id),
       };
       const key = JSON.stringify(look);
       const target = this.standingPoint(army.tile, cityTiles);

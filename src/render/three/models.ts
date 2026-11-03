@@ -118,9 +118,137 @@ function bannerTexture(color: string, text: string, pips: number, emblem: boolea
   return texture;
 }
 
+// ---- Waving cloth -------------------------------------------------------------
+
+/** Banner size, in model units. */
+const FLAG_WIDTH = 24;
+const FLAG_HEIGHT = 18;
+/** The banner is turned a little about its pole, so its folds show from the camera. */
+const FLAG_YAW = 0.42;
+/** Length of one wave, as a share of the banner's width. */
+const FLAG_WAVELENGTH = 0.9;
+
+/** How a banner moves: how far its free edge swings, how many waves a second, how far it sags. */
+export interface FlagMotion {
+  amplitude: number;
+  speed: number;
+  droop: number;
+}
+
+/** The motions a banner can have. */
+export const FLAG_MOTION = {
+  /** Standing in the wind. */
+  idle: { amplitude: 3.2, speed: 0.55, droop: 1.2 },
+  /** Marching: flutters faster. */
+  marching: { amplitude: 3.7, speed: 1, droop: 1 },
+  /** An army that has used its moves: calmer. */
+  spent: { amplitude: 2.2, speed: 0.33, droop: 1.6 },
+  /** An undefended city at half-mast: hangs nearly still. */
+  limp: { amplitude: 1, speed: 0.22, droop: 7 },
+} satisfies Record<string, FlagMotion>;
+
+/** The clock every banner waves to, in seconds. The map view sets it each frame. */
+const flagClock = { value: 0 };
+
+/** Sets the time all banners wave to (seconds). */
+export function setFlagClock(seconds: number): void {
+  flagClock.value = seconds;
+}
+
+/** A waving banner, and a way to change how it moves. */
+interface Cloth {
+  mesh: THREE.Mesh;
+  /** Changes its motion without a jump: the wave carries on from where it is. */
+  setMotion(motion: FlagMotion): void;
+}
+
 /**
- * A pole with a banner facing the camera (for cities). A lowered banner
- * hangs at half-mast, greyed.
+ * Bends the plane in the vertex shader: pinned at the pole (x = 0), a
+ * travelling wave whose swing grows toward the free edge, and a sag. The
+ * normal follows the wave so the folds catch the light.
+ */
+const CLOTH_HEADER = /* glsl */ `
+uniform float uFlagTime;
+uniform float uFlagSpeed;
+uniform float uFlagOffset;
+uniform float uFlagAmp;
+uniform float uFlagDroop;
+const float FLAG_TAU = 6.2831853;
+const float FLAG_W = ${FLAG_WIDTH.toFixed(1)};
+const float FLAG_L = ${FLAG_WAVELENGTH.toFixed(2)};
+`;
+const CLOTH_NORMAL = /* glsl */ `
+float flagU = clamp(position.x / FLAG_W, 0.0, 1.0);
+float flagS = FLAG_TAU * (flagU / FLAG_L - (uFlagTime * uFlagSpeed + uFlagOffset));
+float flagZ = uFlagAmp * pow(flagU, 1.2) * sin(flagS);
+float flagSlope = uFlagAmp * (1.2 * pow(max(flagU, 0.0001), 0.2) * sin(flagS) + pow(flagU, 1.2) * cos(flagS) * FLAG_TAU / FLAG_L) / FLAG_W;
+vec3 objectNormal = normalize(vec3(-flagSlope, 0.0, 1.0));
+#ifdef USE_TANGENT
+  vec3 objectTangent = vec3(tangent.xyz);
+#endif
+`;
+const CLOTH_POSITION = /* glsl */ `
+#include <begin_vertex>
+transformed.z += flagZ;
+transformed.y -= flagU * flagU * uFlagDroop + 0.15 * uFlagAmp * flagU * sin(flagS + 1.3);
+`;
+
+/**
+ * A banner of lit cloth carrying `texture`, its left edge at the pole. Each
+ * starts at its own point in the wave (`seed`, 0-1) so neighbours don't wave
+ * in step.
+ */
+function cloth(texture: THREE.Texture, motion: FlagMotion, seed: number, look: { opacity: number; tint: string }): Cloth {
+  const geometry = new THREE.PlaneGeometry(FLAG_WIDTH, FLAG_HEIGHT, 16, 6);
+  geometry.translate(FLAG_WIDTH / 2, 0, 0);
+  const tint = new THREE.Color(look.tint);
+  const material = new THREE.MeshLambertMaterial({
+    map: texture,
+    color: tint,
+    // A floor under the shading, so the number stays legible in a deep fold.
+    emissive: tint.clone().multiplyScalar(0.3),
+    emissiveMap: texture,
+    transparent: true,
+    alphaTest: 0.05,
+    side: THREE.DoubleSide,
+    opacity: look.opacity,
+  });
+  const uniforms = {
+    uFlagTime: flagClock,
+    uFlagSpeed: { value: motion.speed },
+    uFlagOffset: { value: seed },
+    uFlagAmp: { value: motion.amplitude },
+    uFlagDroop: { value: motion.droop },
+  };
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", `#include <common>\n${CLOTH_HEADER}`)
+      .replace("#include <beginnormal_vertex>", CLOTH_NORMAL)
+      .replace("#include <begin_vertex>", CLOTH_POSITION);
+  };
+  // Every banner runs the same shader; only its uniforms differ.
+  material.customProgramCacheKey = () => "flag-cloth";
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.rotation.y = FLAG_YAW;
+  return {
+    mesh,
+    setMotion(next) {
+      if (next.speed !== uniforms.uFlagSpeed.value) {
+        // Keep the wave's current position: time * speed + offset is unchanged.
+        uniforms.uFlagOffset.value += flagClock.value * (uniforms.uFlagSpeed.value - next.speed);
+        uniforms.uFlagSpeed.value = next.speed;
+      }
+      uniforms.uFlagAmp.value = next.amplitude;
+      uniforms.uFlagDroop.value = next.droop;
+    },
+  };
+}
+
+/**
+ * A pole with a waving banner (for cities). A lowered banner hangs limp at
+ * half-mast, greyed.
  */
 function flag(
   color: string,
@@ -129,24 +257,20 @@ function flag(
   height: number,
   emblem: boolean,
   faded: boolean,
+  seed: number,
   lowered = false,
 ): THREE.Group {
   const g = new THREE.Group();
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, height, 5), mat("#3b2c1e", faded));
   pole.position.y = height / 2;
-  const banner = new THREE.Mesh(
-    new THREE.PlaneGeometry(24, 18),
-    new THREE.MeshBasicMaterial({
-      map: bannerTexture(color, text, pips, emblem),
-      transparent: true,
-      alphaTest: 0.05,
-      side: THREE.DoubleSide,
-      opacity: faded ? 0.6 : 1,
-      color: lowered ? "#9a9a9a" : "#ffffff",
-    }),
-  );
-  banner.position.set(12.5, lowered ? height * 0.45 : height - 9.5, 0);
-  g.add(pole, banner);
+  const finial = new THREE.Mesh(new THREE.SphereGeometry(1.3, 6, 4), mat("#d9b24a", faded));
+  finial.position.y = height + 0.8;
+  const banner = cloth(bannerTexture(color, text, pips, emblem), lowered ? FLAG_MOTION.limp : FLAG_MOTION.idle, seed, {
+    opacity: faded ? 0.6 : 1,
+    tint: lowered ? "#9a9a9a" : "#ffffff",
+  });
+  banner.mesh.position.set(0.5, lowered ? height * 0.45 : height - 9.5, 0);
+  g.add(pole, finial, banner.mesh);
   return g;
 }
 
@@ -159,33 +283,31 @@ export interface ArmyLook {
   /** Regiments in the army, shown as pips under the number. */
   regiments: number;
   faded: boolean;
+  /** Where in its wave the banner starts (0-1), so neighbouring banners don't wave in step. */
+  seed: number;
 }
 
 /**
  * An army on the map: one standard-bearer in the faction's colours, carrying
- * a banner with the army's strength and a pip per regiment. The model faces
- * the way it's walking; the banner always turns to face the camera.
+ * a waving banner with the army's strength and a pip per regiment. The model
+ * faces the way it's walking; the banner always turns to face the camera, and
+ * flutters faster while it marches.
  */
 export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
   const custom = library.army(look.color, look.faded);
   const figure = custom ?? standardBearer(look.color, look.faded);
 
-  const banner = new THREE.Mesh(
-    new THREE.PlaneGeometry(24, 18),
-    new THREE.MeshBasicMaterial({
-      map: bannerTexture(look.color, look.label, look.regiments, false),
-      transparent: true,
-      alphaTest: 0.05,
-      side: THREE.DoubleSide,
-      opacity: look.faded ? 0.6 : 1,
-    }),
-  );
+  const resting = look.faded ? FLAG_MOTION.spent : FLAG_MOTION.idle;
+  const banner = cloth(bannerTexture(look.color, look.label, look.regiments, false), resting, look.seed, {
+    opacity: look.faded ? 0.6 : 1,
+    tint: "#ffffff",
+  });
   // The banner hangs from the top of the pole the bearer carries (or, for a
   // model from a file, a pole planted beside it).
   const bannerHolder = new THREE.Group();
   bannerHolder.position.set(8, 56, 0);
-  banner.position.set(12.5, 0, 0);
-  bannerHolder.add(banner);
+  banner.mesh.position.set(0.5, 0, 0);
+  bannerHolder.add(banner.mesh);
   figure.object.add(bannerHolder);
   if (custom) {
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 64, 5), mat("#3b2c1e", look.faded));
@@ -197,6 +319,7 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
     object: figure.object,
     animate(stride, delta) {
       figure.animate(stride, delta);
+      banner.setMotion(stride !== 0 ? FLAG_MOTION.marching : resting);
       // Keep the banner square to the camera whichever way the bearer faces.
       bannerHolder.rotation.y = -figure.object.rotation.y;
     },
@@ -254,8 +377,8 @@ function standardBearer(color: string, faded: boolean): Figure {
 /**
  * A town that grows with its level: more houses and a taller keep at each
  * level. Walls appear only once built: a low palisade, then stone walls, then
- * great walls with towers. A banner in the owner's colours flies over it
- * while it has a garrison, and hangs at half-mast when it doesn't.
+ * great walls with towers. A banner in the owner's colours waves over it
+ * while it has a garrison, and hangs limp at half-mast when it doesn't.
  */
 export function buildCity(
   color: string,
@@ -267,6 +390,8 @@ export function buildCity(
     garrisoned: boolean;
     /** The garrison's strength and regiments, shown on the banner; null to show the plain laurel. */
     garrison: { label: string; regiments: number } | null;
+    /** Where in its wave the banner starts (0-1). */
+    seed: number;
   },
   library: ModelLibrary,
 ): THREE.Object3D {
@@ -346,8 +471,8 @@ export function buildCity(
   // The banner flies when the city has a garrison, showing its strength, and
   // hangs at half-mast when it's undefended.
   const banner = look.garrison
-    ? flag(color, look.garrison.label, look.garrison.regiments, look.capital ? 50 : 42, false, false)
-    : flag(color, "", 0, look.capital ? 50 : 42, true, false, !look.garrisoned);
+    ? flag(color, look.garrison.label, look.garrison.regiments, look.capital ? 50 : 42, false, false, look.seed)
+    : flag(color, "", 0, look.capital ? 50 : 42, true, false, look.seed, !look.garrisoned);
   banner.position.set(-1, 0, -10);
   g.add(banner);
   return g;
