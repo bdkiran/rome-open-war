@@ -87,7 +87,7 @@ tests/         simulation.test.ts (whole games: invalid orders, debt, state
                siege.test.ts, buildings.test.ts, recruitment.test.ts,
                watchtowers.test.ts, scouts.test.ts, experience.test.ts, combat.test.ts,
                flight.test.ts,
-               controller.test.ts, playbackBanner.test.ts,
+               controller.test.ts, playbackBanner.test.ts, aiGovernment.test.ts,
                movement.test.ts (rules checked directly),
                balance.test.ts (no tax policy or conquest choice dominates)
 tools/         build_europe_map.py (map generator), simulation.ts (plays a

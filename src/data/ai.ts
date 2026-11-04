@@ -53,6 +53,11 @@ export const AI = {
   /** Gold kept back for emergencies before anything is built. */
   buildReserve: 100,
   /**
+   * Regiments per city the AI wants before it stops training to save for a
+   * government building it can't yet afford (see governmentToSave in ai/ai.ts).
+   */
+  regimentsBeforeGovernment: 3,
+  /**
    * Watchtowers the AI builds in the region of each city that borders
    * another faction's land. Its own limit: the game has none.
    */

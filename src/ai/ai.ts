@@ -42,7 +42,7 @@ import { WATCHTOWER } from "@/data/watchtowers.js";
 import { canBuildWatchtower, towersOf } from "@/systems/watchtowers.js";
 import { battlefieldAt, battleSides, battleStrength } from "@/systems/combat.js";
 import { canBesiege } from "@/systems/siege.js";
-import { canBuild, nextLevel } from "@/systems/buildings.js";
+import { buildingAvailable, canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
 import { bestTier, canRetrain, canTrain, canTrainScout, trainableUnits, unitUnlocked } from "@/systems/recruitment.js";
 import type { BuildingType } from "@/data/buildings.js";
@@ -443,6 +443,10 @@ function trainingAction(
     }
   }
 
+  // Saving for a government building: no new regiments, once it has the bare minimum of an army.
+  const regiments = armiesOf(state, factionId).reduce((sum, a) => sum + a.regiments.length, 0);
+  if (regiments >= citiesOf(state, factionId).length * AI.regimentsBeforeGovernment && governmentToSave(state, factionId)) return null;
+
   // Garrisons first, most short-handed city first. Each city trains one regiment a turn.
   const cities = citiesOf(state, factionId)
     .map((city) => ({ city, deficit: (plan.garrisonNeed.get(city.id) ?? 0) - regimentsAt(city.tile) }))
@@ -524,9 +528,35 @@ export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boole
     : ["government", "market", ...military, ...mine, "farms", ...port, "walls", "roads"];
 }
 
+/**
+ * The city the AI is saving to raise the government of: its cheapest one with
+ * the people for the next level and none already queued. Null if none is
+ * ready, or any of its cities is besieged: then every coin goes to the war.
+ *
+ * Without this the AI never advanced its cities. Forums and Senates cost more
+ * than other buildings, so it always bought something cheaper first (3% of its
+ * gold went on them, with 20 cities at turn 100 ready for their next level).
+ */
+export function governmentToSave(state: GameState, factionId: FactionId): City | null {
+  const cities = citiesOf(state, factionId);
+  if (cities.some((c) => c.besiegedBy)) return null;
+  const cost = (c: City) => nextLevel(c, "government")?.def.cost ?? Infinity;
+  const ready = cities.filter(
+    (c) => buildingAvailable(state, c.id, "government") && !c.constructionQueue.some((q) => q.building === "government"),
+  );
+  return ready.length > 0 ? ready.reduce((best, c) => (cost(c) < cost(best) ? c : best)) : null;
+}
+
 function constructionAction(ctx: GameContext, state: GameState, factionId: FactionId, plan: Assessment): Action | null {
   if (plan.relief) return null; // at war for a city: every coin goes to the army
   const gold = getFaction(state, factionId)?.gold ?? 0;
+
+  const saving = governmentToSave(state, factionId);
+  if (saving) {
+    const cost = nextLevel(saving, "government")!.def.cost;
+    const affordable = gold >= cost + AI.buildReserve && canBuild(state, factionId, saving.id, "government").ok;
+    return affordable ? { type: "build", cityId: saving.id, building: "government" } : null;
+  }
 
   for (const city of citiesOf(state, factionId)) {
     if (city.constructionQueue.length > 0 || city.besiegedBy) continue;
@@ -568,7 +598,7 @@ function scoutAction(ctx: GameContext, real: GameState, factionId: FactionId, pl
     return { type: "moveScout", scoutId: scout.id, to };
   }
 
-  if (plan.relief) return null;
+  if (plan.relief || governmentToSave(real, factionId)) return null;
   const cities = citiesOf(real, factionId);
   const queued = cities.reduce((n, c) => n + c.recruitQueue.filter((o) => o.kind === "scout").length, 0);
   if (scouts.length + queued >= AI.baseScouts + Math.floor(cities.length / AI.citiesPerExtraScout)) return null;
@@ -591,7 +621,7 @@ function scoutAction(ctx: GameContext, real: GameState, factionId: FactionId, pl
  * tile), so the order is always valid. Not while relieving a besieged city.
  */
 function watchtowerAction(ctx: GameContext, real: GameState, factionId: FactionId, plan: Assessment): Action | null {
-  if (plan.relief) return null;
+  if (plan.relief || governmentToSave(real, factionId)) return null;
   const gold = getFaction(real, factionId)?.gold ?? 0;
   if (gold < WATCHTOWER.cost + AI.buildReserve) return null;
   const foreign = Object.values(real.cities).filter((c) => c.owner !== factionId);

@@ -412,6 +412,21 @@ so.
   390 (was 304), median AI income 450 a turn (was 391), factions fallen 15
   (unchanged); peacetime numbers unchanged, since no city starts that small.
 
+- **The AI saves for its government buildings.** It had about 1 level 3 city a
+  game, and we blamed watchtowers competing with the Senate, wrongly: removing
+  them only took level 3 from 0 to 1 (scouts: 0 to 3). Tracing its gold showed 3%
+  went on Forums and Senates, while 20 cities at turn 100 had the people for their
+  next level. The build loop skipped what it couldn't afford and bought something
+  cheaper, so it never saved 500 or 1,200 gold. Levers measured alone, in 8 seeds:
+  saving 0 to 14 level 3 cities; never exterminating 1; cheaper government (350 /
+  800) 2; fewer people needed (5,000 / 12,000) 0; a lower upkeep limit 0. The player
+  chose saving only, which leaves their own rules alone. Real version, 24 seeds
+  (normal, then `--garrison`): level 1 / 2 / 3 cities 32 / 22 / 1 to 23 / 20 / 13 and
+  32 / 22 / 1 to 24 / 19 / 12; AI income +10% and +12%; soldiers, battles and factions
+  fallen about the same; AI watchtowers fell by 60% (23 to 9), since it's usually
+  saving when it would build one. Cities at level 2 by turn 50 hardly change: they
+  haven't the people yet. Fewer people needed is the lever if early cities matter.
+
 ## Economy tuning history
 
 The economy was retuned several times; the lesson each time:
