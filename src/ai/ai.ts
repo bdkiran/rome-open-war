@@ -36,13 +36,15 @@ import {
   upkeepFor,
 } from "@/systems/armies.js";
 import { cityStats, factionIncome, mineableTiles, regionOwner } from "@/systems/cities.js";
+import { SCOUT } from "@/data/scouts.js";
+import { reachableScoutTiles, scoutsOf } from "@/systems/scouts.js";
 import { WATCHTOWER } from "@/data/watchtowers.js";
 import { canBuildWatchtower, towersOf } from "@/systems/watchtowers.js";
 import { battlefieldAt, battleSides, battleStrength } from "@/systems/combat.js";
 import { canBesiege } from "@/systems/siege.js";
 import { canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
-import { bestTier, canRetrain, canTrain, trainableUnits, unitUnlocked } from "@/systems/recruitment.js";
+import { bestTier, canRetrain, canTrain, canTrainScout, trainableUnits, unitUnlocked } from "@/systems/recruitment.js";
 import type { BuildingType } from "@/data/buildings.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { costToTarget } from "@/systems/pathfinding.js";
@@ -93,6 +95,7 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
     advanceAction(ctx, real, seen, factionId, plan) ??
     trainingAction(ctx, seen, factionId, plan, "defense") ??
     constructionAction(ctx, seen, factionId, plan) ??
+    scoutAction(ctx, real, factionId, plan) ??
     watchtowerAction(ctx, real, factionId, plan) ??
     trainingAction(ctx, seen, factionId, plan, "field") ?? { type: "endTurn" }
   );
@@ -535,6 +538,48 @@ function constructionAction(ctx: GameContext, state: GameState, factionId: Facti
     }
   }
   return null;
+}
+
+/**
+ * Scouting, once its buildings are seen to: a scout rides to a few tiles from
+ * the target city, to see its garrison before the army arrives. It keeps
+ * AI.baseScouts plus one per AI.citiesPerExtraScout cities, trained in the
+ * city nearest the target when the gold and upkeep allow and no city needs
+ * relieving. Checked against the real state, so the orders are always valid.
+ * A faction in debt, or whose income doesn't cover its upkeep, dismisses them.
+ */
+function scoutAction(ctx: GameContext, real: GameState, factionId: FactionId, plan: Assessment): Action | null {
+  // Scouts can't die, so a collapsing faction would pay for them for ever: it sends them home.
+  const scouts = scoutsOf(real, factionId);
+  const broke = (getFaction(real, factionId)?.gold ?? 0) < 0 || factionIncome(real, factionId) < factionUpkeep(real, factionId);
+  if (broke && scouts.length > 0) return { type: "dismissScout", scoutId: scouts[0].id };
+
+  const target = plan.target;
+  if (!target) return null;
+  const from = (tile: TileId) => ctx.topology.distance(tile, target.tile);
+
+  for (const scout of scouts) {
+    // One ride a turn: the target can change after every action, and chasing it wastes the turn's actions.
+    if (scout.movementLeft < SCOUT.movement || from(scout.tile) <= AI.scoutStandoff) continue;
+    const here = from(scout.tile);
+    const tiles = [...reachableScoutTiles(ctx, real, scout).keys()].filter((t) => from(t) >= AI.scoutStandoff && from(t) < here);
+    if (tiles.length === 0) continue;
+    const to = tiles.reduce((best, t) => (from(t) < from(best) ? t : best));
+    return { type: "moveScout", scoutId: scout.id, to };
+  }
+
+  if (plan.relief) return null;
+  const cities = citiesOf(real, factionId);
+  const queued = cities.reduce((n, c) => n + c.recruitQueue.filter((o) => o.kind === "scout").length, 0);
+  if (scouts.length + queued >= AI.baseScouts + Math.floor(cities.length / AI.citiesPerExtraScout)) return null;
+  const gold = getFaction(real, factionId)?.gold ?? 0;
+  if (gold < SCOUT.cost + AI.buildReserve) return null;
+  const spareIncome = factionIncome(real, factionId) * (1 - AI.upkeepHeadroom) - factionUpkeep(real, factionId);
+  if (spareIncome < SCOUT.upkeep) return null;
+  const able = cities.filter((c) => canTrainScout(real, factionId, c.id).ok);
+  if (able.length === 0) return null;
+  const nearest = able.reduce((best, c) => (from(c.tile) < from(best.tile) ? c : best));
+  return { type: "trainScout", cityId: nearest.id };
 }
 
 /**

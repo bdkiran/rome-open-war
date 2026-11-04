@@ -57,4 +57,9 @@ export const AI = {
    * another faction's land. Its own limit: the game has none.
    */
   watchtowersPerBorderCity: 1,
+  /** Scouts the AI keeps: this many, plus one for every citiesPerExtraScout cities. */
+  baseScouts: 1,
+  citiesPerExtraScout: 5,
+  /** How close to its target city a scout rides, in tiles: close enough to see the garrison. */
+  scoutStandoff: 3,
 } as const;

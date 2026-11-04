@@ -110,6 +110,15 @@ export function shade(hex: string, amount: number): string {
 
 /** A figure as an inline SVG string, for the panels. */
 export function figureSvg(unit: UnitType, color: string, className = "figure"): string {
+  return svgOf((p) => drawFigure(p, unit, color), className);
+}
+
+/** A scout as an inline SVG string: a lone rider. */
+export function scoutSvg(color: string, className = "figure"): string {
+  return svgOf((p) => drawRider(p, color, 0), className);
+}
+
+function svgOf(draw: (painter: Painter) => void, className: string): string {
   const parts: string[] = [];
   const attrs = (fill: string | null, stroke?: string | null, width?: number) =>
     `fill="${fill ?? "none"}"${stroke ? ` stroke="${stroke}" stroke-width="${width ?? 1}"` : ""} stroke-linecap="round" stroke-linejoin="round"`;
@@ -121,6 +130,6 @@ export function figureSvg(unit: UnitType, color: string, className = "figure"): 
     line: (x1, y1, x2, y2, stroke, width) =>
       parts.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${attrs(null, stroke, width)}/>`),
   };
-  drawFigure(painter, unit, color);
+  draw(painter);
   return `<svg class="${className}" viewBox="0 -4 64 68" aria-hidden="true">${parts.join("")}</svg>`;
 }

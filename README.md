@@ -154,6 +154,16 @@ fought opens its result before they carry on. Moves in the fog stay
 hidden. Press Space or Esc to skip to your turn; the camera then returns to
 where you left it.
 
+**Scouts.** A level 2 city can train a scout from its Recruitment tab, for 100
+gold and 2 gold a turn: a lone rider, not a regiment. It moves 20 points a turn
+(cavalry move 16), sees 5 tiles, ignores zones of control, and rides through
+armies and cities, enemy ones too. It never fights, blocks nothing, and can't be
+killed; it only goes if its faction falls, or if you click Dismiss in the
+bottom bar (no refund). It can't share a tile with another of your scouts. Select
+it (with an army or city on its tile, open the bar's Scout tab) and right-click
+a highlighted tile to move it: within one turn's reach, as it can't take march
+orders. Enemy scouts show only within your sight.
+
 **Watchtowers.** Select a tile of your own region (any land drawn in your
 colour, except a city) and build a watchtower there for 300 gold. It's
 finished at once, costs nothing to keep and sees 3 tiles around it. It's
@@ -503,7 +513,9 @@ to expect from them:
   borders, advance their cities, build markets, then a spear yard, archery
   range and stables, then mines, farms, ports and, last, roads. They train
   the best tier of a unit they can afford to keep. Once a border city's
-  buildings are seen to, they put one watchtower in its region, on the
+  buildings are seen to, they keep a scout (one more per 5 cities) a few
+  tiles from the city they're after (dismissing scouts when they can't pay
+  their upkeep), and put one watchtower in its region, on the
   tile nearest the closest foreign city.
 - They raise taxes when in debt and lower them once recovered, and tax a
   city high once it's full (it can't grow anyway). When they

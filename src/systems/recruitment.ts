@@ -14,14 +14,16 @@ import {
   type RegimentId,
 } from "@/core/state.js";
 import { BUILDINGS } from "@/data/buildings.js";
+import { SCOUT } from "@/data/scouts.js";
 import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, unitName, type Tier, type UnitType } from "@/data/units.js";
 import { placeNewArmy, regimentCost, trainingCost } from "@/systems/armies.js";
+import { scoutAt } from "@/systems/scouts.js";
 
 /**
  * Each city has a recruitment queue shared by training and retraining. Orders
  * are paid for in gold when queued. At the end of its owner's turn, a city
  * that isn't besieged retrains every regiment queued for it, and trains one
- * new regiment: what's queued for retraining is always ready next turn, and
+ * new regiment or scout: what's queued for retraining is always ready next turn, and
  * new regiments come one a turn.
  */
 
@@ -104,6 +106,20 @@ export function canTrain(state: GameState, factionId: FactionId, cityId: CityId,
 export function queueTraining(state: GameState, factionId: FactionId, cityId: CityId, unit: UnitType, tier: Tier = 1): GameState {
   const cost = regimentCost(unit, tier).gold;
   return addOrders(state, factionId, cityId, [{ kind: "train", unit, tier, cost }], cost);
+}
+
+/** Whether a city can queue a scout: a high enough level, room in its queue, not besieged, and the gold. */
+export function canTrainScout(state: GameState, factionId: FactionId, cityId: CityId): Check {
+  const city = state.cities[cityId];
+  if (city && city.owner === factionId && city.buildings.government < SCOUT.cityLevel) {
+    return { ok: false, reason: `Scouts need a level ${SCOUT.cityLevel} city.` };
+  }
+  return queueCheck(state, factionId, cityId, 1, SCOUT.cost);
+}
+
+/** Pays for a scout and queues it. Call canTrainScout first. */
+export function queueScout(state: GameState, factionId: FactionId, cityId: CityId): GameState {
+  return addOrders(state, factionId, cityId, [{ kind: "scout", cost: SCOUT.cost }], SCOUT.cost);
 }
 
 /**
@@ -225,9 +241,11 @@ function retrainAll(state: GameState, factionId: FactionId, cityId: CityId): Gam
 function trainNext(state: GameState, factionId: FactionId, cityId: CityId): GameState {
   let next = state;
   const city = next.cities[cityId];
-  const index = city.recruitQueue.findIndex((o) => o.kind === "train");
+  const index = city.recruitQueue.findIndex((o) => o.kind !== "retrain");
   if (index === -1) return next;
   const order = city.recruitQueue[index];
+  if (order.kind === "scout") return trainScout(next, factionId, cityId, index);
+  if (order.kind !== "train") return next;
 
   const army = armyAt(next, city.tile);
   const own = army && army.owner === factionId ? army : undefined;
@@ -240,7 +258,7 @@ function trainNext(state: GameState, factionId: FactionId, cityId: CityId): Game
     population: city.population - needed,
     recruitQueue: city.recruitQueue.filter((_, i) => i !== index),
   });
-  const tier: Tier = order.kind === "train" ? order.tier : 1;
+  const tier: Tier = order.tier;
   const regiment: Regiment = {
     id: `reg${next.nextRegimentNumber}`,
     unit: order.unit,
@@ -258,6 +276,22 @@ function trainNext(state: GameState, factionId: FactionId, cityId: CityId): Game
   return own
     ? { ...next, armies: { ...next.armies, [own.id]: { ...own, regiments: [...own.regiments, regiment] } } }
     : placeNewArmy(next, factionId, city.tile, [regiment]);
+}
+
+/** A queued scout rides out of its city, unless another of ours is still standing there: then it waits. */
+function trainScout(state: GameState, factionId: FactionId, cityId: CityId, index: number): GameState {
+  const city = state.cities[cityId];
+  if (scoutAt(state, city.tile, factionId)) return state;
+  const id = `scout${state.nextScoutNumber}`;
+  const next: GameState = {
+    ...state,
+    nextScoutNumber: state.nextScoutNumber + 1,
+    scouts: { ...state.scouts, [id]: { id, owner: factionId, tile: city.tile, movementLeft: 0 } },
+  };
+  return addLog(setCity(next, { ...city, recruitQueue: city.recruitQueue.filter((_, i) => i !== index) }), `${city.name} trained a scout.`, {
+    kind: "recruitment",
+    factions: [factionId],
+  });
 }
 
 /**
@@ -283,7 +317,7 @@ export function dropStrayRetraining(state: GameState): GameState {
 /** People the orders in a city's queue will take when they're completed. */
 export function queuedPeople(city: City): number {
   return city.recruitQueue.reduce(
-    (sum, o) => sum + (o.kind === "train" ? regimentSize(o.unit) : o.soldiers) * ARMY_RULES.populationPerSoldier,
+    (sum, o) => sum + (o.kind === "scout" ? 0 : o.kind === "train" ? regimentSize(o.unit) : o.soldiers) * ARMY_RULES.populationPerSoldier,
     0,
   );
 }

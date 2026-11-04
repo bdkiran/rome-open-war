@@ -5,6 +5,7 @@ import {
   armyAt,
   cityAt,
   type BattleReport,
+  type Scout,
   citiesOf,
   currentFaction,
   getFaction,
@@ -25,6 +26,7 @@ import { attachInput } from "@/render/input.js";
 import type { ViewState } from "@/render/mapView.js";
 import { MapView3D } from "@/render/three/mapView3d.js";
 import { armyHolding, attackOptions, marchRoute, marchSchedule, reachableTiles } from "@/systems/armies.js";
+import { reachableScoutTiles, scoutAt } from "@/systems/scouts.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { renderInfoPanel, type CityTab } from "@/ui/infoPanel.js";
 import { renderSelectionBar, type BarTab } from "@/ui/selectionBar.js";
@@ -197,6 +199,18 @@ function selectedArmy(state: GameState): Army | undefined {
 }
 
 /**
+ * The player's scout on the selected tile, if orders go to it: when it's
+ * alone there, or the bar's Scout tab is open. An army or city sharing its
+ * tile comes first otherwise.
+ */
+function selectedScout(state: GameState): Scout | undefined {
+  if (!humanId || !view.selected) return undefined;
+  const scout = scoutAt(state, view.selected, humanId);
+  if (!scout) return undefined;
+  return barTab === "scout" || (!armyAt(state, view.selected) && !cityAt(state, view.selected)) ? scout : undefined;
+}
+
+/**
  * Keep the ticked regiments in step with the selected army. Selecting an army
  * ticks every regiment in it except those trained this turn, so the stack
  * moves at its own pace: once any ticked regiment is out of moves, the stack
@@ -231,7 +245,17 @@ function deselect(): void {
 
 /** Recompute move and attack highlights for the chosen regiments, and the selected army's march route. */
 function refreshHighlights(state: GameState): void {
+  syncBarTab();
   const seen = playerView(state);
+  const scout = selectedScout(state);
+  if (scout) {
+    view.route = [];
+    view.routeTurns = [];
+    attackVia = new Map();
+    view.reachable = isPlayerTurn() ? new Set(reachableScoutTiles(ctx, state, scout).keys()) : new Set();
+    view.attackable = new Set();
+    return;
+  }
   const army = selectedArmy(seen);
   view.route = army?.destination ? marchRoute(ctx, seen, army, army.destination) : [];
   view.routeTurns = army ? marchSchedule(seen, army, view.route) : [];
@@ -504,6 +528,16 @@ function order(action: Action, from: TileId, regimentIds: RegimentId[]): void {
  */
 function handleRightClick(tile: TileId | null): void {
   const state = controller.getState();
+  const scout = selectedScout(state);
+  if (scout) {
+    if (tile && isPlayerTurn() && view.reachable.has(tile) && dispatch({ type: "moveScout", scoutId: scout.id, to: tile })) {
+      view.selected = tile;
+      barTab = "scout";
+      barTabFor = tile;
+      refreshAll(controller.getState());
+    }
+    return;
+  }
   const army = selectedArmy(state);
   if (!tile || !army || !isPlayerTurn() || chosen.size === 0 || tile === army.tile) return;
   const regimentIds = [...chosen];
@@ -676,7 +710,13 @@ function handlePanelClick(e: MouseEvent): void {
 
   if (target.dataset.barTab) {
     barTab = target.dataset.barTab as BarTab;
+    refreshHighlights(state);
     renderInfo(state);
+    requestRedraw();
+  } else if (target.dataset.trainScout) {
+    dispatch({ type: "trainScout", cityId: target.dataset.trainScout });
+  } else if (target.dataset.dismissScout) {
+    dispatch({ type: "dismissScout", scoutId: target.dataset.dismissScout });
   } else if (target.dataset.cityTab) {
     cityTab = target.dataset.cityTab as CityTab;
     renderInfo(state);
@@ -753,11 +793,16 @@ function infoInput(state: GameState) {
   };
 }
 
-function renderInfo(state: GameState): void {
+/** A newly selected tile opens the bar on its first tab. */
+function syncBarTab(): void {
   if (view.selected !== barTabFor) {
     barTab = "army";
     barTabFor = view.selected;
   }
+}
+
+function renderInfo(state: GameState): void {
+  syncBarTab();
   const input = infoInput(state);
   infoPanel.innerHTML = renderInfoPanel(input);
   const bar = renderSelectionBar(input, barTab);
@@ -927,6 +972,13 @@ function stepFocus(step: AiStep): StepFocus | null {
     if (moved) {
       look(moved, false);
       look(army.tile, false);
+    }
+  }
+  for (const scout of Object.values(after.scouts)) {
+    const was = before.scouts[scout.id];
+    if (scout.owner === factionId && was && was.tile !== scout.tile) {
+      look(was.tile, false);
+      look(scout.tile, false);
     }
   }
   for (const battle of after.battles) if (battle.id >= before.nextBattleNumber) look(battle.tile, true);
