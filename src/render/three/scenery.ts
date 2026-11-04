@@ -70,6 +70,11 @@ export class MeshBuilder {
   private readonly positions: number[] = [];
   private readonly colors: number[] = [];
 
+  /** Vertices added so far. */
+  get vertexCount(): number {
+    return this.positions.length / 3;
+  }
+
   /** Adds a triangle facing away from `inside` (a point within the solid). */
   tri(a: V3, b: V3, c: V3, color: THREE.Color, inside: V3): void {
     const n = normal(a, b, c);
@@ -396,4 +401,132 @@ export function buildMountains(
   }
 
   return new THREE.Mesh(m.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+}
+
+// ---- Ground details: hills, fields, dunes --------------------------------------------
+
+const FIELDS = [new THREE.Color("#b9c27a"), new THREE.Color("#c7c27a"), new THREE.Color("#98a862")];
+// Hills and dunes take their ground's own colour, so the territory tint over the
+// ground doesn't leave them standing out: they read by their shape and shading.
+const HILL = new THREE.Color("#b29c6b");
+const DUNE = new THREE.Color("#d6bf8c");
+/** Details on each tile, set between these distances from its centre. */
+const DETAIL_RING = { min: 9, max: 16 };
+
+/** A rounded, faceted mound: a hill's roll. */
+function mound(m: MeshBuilder, x: number, y: number, z: number, r: number, h: number, color: THREE.Color): void {
+  const sides = 8;
+  const base: V3[] = [];
+  const shoulder: V3[] = [];
+  for (let k = 0; k < sides; k++) {
+    const a = (k * Math.PI * 2) / sides;
+    base.push([x + r * Math.cos(a), y, z + r * Math.sin(a) * 0.8]);
+    shoulder.push([x + r * 0.55 * Math.cos(a + 0.2), y + h * 0.75, z + r * 0.55 * Math.sin(a + 0.2) * 0.8]);
+  }
+  const top: V3 = [x, y + h, z];
+  const inside: V3 = [x, y + h * 0.2, z];
+  for (let k = 0; k < sides; k++) {
+    const j = (k + 1) % sides;
+    m.quad(base[k], base[j], shoulder[j], shoulder[k], color, inside);
+    m.tri(shoulder[k], shoulder[j], top, color, inside);
+  }
+}
+
+/** A dune: a long ridge tapering to a point at each end, steeper on its lee side. */
+function dune(m: MeshBuilder, x: number, y: number, z: number, length: number, width: number, h: number, turn: number): void {
+  const at = (u: number, v: number, yy: number): V3 => [x + u * Math.cos(turn) - v * Math.sin(turn), yy, z + u * Math.sin(turn) + v * Math.cos(turn)];
+  const shoulder = length * 0.28;
+  const ends = [at(-length / 2, 0, y), at(length / 2, 0, y)];
+  const crest = [at(-shoulder, 0, y + h), at(shoulder, 0, y + h)];
+  const front = [at(-shoulder, width, y), at(shoulder, width, y)];
+  const back = [at(-shoulder, -width * 0.55, y), at(shoulder, -width * 0.55, y)];
+  const inside: V3 = [x, y + h / 3, z];
+  m.quad(front[0], front[1], crest[1], crest[0], DUNE, inside);
+  m.quad(back[0], back[1], crest[1], crest[0], DUNE, inside);
+  for (const i of [0, 1]) {
+    m.tri(ends[i], front[i], crest[i], DUNE, inside);
+    m.tri(ends[i], crest[i], back[i], DUNE, inside);
+  }
+}
+
+/** A flat patch of field, just above the ground. */
+function field(m: MeshBuilder, x: number, y: number, z: number, w: number, d: number, turn: number, color: THREE.Color): void {
+  const at = (u: number, v: number): V3 => [x + u * Math.cos(turn) - v * Math.sin(turn), y + 0.15, z + u * Math.sin(turn) + v * Math.cos(turn)];
+  const below: V3 = [x, y - 1, z];
+  m.quad(at(-w / 2, -d / 2), at(w / 2, -d / 2), at(w / 2, d / 2), at(-w / 2, d / 2), color, below);
+}
+
+/**
+ * The texture of open ground: three rolling mounds on each hill tile, field
+ * patches on plains, and two broad dunes on desert. Like the trees, they keep clear of
+ * a tile's centre, of cities and of clearings.
+ */
+export function buildGroundDetails(
+  topology: MapTopology,
+  tiles: TileDataMap,
+  heightOf: (tile: TileId) => number,
+  clear: Clearings,
+): GroundDetails {
+  const m = new MeshBuilder();
+  const ranges: GroundDetails["ranges"] = [];
+  for (const id of topology.allTiles()) {
+    const start = m.vertexCount;
+    const terrain = tiles[id].terrain;
+    if ((terrain !== "hills" && terrain !== "plains" && terrain !== "desert") || clear.settlements.has(id)) continue;
+    const rand = sequence(`ground:${id}`);
+    const c = topology.tileCenter(id);
+    const y = heightOf(id);
+    const turn = rand() * Math.PI * 2;
+    const count = terrain === "desert" ? 2 : 3;
+    for (let k = 0; k < count; k++) {
+      const a = turn + (k * Math.PI * 2) / count + between(rand, -0.4, 0.4);
+      const r = between(rand, DETAIL_RING.min, DETAIL_RING.max);
+      const x = c.x + Math.cos(a) * r;
+      const z = c.y + Math.sin(a) * r;
+      if (terrain === "hills") {
+        const size = between(rand, 8, 11);
+        if (!inClearing(clear, x, z, size)) mound(m, x, y - 0.3, z, size, between(rand, 4, 6), HILL);
+      } else if (terrain === "desert") {
+        const length = between(rand, 22, 28);
+        const width = between(rand, 7, 9);
+        const h = between(rand, 2.2, 3);
+        const facing = between(rand, -0.4, 0.4);
+        if (!inClearing(clear, x, z, length / 2)) dune(m, x, y, z, length, width, h, facing);
+      } else {
+        const w = between(rand, 9, 14);
+        const d = between(rand, 6, 9);
+        const facing = between(rand, -0.6, 0.6);
+        const color = FIELDS[Math.floor(rand() * FIELDS.length)];
+        if (!inClearing(clear, x, z, w / 2)) field(m, x, y, z, w, d, facing, color);
+      }
+    }
+    if (m.vertexCount > start) ranges.push({ tile: id, start, end: m.vertexCount });
+  }
+  const mesh = new THREE.Mesh(m.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  const colors = mesh.geometry.getAttribute("color") as THREE.BufferAttribute;
+  return { mesh, ranges, base: Float32Array.from(colors.array as Float32Array) };
+}
+
+/**
+ * The ground details' mesh, which vertices belong to which tile, and their
+ * own colours. The territory and fog tint is a flat layer over the ground, so
+ * details that rise through it are tinted to match (see Terrain3D.paintOverlay).
+ */
+export interface GroundDetails {
+  mesh: THREE.Mesh;
+  ranges: { tile: TileId; start: number; end: number }[];
+  base: Float32Array;
+}
+
+/** Tints each tile's details as its overlay colour ([r, g, b, a], 0-1) would tint the ground. */
+export function tintGroundDetails(details: GroundDetails, colorOf: (tile: TileId) => readonly [number, number, number, number] | null): void {
+  const colors = details.mesh.geometry.getAttribute("color") as THREE.BufferAttribute;
+  const out = colors.array as Float32Array;
+  for (const { tile, start, end } of details.ranges) {
+    const c = colorOf(tile);
+    for (let v = start * 3; v < end * 3; v += 3) {
+      for (let k = 0; k < 3; k++) out[v + k] = c ? details.base[v + k] * (1 - c[3]) + c[k] * c[3] : details.base[v + k];
+    }
+  }
+  colors.needsUpdate = true;
 }
