@@ -442,6 +442,10 @@ of storming the walls now:
 Clicking a city you're already besieging reopens the screen. A city in sight
 with no garrison is simply taken.
 
+On the map a besieged city is ringed with stakes, with pennants in the
+besieger's colours, and the besieging soldiers face it, weapons raised,
+striking now and then.
+
 A besieged city earns no gold, doesn't grow, can't train or build, and from
 the first turn suffers **attrition**: its garrison loses 5% of its soldiers
 and the city 1% of its people each turn. Every city holds supplies: 3 turns
