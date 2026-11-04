@@ -517,6 +517,10 @@ to expect from them:
   tiles from the city they're after (dismissing scouts when they can't pay
   their upkeep), and put one watchtower in its region, on the
   tile nearest the closest foreign city.
+- When a city has the people for its next level, they save for its Forum or
+  Senate, buying no other buildings, watchtowers or new scouts, and training
+  no new regiments once they have 3 per city. Armies still march and fight,
+  regiments still retrain, and a besieged city ends the saving.
 - They raise taxes when in debt and lower them once recovered, and tax a
   city high once it's full (it can't grow anyway). When they
   take a city, they exterminate when short of gold, enslave when they have
