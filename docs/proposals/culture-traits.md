@@ -1,13 +1,27 @@
-<!-- Status: proposal, not yet implemented. Numbers are starting points to tune. -->
+# Decision: culture traits
 
-# Culture traits
+- **Status:** Proposed. Not implemented yet.
+- **Decides:** whether cultures should change the rules, and how.
+- **Where it goes once agreed:** this replaces "Cultures are purely a look". When it's
+  built, a short entry goes into `docs/DECISIONS.md` with the measured numbers, and
+  `README.md` gets the rules.
 
 ## Context
 
-Culture is only a look right now (`src/data/cultures.ts`: "no effect on the rules").
-You chose culture traits as the first way to add depth: each culture gets **one unit
-edge, one economic edge and one small drawback**. Traits follow the **owner**: Rome
-trains Roman troops everywhere, including in a captured Gallic city.
+Each faction has a culture: Roman, Hellenistic, Punic, Celtic or Thracian
+(`src/data/cultures.ts`). Today it only sets how the soldiers look on the map. Every
+faction plays the same way, so the 14 opponents feel alike. Culture traits are the first
+idea picked for adding depth, because they're cheap: almost all numbers in `src/data/`, and
+the AI already reacts to unit strength and cost.
+
+## Choices already made
+
+| Question | Options considered | Chosen |
+|---|---|---|
+| Scope | Units only. Units plus one economic edge. Units, economy and terrain. | **Units plus one economic edge.** Terrain edges would need terrain passed into battles, which is more work and more balance risk. |
+| Drawbacks | Bonuses only. A bonus plus a small drawback. | **A bonus plus a small drawback.** Overall strength stays level, and choices get sharper. |
+| Whose traits in a conquered city | The owner's. The city's culture. | **The owner's.** Rome trains Roman troops everywhere, so nothing new has to be stored per city. |
+| Movement traits | Faster cavalry for some cultures. | **Rejected.** Cavalry movement was cut from 18 to 16 on purpose, so they couldn't strike from anywhere (DECISIONS, Movement). |
 
 ## Baseline (current code, 4 seeds, 100 turns, passive Rome)
 
@@ -19,12 +33,16 @@ trains Roman troops everywhere, including in a captured Gallic city.
 | Celtic | Gauls, Germania, Spain, Britannia | 16 | 16, 19, 14, 16 | 16 |
 | Thracian | Thrace, Dacia, Scythia | 8 | 4, 9, 8, 10 | 8.5 |
 
-AI armies at turn 100 are about 45% militia, 25% spearmen, 25% archers and 5% cavalry,
-and almost everything is basic tier. So a trait on militia, spearmen or archers matters a
-lot. A trait on cavalry matters little unless it makes the AI train more of them.
-Punic factions already do best (+65% cities), so their traits get a real drawback.
+What this tells us:
 
-## Proposed traits (starting numbers, to be tuned against the measurements)
+- AI armies at turn 100 are about 45% militia, 25% spearmen, 25% archers and 5% cavalry,
+  and almost everything is basic tier. So a trait on militia, spearmen or archers matters
+  a lot. A trait on cavalry matters little unless it makes the AI train more of them.
+- Punic factions already do best (+65% cities), so their traits come with a real drawback.
+
+## Proposal
+
+These are starting numbers, to be tuned against the measurements.
 
 | Culture | Unit edge | Economic edge | Drawback |
 |---|---|---|---|
@@ -34,68 +52,60 @@ Punic factions already do best (+65% cities), so their traits get a real drawbac
 | **Celtic**: warbands | Militia +0.5 attack (2→2.5) and +2 charge on open ground | Farms cost −25% | Archers +25% gold and upkeep |
 | **Thracian**: horse archers | Cavalry gain 2 ranged (they fire in the volleys) | Mine gold +50% | Walls cost +25% |
 
-Stat edges are added to the unit's base stats **before** the tier multiplier, so an
-elite regiment keeps the edge in proportion. No movement traits: cavalry movement was cut
-from 18 to 16 on purpose (DECISIONS).
+Stat edges are added to the unit's base stats **before** the tier multiplier, so an elite
+regiment keeps the edge in proportion.
 
-## Implementation
+## How it would be built
 
 1. **`src/data/cultures.ts`**: add `CULTURE_TRAITS: Record<Culture, CultureTraits>` (name,
    a one-line summary, per-unit stat additions and cost multipliers, building cost
-   multipliers, building gold multipliers). Rewrite the "purely a look" comment. All the
-   numbers go here.
-2. **The regiment remembers its culture**: add `culture: Culture` to `Regiment`
-   (`core/state.ts`), stamped from the owner when the regiment is created (`core/setup.ts`,
-   the training step in `systems/recruitment.ts`). Regiments never change owner, so this
-   always matches the owner. It also means every battle function, which takes `Troops`
-   (regiments pass straight through), gets culture without threading it through each call.
-   - `Troops` gets `culture?: Culture`. Without it, no traits apply, so existing combat
-     tests stay unchanged.
-   - `unitStats(unit, tier, level, culture?)` (`data/units.ts`) adds the edge before the
-     tier multiplier. `kindsOf` in `systems/combat.ts` keys its pools by culture too.
-   - The AI's hypothetical troops (`trainAgainst` in `ai/assess.ts`) pass the city owner's
-     culture, so the AI prefers its own strong units through the existing strength checks.
+   multipliers, building gold multipliers). All the numbers live here.
+2. **The regiment remembers its culture**: add `culture: Culture` to `Regiment`, stamped
+   from the owner at setup and when the regiment is trained.
+   - Regiments never change owner, so this always matches the owner. A new invariant in
+     `tests/invariants.ts` checks it.
+   - Battles take regiments directly, so every battle function sees the culture without
+     extra arguments.
+   - `unitStats` applies the edge. `kindsOf` in `systems/combat.ts` pools by culture too.
+   - The AI's hypothetical troops (`trainAgainst`) pass the owner's culture, so the AI
+     favours its strong units through its existing checks.
 3. **Costs**:
-   - `trainingCost`, `upkeepFor` and `regimentCost` (`systems/armies.ts`) and `retrainCost`
-     (`systems/recruitment.ts`) take a culture.
-   - Add a `buildingCost(state, factionId, building, level)` helper in
-     `systems/buildings.ts`. It replaces direct reads of `def.cost` (canBuild, the build
-     queue, the AI, the Construction tab).
-   - Mine and port gold in `cityIncome` (`systems/cities.ts:262–264`) use the owner's
-     multiplier, so the money breakdown shows it automatically.
+   - `trainingCost`, `upkeepFor`, `regimentCost` and `retrainCost` take a culture.
+   - A new `buildingCost` helper replaces direct reads of `def.cost`.
+   - Mine and port gold in `cityIncome` use the owner's multiplier, so the money breakdown
+     shows it.
 4. **UI** (kept short):
-   - The scoreboard faction row gets a `title` tooltip with the culture name and its three
-     traits.
-   - Recruitment and Construction cards already show costs, which become the adjusted ones.
-   - Recruitment card tooltips name the edge, e.g. "Roman: +1 armor".
+   - The scoreboard faction row gets a tooltip with the culture and its three traits.
+   - Recruitment and Construction cards show the adjusted costs.
+   - Recruitment card tooltips name the edge.
 5. **Tests**:
-   - `tests/invariants.ts`: every regiment's culture equals its owner's culture.
-   - `tests/combat.test.ts`: each stat edge, measured as "fights like N basic soldiers"
-     using the existing `soldiersToBeat` helper.
-   - `tests/recruitment.test.ts` and `tests/buildings.test.ts`: the cost and gold multipliers.
-6. **Measurement tooling**: add per-culture rows ("Cities held: Hellenistic", and so on)
-   to `tools/compare.ts`. Its worker reads state field by field, and `faction.culture`
-   already exists on master, so `--base master` still works.
-7. **Docs**:
-   - `README.md`: replace "This is only a look" with a Cultures table, and add a line in
-     "Your opponents".
-   - `docs/DECISIONS.md`: a Cultures entry with the before/after numbers.
+   - `tests/combat.test.ts`: each stat edge, measured as "fights like N basic soldiers".
+   - `tests/recruitment.test.ts` and `tests/buildings.test.ts`: the cost and gold changes.
+6. **Tooling**: per-culture "Cities held" rows in `tools/compare.ts`, which still work
+   with `--base master`.
 
-## Verification
+## Consequences and risks
 
-- `npm run build` clean, and `npm test` passes: no invalid AI action, no AI debt, the new
-  invariant holds, and JSON round trip and determinism still pass.
-- `npm run compare -- --base master --seeds 8`, with and without `--garrison`: median AI
-  income, cities changing hands, factions fallen, city levels and the new per-culture
-  rows.
-- **Target**: no culture's median cities moves by more than about 30% from the baseline,
-  and the Punic lead doesn't widen. I'll tune the numbers until that holds, then report the
-  before/after table.
-- `npm run levers`: the market, farm, mine and port discounts and multipliers mustn't break
-  `balance.test.ts`.
-- Caveat: Rome is passive in sims, so the Roman traits can only be judged by the combat
-  tests and by you playing. I'll report Roman spearmen against each culture's spearmen as
-  numbers.
-- Browser check (headless Chromium): the tooltip and the adjusted costs show on a Roman
-  city's Recruitment and Construction tabs.
-- Commit and push to `claude/dazzling-thompson-qvs9ei`.
+- The AI should lean into its strengths without new AI code. If it doesn't (for example,
+  Thracians still never train cavalry), that's a follow-up for the AI's unit choice.
+- Rome is passive in sims, so the Roman traits can only be judged by the combat tests and
+  by playing. Roman spearmen against each culture's spearmen get reported as numbers.
+- A cheaper market, farms, mine or port moves the economic levers. `npm run levers` and
+  `tests/balance.test.ts` must still pass.
+
+## How we'll know it works
+
+- `npm run build` is clean, and `npm test` passes: no invalid AI action, no AI debt, and
+  the new invariant holds.
+- `npm run compare -- --base master --seeds 8`, with and without `--garrison`.
+  **Target:** no culture's median cities moves by more than about 30% from the baseline,
+  and the Punic lead doesn't widen. The numbers get tuned until that holds, and the
+  before/after table is reported.
+- A browser check shows the tooltip and the adjusted costs.
+
+## Open questions for review
+
+- Are the five themes right (legions, Cretan bows, Numidian horse, warbands, horse
+  archers)?
+- Are the drawbacks the right size, or should some be dropped?
+- Should Rome, as the player's faction, get a deliberately milder edge?
