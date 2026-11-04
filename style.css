@@ -70,7 +70,31 @@ html, body {
   background: rgba(20, 30, 36, 0.7);
 }
 .city-plate.capital .name { font-size: 14px; }
+/* Your cities: how the population is moving, and whether anything is being built or trained */
+.city-plate .pop { display: inline-flex; align-items: center; gap: 3px; }
+.city-plate .pop svg { width: 11px; height: 11px; fill: currentColor; }
+.city-plate .pop.rising svg { color: #8fd67a; }
+.city-plate .pop.steady svg { color: #f0c36f; }
+.city-plate .pop.falling svg { color: #f0806f; }
+.city-plate .work {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  color: var(--bone);
+  background: rgba(20, 30, 36, 0.82);
+}
+.city-plate .work svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .city-plate[hidden] { display: none; }
+
 
 /* Overlays sit on the map but only their contents take clicks. */
 .title-plate,

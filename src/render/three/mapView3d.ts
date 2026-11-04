@@ -3,6 +3,7 @@ import { armySoldiers, getFaction, type GameState } from "@/core/state.js";
 import { TERRAIN } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { MapTopology, Point, TileId } from "@/map/topology.js";
+import { cityPlate } from "@/render/cityPlate.js";
 import { formatCompact } from "@/render/format.js";
 import type { ViewState } from "@/render/mapView.js";
 import { isSpent } from "@/systems/armies.js";
@@ -71,6 +72,9 @@ export class MapView3D {
   /** Watchtowers by tile, keyed by their owner's colour. */
   private readonly towers = new Map<TileId, { key: string; object: THREE.Object3D }>();
   private readonly cityLabels = new Map<string, { el: HTMLElement; text: string }>();
+  /** The state and player the plates were last filled in for. */
+  private platesFor: GameState | null = null;
+  private platesFaction: string | null = null;
   private readonly layers = { borders: null as THREE.Object3D | null, selection: null as THREE.Object3D | null, route: null as THREE.Object3D | null };
   private seen = { territory: null as unknown, selected: null as unknown, route: "", overlay: [] as unknown[] };
   private lastTime = 0;
@@ -135,7 +139,7 @@ export class MapView3D {
     this.syncClashes(time);
 
     this.renderer.render(this.scene, this.camera.three);
-    this.placeLabels(state);
+    this.placeLabels(state, view);
     // Banners are always waving, so the map keeps redrawing.
     return true;
   }
@@ -256,7 +260,8 @@ export class MapView3D {
       const holding = Object.values(state.armies).find((a) => a.tile === city.tile && a.owner === city.owner);
       const garrisoned = inSight ? holding !== undefined : true;
       const garrison = inSight && holding ? { label: formatCompact(armySoldiers(holding)), regiments: holding.regiments.length } : null;
-      const key = `${color}|${city.isCapital}|${besieger}|${city.buildings.government}|${city.buildings.walls}|${garrisoned}|${garrison?.label}|${garrison?.regiments}`;
+      const culture = getFaction(state, city.owner)?.culture ?? "roman";
+      const key = `${color}|${culture}|${city.isCapital}|${besieger}|${city.buildings.government}|${city.buildings.walls}|${garrisoned}|${garrison?.label}|${garrison?.regiments}`;
       const existing = this.cities.get(city.id);
       if (existing?.key === key) continue;
       if (existing) this.scene.remove(existing.object);
@@ -265,7 +270,7 @@ export class MapView3D {
       group.add(
         buildCity(
           color,
-          { capital: city.isCapital, level: city.buildings.government, walls: city.buildings.walls, garrisoned, garrison, seed: hash(city.id) },
+          { capital: city.isCapital, level: city.buildings.government, walls: city.buildings.walls, culture, garrisoned, garrison, seed: hash(city.id) },
           this.library,
         ),
       );
@@ -308,9 +313,15 @@ export class MapView3D {
     }
   }
 
-  /** Name plates under each city, as HTML over the canvas. */
-  private placeLabels(state: GameState): void {
+  /**
+   * Name plates under each city, as HTML over the canvas. Their contents
+   * (cityPlate.ts) are worked out again only when the game state changes.
+   */
+  private placeLabels(state: GameState, view: ViewState): void {
     const show = this.camera.zoom >= LABEL_MIN_ZOOM;
+    const fresh = state !== this.platesFor || view.activeFaction !== this.platesFaction;
+    this.platesFor = state;
+    this.platesFaction = view.activeFaction;
     for (const city of Object.values(state.cities)) {
       let label = this.cityLabels.get(city.id);
       if (!label) {
@@ -320,13 +331,16 @@ export class MapView3D {
         label = { el, text: "" };
         this.cityLabels.set(city.id, label);
       }
-      const faction = getFaction(state, city.owner);
-      const text = `${city.name}|${formatCompact(city.population)}|${faction?.color}|${city.isCapital}`;
-      if (text !== label.text) {
-        label.text = text;
-        label.el.innerHTML = `<span class="name">${city.name}</span><span class="pop">${formatCompact(city.population)}</span>`;
-        label.el.style.setProperty("--faction", faction?.color ?? "#888");
-        label.el.classList.toggle("capital", city.isCapital);
+      if (fresh || label.text === "") {
+        const faction = getFaction(state, city.owner);
+        const html = cityPlate(state, city, city.owner === view.activeFaction);
+        const text = `${html}|${faction?.color}|${city.isCapital}`;
+        if (text !== label.text) {
+          label.text = text;
+          label.el.innerHTML = html;
+          label.el.style.setProperty("--faction", faction?.color ?? "#888");
+          label.el.classList.toggle("capital", city.isCapital);
+        }
       }
       const at = show ? this.camera.toScreen(this.terrain.top(city.tile).add(new THREE.Vector3(0, 0, 36))) : null;
       if (!at || at.x < -80 || at.y < -40 || at.x > this.canvas.clientWidth + 80 || at.y > this.canvas.clientHeight + 40) {

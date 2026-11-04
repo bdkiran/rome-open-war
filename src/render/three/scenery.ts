@@ -39,7 +39,7 @@ function inClearing(clear: Clearings, x: number, z: number, r: number): boolean 
 // ---- Random numbers from a tile id -------------------------------------------
 
 /** A stable pseudo-random sequence in [0, 1) for a string. */
-function sequence(key: string): () => number {
+export function sequence(key: string): () => number {
   let h = 2166136261;
   for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
   let s = h >>> 0 || 1;
@@ -53,7 +53,7 @@ function sequence(key: string): () => number {
   };
 }
 
-function between(rand: () => number, a: number, b: number): number {
+export function between(rand: () => number, a: number, b: number): number {
   return a + (b - a) * rand();
 }
 
@@ -66,7 +66,7 @@ function smoothstep(a: number, b: number, x: number): number {
 // ---- Building flat-shaded meshes ------------------------------------------------
 
 /** Triangles with a colour each, wound to face away from a given centre. */
-class MeshBuilder {
+export class MeshBuilder {
   private readonly positions: number[] = [];
   private readonly colors: number[] = [];
 

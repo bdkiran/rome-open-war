@@ -104,9 +104,16 @@ Either way you can close the screen to look at the map, or play again.
 
 The map is drawn in 3D under a tilted campaign camera. Hills and mountains
 stand above the plains, mountains carry peaks and forests trees, and the sea
-sits below the coast. Cities are walled towns with a banner in their owner's
-colours and a name plate; they grow with their level, and their walls appear
-once built. Territory, fog, move and attack highlights, the selected tile,
+sits below the coast. Cities are towns in their owner's style (tiled Roman
+and Greek houses, flat-roofed Punic ones, Celtic roundhouses, Thracian timber
+houses) with a banner in their owner's colours and a name plate. They gain
+houses and civic buildings with each level (a temple or hall, then a basilica
+and a theatre), and their walls appear once built: a palisade, then stone
+walls with towers (an earth rampart for Celts and Thracians), then great
+walls. On your own cities' plates, a figure beside the population shows
+how it's moving (green: rising fast; yellow: slowly or not at all; red:
+falling), a hammer shows something is being built, and crossed swords that
+regiments are training. Territory, fog, move and attack highlights, the selected tile,
 march routes and sea crossings are drawn on the terrain.
 
 Each army is one soldier in its faction's colours, equipped in its culture's

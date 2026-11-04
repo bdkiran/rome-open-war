@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { Culture } from "@/data/cultures.js";
+import { buildTown } from "@/render/three/town.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { shade } from "@/render/figures.js";
@@ -380,10 +381,10 @@ function standardBearer(color: string, faded: boolean): Figure {
 // ---- Cities -----------------------------------------------------------------
 
 /**
- * A town that grows with its level: more houses and a taller keep at each
- * level. Walls appear only once built: a low palisade, then stone walls, then
- * great walls with towers. A banner in the owner's colours waves over it
- * while it has a garrison, and hangs limp at half-mast when it doesn't.
+ * A city: its town (town.ts: houses and civic buildings in its culture's
+ * style, more with each level, and its walls once built), and a banner in
+ * the owner's colours that waves over it while it has a garrison and hangs
+ * limp at half-mast when it doesn't.
  */
 export function buildCity(
   color: string,
@@ -391,11 +392,13 @@ export function buildCity(
     capital: boolean;
     level: number;
     walls: number;
+    /** The owner's culture, which sets the town's style. */
+    culture: Culture;
     /** Whether a garrison holds it (true for an enemy city out of sight, so the fog gives nothing away). */
     garrisoned: boolean;
     /** The garrison's strength and regiments, shown on the banner; null to show the plain laurel. */
     garrison: { label: string; regiments: number } | null;
-    /** Where in its wave the banner starts (0-1). */
+    /** Where in its wave the banner starts (0-1); also lays out the town. */
     seed: number;
   },
   library: ModelLibrary,
@@ -404,74 +407,7 @@ export function buildCity(
   if (custom) return custom;
 
   const g = new THREE.Group();
-  const stone = mat(STONE);
-  const wall = mat("#d9cdb0");
-  const wood = mat("#8a6a45");
-  const roof = mat(ROOF);
-  const plaster = mat("#efe6d2");
-
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(25, 27, 3, 6), stone);
-  base.position.y = 1.5;
-  g.add(base);
-
-  // Walls: none, a palisade (1), stone (2), great walls with towers (3).
-  if (look.walls > 0) {
-    const half = 15;
-    const height = [0, 5, 7, 9][look.walls];
-    const material = look.walls === 1 ? wood : wall;
-    for (const [x, z, w, d] of [[0, -half, 30, 2.4], [0, half, 30, 2.4], [-half, 0, 2.4, 30], [half, 0, 2.4, 30]] as const) {
-      const segment = box(w, height, d, material);
-      segment.position.set(x, 3 + height / 2, z);
-      g.add(segment);
-    }
-    if (look.walls >= 2) {
-      for (const [x, z] of [[-half, -half], [half, -half], [-half, half], [half, half]]) {
-        const towerHeight = look.walls === 3 ? 14 : 10;
-        const tower = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.4, towerHeight, 6), wall);
-        tower.position.set(x, 3 + towerHeight / 2, z);
-        const cap = new THREE.Mesh(new THREE.ConeGeometry(3.8, 4, 6), roof);
-        cap.position.set(x, 5 + towerHeight, z);
-        g.add(tower, cap);
-      }
-    }
-    if (look.walls === 3) {
-      const gate = box(8, 12, 4, wall);
-      gate.position.set(0, 9, half);
-      g.add(gate);
-    }
-  }
-
-  // Houses: more with each level.
-  const spots: [number, number, number][] = [
-    [-7, -6, 1], [5, -8, 0.9], [-8, 6, 0.9], [7, 5, 1], [0, 9, 0.8], [-10, -1, 0.75], [10, -2, 0.8], [-3, 11, 0.7],
-  ];
-  const houses = [3, 5, 8][Math.max(0, Math.min(2, look.level - 1))];
-  for (const [x, z, s] of spots.slice(0, houses)) {
-    const house = box(8 * s, 6 * s, 7 * s, plaster);
-    house.position.set(x, 3 + 3 * s, z);
-    const top = new THREE.Mesh(new THREE.ConeGeometry(6.4 * s, 4 * s, 4), roof);
-    top.rotation.y = Math.PI / 4;
-    top.position.set(x, 3 + 6 * s + 2 * s, z);
-    g.add(house, top);
-  }
-
-  // The government building: a hall, a forum's keep, or a senate with a second tower.
-  const keepHeight = [8, 14, 18][Math.max(0, Math.min(2, look.level - 1))];
-  const keep = box(8, keepHeight, 8, wall);
-  keep.position.set(0, 3 + keepHeight / 2, -1);
-  const keepRoof = new THREE.Mesh(new THREE.ConeGeometry(6.8, 6, 4), roof);
-  keepRoof.rotation.y = Math.PI / 4;
-  keepRoof.position.set(0, 6 + keepHeight, -1);
-  g.add(keep, keepRoof);
-  if (look.level >= 3) {
-    const second = box(6, 12, 6, wall);
-    second.position.set(-9, 9, -9);
-    const secondRoof = new THREE.Mesh(new THREE.ConeGeometry(5, 5, 4), roof);
-    secondRoof.rotation.y = Math.PI / 4;
-    secondRoof.position.set(-9, 17.5, -9);
-    g.add(second, secondRoof);
-  }
-  g.scale.setScalar([0.85, 1, 1.15][Math.max(0, Math.min(2, look.level - 1))]);
+  g.add(buildTown({ culture: look.culture, level: look.level, walls: look.walls, capital: look.capital, seed: look.seed }));
 
   // The banner flies when the city has a garrison, showing its strength, and
   // hangs at half-mast when it's undefended.
