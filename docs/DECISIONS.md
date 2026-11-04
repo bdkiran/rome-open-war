@@ -71,6 +71,25 @@ so.
   tile walkable from a territory, `state.regions`) with borders and a faint
   tint, while income, growth, buildings, roads and sight still count the
   3-tile territory alone. Battles there are named after the region's city.
+- **Scouts are a separate kind of unit, not regiments.** The player wanted a
+  single rider who doesn't block armies, moves faster than cavalry and never
+  dies, trained in a level 2 city, at 100 gold and 2 a turn. Keeping them out
+  of `state.armies` means battles, zones of control, sieges, garrisons and the
+  AI's army logic need no exceptions. Since one can't die and upkeep never ends,
+  Dismiss ends it. The AI moves each at most once a turn: chasing a changing
+  target cost 2,500 extra actions a game. Sight 5 and movement 20 are proposals.
+  A faction in debt, or whose income doesn't cover its upkeep, dismisses its
+  scouts, as they'd otherwise cost it for ever. In 24 seeds, 100 turns (21 scouts
+  a game): more conquest and less development, with ranges overlapping: median AI
+  income −6%, treasury −14%, cities not with their first owner +14%, level-1
+  cities 32 (was 27), level-3 cities 1 (was 2), watchtowers −32%; factions fallen
+  unchanged. The cost of scouts is far too small to explain it, so better sight
+  probably does; that isn't proven. Known edge: in 1 of 48 games a faction fell
+  while in debt (−19, its last city besieged, mostly army upkeep), against 0 of 48
+  before; no living faction ended in debt.
+- **`cityTiles` remembers its result** per territory object. It scanned the whole
+  map on every AI action and was 28% of game time; games now run in 30 s (36
+  before scouts), and the numbers don't change.
 - **Watchtowers make new sight.** Only armies could see past a city, so
   most of a region sat in fog. A tower is built at once on any land tile of
   your region (not a city) for 300 gold and sees 3 tiles. The player chose:

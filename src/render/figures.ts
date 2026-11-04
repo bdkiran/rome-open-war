@@ -137,7 +137,8 @@ function drawFootSoldier(p: Painter, unit: "militia" | "spearmen" | "archers", c
   p.line(41, 31, 50.5, 31.5, SKIN, 3.4);
 }
 
-function drawRider(p: Painter, color: string, tier: Tier): void {
+/** A rider on his horse; `scout` leaves off the lance, shield and crest. */
+function drawRider(p: Painter, color: string, tier: Tier, scout = false): void {
   p.ellipse(33, 61.5, 21, 2.6, SHADOW);
   if (tier === 3) p.path("M27 18 Q18 21 13 30 L19 31 Q23 25 28.5 22 Z", shade(color, -0.38), INK, 1.1);
   // Far legs, in shade
@@ -167,9 +168,15 @@ function drawRider(p: Painter, color: string, tier: Tier): void {
   p.circle(32.5, 10.5, 5.6, SKIN, INK, 1.3);
   p.path("M26.6 11 Q26.8 4.2 32.5 4 Q38.3 4.2 38.4 11 L36.4 11 L36 8.4 L28.8 8.4 L28.5 14 L26.6 13 Z", BRONZE, INK, 1.1);
   if (tier === 3) p.path("M26.4 5.6 Q30 -6 41 0.4 Q35.8 1.2 32.5 4 Q29.4 3.8 26.4 5.6 Z", color, INK, 1);
-  else p.path("M27.6 4.8 Q32.5 -1.5 38.6 2.4 Q35.5 2.4 32.5 4 Q29.8 3.8 27.6 4.8 Z", color, INK, 1);
+  else if (!scout) p.path("M27.6 4.8 Q32.5 -1.5 38.6 2.4 Q35.5 2.4 32.5 4 Q29.8 3.8 27.6 4.8 Z", color, INK, 1);
   // Elite horses wear a bronze face plate.
   if (tier === 3) p.path("M52 13 L57.5 17 L56.5 19 L51 16.5 Z", BRONZE, INK, 0.8);
+  if (scout) {
+    // Reins in hand, nothing else
+    p.line(36.5, 21, 44, 22, SKIN, 3.2);
+    p.line(44, 22, 51, 15, LEATHER, 0.9);
+    return;
+  }
   // A lance couched under his arm, pennon at the tip
   p.line(20, 40, 47, -1, WOOD, 2.2);
   p.path("M47 -1 L49.5 -4 L48.6 1.2 Z", IRON, INK, 0.8);
@@ -194,6 +201,15 @@ export function shade(hex: string, amount: number): string {
 
 /** A figure as an inline SVG string, for the panels. */
 export function figureSvg(unit: UnitType, color: string, tier: Tier = 1, className = "figure"): string {
+  return svgOf((p) => drawFigure(p, unit, color, tier), className);
+}
+
+/** A scout as an inline SVG string: a lone, lightly equipped rider (no lance, shield or crest). */
+export function scoutSvg(color: string, className = "figure"): string {
+  return svgOf((p) => drawRider(p, color, 1, true), className);
+}
+
+function svgOf(draw: (painter: Painter) => void, className: string): string {
   const parts: string[] = [];
   const attrs = (fill: string | null, stroke?: string | null, width?: number) =>
     `fill="${fill ?? "none"}"${stroke ? ` stroke="${stroke}" stroke-width="${width ?? 1}"` : ""} stroke-linecap="round" stroke-linejoin="round"`;
@@ -205,6 +221,6 @@ export function figureSvg(unit: UnitType, color: string, tier: Tier = 1, classNa
     line: (x1, y1, x2, y2, stroke, width) =>
       parts.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" ${attrs(null, stroke, width)}/>`),
   };
-  drawFigure(painter, unit, color, tier);
+  draw(painter);
   return `<svg class="${className}" viewBox="0 -4 64 68" aria-hidden="true">${parts.join("")}</svg>`;
 }

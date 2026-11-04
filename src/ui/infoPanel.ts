@@ -28,13 +28,14 @@ import { enterCost } from "@/systems/pathfinding.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
 import { describeAttackArmor, describeSpecials, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
-import { figureSvg } from "@/render/figures.js";
+import { figureSvg, scoutSvg } from "@/render/figures.js";
 import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
-import { canRetrain, canTrain, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
+import { canRetrain, canTrain, canTrainScout, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
 import { cityStats, mineableTiles, plainsTiles, type CityStats } from "@/systems/cities.js";
 import { canBuildWatchtower, towerOwner, towerSighter } from "@/systems/watchtowers.js";
+import { SCOUT } from "@/data/scouts.js";
 import { VISION } from "@/data/vision.js";
 import { WATCHTOWER } from "@/data/watchtowers.js";
 import { levelPips, regimentBox, tierMark } from "@/ui/boxes.js";
@@ -76,6 +77,10 @@ export function renderInfoPanel(input: InfoPanelInput): string {
   sections.push(terrainSection(state, tile, Boolean(army || city)));
   const tower = watchtowerSection(input, tile);
   if (tower) sections.push(tower);
+  const strangers = Object.values(state.scouts).filter((s) => s.tile === tile && s.owner !== input.humanId);
+  if (strangers.length > 0) {
+    sections.push(`<p class="terrain-line">${strangers.map((s) => `Scout (${escapeHtml(getFaction(state, s.owner)?.shortName ?? "enemy")})`).join(", ")}.</p>`);
+  }
   if (input.ctx.topology.links?.().some(([a, b]) => a === tile || b === tile)) {
     sections.push(`<p class="terrain-line">Sea crossing.</p>`);
   }
@@ -372,6 +377,18 @@ function recruitmentTab(input: InfoPanelInput, city: City): string {
       </button>`;
   }).join("");
 
+  const scoutCheck = canTrainScout(state, humanId, city.id);
+  const scoutBox = `
+      <button type="button" class="unit-box" data-train-scout="${city.id}" ${scoutCheck.ok ? "" : "disabled"}
+        title="${escapeHtml(scoutCheck.ok ? `Queue a scout: ${SCOUT.cost} gold, upkeep ${SCOUT.upkeep} a turn. Sees ${VISION.scout} tiles, goes anywhere, never fights and can't be killed.` : scoutCheck.reason)}">
+        ${scoutSvg(color)}
+        <span class="unit-name">Scout</span>
+        <span class="unit-stat">1 rider</span>
+        <span class="unit-stat">${SCOUT.cost} gold</span>
+        <span class="unit-stat">Move ${SCOUT.movement}</span>
+        <span class="unit-stat">Sight ${VISION.scout}</span>
+      </button>`;
+
   const checks = options.map(({ unit, tier }) => canTrain(state, humanId, city.id, unit, tier));
   const blocked = checks.find((c) => !c.ok);
   const note = checks.every((c) => !c.ok) && blocked && !blocked.ok ? escapeHtml(blocked.reason) : "";
@@ -388,7 +405,7 @@ function recruitmentTab(input: InfoPanelInput, city: City): string {
   }
 
   return `
-    <div class="box-grid units">${boxes}</div>
+    <div class="box-grid units">${boxes}${scoutBox}</div>
     ${next ? `<p class="hint">${escapeHtml(next)}</p>` : ""}
     ${recruitQueue(city, color)}
     ${note ? `<p class="hint">${note}</p>` : ""}`;
@@ -460,6 +477,17 @@ function recruitQueue(city: City, color: string): string {
   const retrainPeople = people;
   let trainingAhead = 0;
   const items = city.recruitQueue.map((order, index) => {
+    if (order.kind === "scout") {
+      const when = city.besiegedBy ? "Halted by the siege" : trainingAhead === 0 ? "Next turn" : `In ${trainingAhead + 1} turns`;
+      trainingAhead++;
+      return `
+      <div class="queue-entry" title="${escapeHtml(`Training a scout: ${formatNumber(order.cost)} gold. Cancel to refund it.`)}">
+        ${scoutSvg(color)}
+        <span class="queue-entry-name">Scout</span>
+        <span class="reg-status">${escapeHtml(when)}</span>
+        <button type="button" class="queue-cancel" data-cancel-recruit="${index}" aria-label="Cancel Scout">&times;</button>
+      </div>`;
+    }
     let when: string;
     if (city.besiegedBy) when = "Halted by the siege";
     else if (order.kind === "retrain") when = retrainPeople > spare ? "Waiting for people" : "Next turn";

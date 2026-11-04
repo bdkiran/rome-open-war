@@ -16,6 +16,7 @@ import {
   type Regiment,
   type RegimentId,
 } from "@/core/state.js";
+import { SCOUT } from "@/data/scouts.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, TIERS, UNITS, regimentSize, type Tier, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
@@ -53,6 +54,7 @@ export function factionUpkeep(state: GameState, factionId: FactionId): number {
   for (const army of armiesOf(state, factionId)) {
     for (const r of army.regiments) total += upkeepFor(r.unit, r.soldiers, r.tier);
   }
+  total += Object.values(state.scouts).filter((s) => s.owner === factionId).length * SCOUT.upkeep;
   return Math.round(total);
 }
 
@@ -299,7 +301,11 @@ export function refreshMovement(state: GameState, factionId: FactionId): GameSta
       regiments: army.regiments.map((r) => ({ ...r, movementLeft: UNITS[r.unit].movement, pinned: false })),
     };
   }
-  return { ...state, armies };
+  const scouts = { ...state.scouts };
+  for (const scout of Object.values(state.scouts)) {
+    if (scout.owner === factionId) scouts[scout.id] = { ...scout, movementLeft: SCOUT.movement };
+  }
+  return { ...state, armies, scouts };
 }
 
 // ---- March orders -------------------------------------------------------

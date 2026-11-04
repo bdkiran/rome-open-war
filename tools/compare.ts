@@ -46,6 +46,7 @@ interface GameMetrics {
   seasoned: number;
   topLevel: number;
   regiments: number;
+  scouts: number;
   seconds: number;
 }
 
@@ -61,6 +62,7 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "level2", label: "Cities at level 2" },
   { key: "level3", label: "Cities at level 3" },
   { key: "watchtowers", label: "Watchtowers" },
+  { key: "scouts", label: "Scouts" },
   { key: "regiments", label: "Regiments alive" },
   { key: "veterans", label: "Regiments at experience 1-2" },
   { key: "seasoned", label: "Regiments at experience 3-5" },
@@ -135,6 +137,8 @@ async function runWorker(): Promise<void> {
       .reduce((n, a) => n + a.regiments.reduce((m, r) => m + r.soldiers, 0), 0),
     // Versions before watchtowers have none.
     watchtowers: Object.keys((state as { watchtowers?: object }).watchtowers ?? {}).length,
+    // Versions before scouts have none.
+    scouts: Object.keys((state as { scouts?: object }).scouts ?? {}).length,
     regiments: levels.length,
     veterans: levels.filter((l) => l >= 1 && l <= 2).length,
     seasoned: levels.filter((l) => l >= 3 && l <= 5).length,
