@@ -386,8 +386,8 @@ function townGeometry(look: TownLook): THREE.BufferGeometry {
 const SIEGE_RINGS = [30.5];
 /** Stakes around each ring. */
 const STAKES_PER_RING = 30;
-/** How big each stake is: about 9 tall, leaning in. */
-const STAKE_SIZE = 2;
+/** How big each stake is: about 13 tall, leaning in. */
+const STAKE_SIZE = 3;
 
 const siegeBuilt = new Map<string, THREE.BufferGeometry>();
 
@@ -428,9 +428,9 @@ function siegeGeometry(color: string, seed: number): THREE.BufferGeometry {
   for (const a of [0.35, 2.45, 4.55]) {
     const x = Math.sin(a) * (SIEGE_RINGS[0] + 2.5);
     const z = Math.cos(a) * (SIEGE_RINGS[0] + 2.5);
-    b.prism(polygon(x, z, 0.35, 5), 0, 11, DARK_WOOD);
-    b.face([[x, 11, z], [x + 4.5, 9.8, z], [x, 8.6, z]], cloth, [x + 1.5, 9.8, z - 1]);
-    b.face([[x, 11, z], [x + 4.5, 9.8, z], [x, 8.6, z]], cloth, [x + 1.5, 9.8, z + 1]);
+    b.prism(polygon(x, z, 0.45, 5), 0, 18, DARK_WOOD);
+    b.face([[x, 18, z], [x + 6, 16.4, z], [x, 14.8, z]], cloth, [x + 2, 16.4, z - 1]);
+    b.face([[x, 18, z], [x + 6, 16.4, z], [x, 14.8, z]], cloth, [x + 2, 16.4, z + 1]);
   }
   return b.mesh.geometry();
 }
