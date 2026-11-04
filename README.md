@@ -103,8 +103,9 @@ Either way you can close the screen to look at the map, or play again.
 ## The map
 
 The map is drawn in 3D under a tilted campaign camera. Hills and mountains
-stand above the plains, mountains carry peaks and forests trees, and the sea
-sits below the coast. Cities are towns in their owner's style (tiled Roman
+stand above the plains, mountains carry peaks and forests trees, hills roll,
+plains are patched with fields and deserts ridged with dunes, and the sea sits
+below the coast, sand beaches along the shore and lighter shallows off it. Cities are towns in their owner's style (tiled Roman
 and Greek houses, flat-roofed Punic ones, Celtic roundhouses, Thracian timber
 houses) with a banner in their owner's colours and a name plate. They gain
 houses and civic buildings with each level (a temple or hall, then a basilica
