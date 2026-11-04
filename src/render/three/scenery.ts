@@ -31,6 +31,15 @@ export interface Clearings {
   spots: readonly Clearing[];
 }
 
+/** A colour over a tile, [r, g, b, opacity] (0-1), or null for none: the fog of war. */
+export type TileWash = (tile: TileId) => readonly [number, number, number, number] | null;
+
+/** Scenery that the fog of war darkens: `fog` applies the fog over each tile to what stands on it. */
+export interface Fogged<T extends THREE.Object3D> {
+  object: T;
+  fog(washOf: TileWash): void;
+}
+
 /** Whether something of radius `r` at (x, z) would stand in a clearing. */
 function inClearing(clear: Clearings, x: number, z: number, r: number): boolean {
   return clear.spots.some((s) => Math.hypot(x - s.x, z - s.z) < s.radius + r);
@@ -243,10 +252,11 @@ export function buildTrees(
   tiles: TileDataMap,
   heightOf: (tile: TileId) => number,
   clear: Clearings,
-): THREE.Group {
+): Fogged<THREE.Group> {
   const bounds = topology.bounds();
   const placed: Record<TreeKind, THREE.Matrix4[]> = { oak: [], fir: [], pine: [], cypress: [], olive: [] };
   const tints: Record<TreeKind, THREE.Color[]> = { oak: [], fir: [], pine: [], cypress: [], olive: [] };
+  const owners: Record<TreeKind, TileId[]> = { oak: [], fir: [], pine: [], cypress: [], olive: [] };
 
   for (const id of topology.allTiles()) {
     if (tiles[id].terrain !== "forest" || clear.settlements.has(id)) continue;
@@ -270,11 +280,13 @@ export function buildTrees(
       placed[kind].push(m);
       // A little light and dark variation, so a wood isn't one flat green.
       tints[kind].push(new THREE.Color().setScalar(between(rand, 0.86, 1.1)));
+      owners[kind].push(id);
     }
   }
 
   const group = new THREE.Group();
   const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const meshes: { mesh: THREE.InstancedMesh; kind: TreeKind }[] = [];
   for (const kind of Object.keys(TREE_KINDS) as TreeKind[]) {
     if (placed[kind].length === 0) continue;
     const geometry = TREE_KINDS[kind](sequence(`tree-kind:${kind}`)).geometry();
@@ -285,8 +297,24 @@ export function buildTrees(
     });
     mesh.computeBoundingSphere();
     group.add(mesh);
+    meshes.push({ mesh, kind });
   }
-  return group;
+  const shaded = new THREE.Color();
+  return {
+    object: group,
+    // A tree's colour is multiplied by its instance colour, so the fog darkens it there.
+    fog(washOf) {
+      for (const { mesh, kind } of meshes) {
+        owners[kind].forEach((tile, i) => {
+          const w = washOf(tile);
+          shaded.copy(tints[kind][i]);
+          if (w) shaded.setRGB(shaded.r * (1 - w[3] + w[0] * w[3]), shaded.g * (1 - w[3] + w[1] * w[3]), shaded.b * (1 - w[3] + w[2] * w[3]));
+          mesh.setColorAt(i, shaded);
+        });
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      }
+    },
+  };
 }
 
 // ---- Mountains --------------------------------------------------------------------
@@ -340,8 +368,18 @@ export function buildMountains(
   tiles: TileDataMap,
   heightOf: (tile: TileId) => number,
   clear: Clearings,
-): THREE.Mesh {
+): Fogged<THREE.Mesh> {
   const { settlements } = clear;
+  /** Which tile each run of vertices stands on, for the fog. */
+  const runs: { tile: TileId; start: number; end: number }[] = [];
+  let runTile: TileId | null = null;
+  let runStart = 0;
+  /** Starts a new run of vertices belonging to `tile`. */
+  const standOn = (tile: TileId) => {
+    if (runTile !== null && m.vertexCount > runStart) runs.push({ tile: runTile, start: runStart, end: m.vertexCount });
+    runTile = tile;
+    runStart = m.vertexCount;
+  };
   // A peak that would stand in a clearing is still worked out (into a builder
   // that's thrown away), so the rest of its tile's random layout doesn't shift.
   const discard = new MeshBuilder();
@@ -354,6 +392,7 @@ export function buildMountains(
     const rand = sequence(`peaks:${id}`);
     const c = topology.tileCenter(id);
     const top = heightOf(id);
+    standOn(id);
 
     if (!settlements.has(id)) {
       // The main peak, behind the centre.
@@ -395,12 +434,30 @@ export function buildMountains(
         const px = x + between(ridgeRand, -2, 2);
         const pz = z + between(ridgeRand, -2, 2);
         const r = between(ridgeRand, 7, 9.5);
+        // A ridge peak belongs to the tile it stands nearer, for the fog.
+        standOn(t <= 0.5 ? id : n);
         peak(into(px, pz, r), ridgeRand, px, Math.min(heightOf(id), heightOf(n)), pz, r, h);
       }
     }
   }
 
-  return new THREE.Mesh(m.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  standOn("");
+  const mesh = new THREE.Mesh(m.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  const colors = mesh.geometry.getAttribute("color") as THREE.BufferAttribute;
+  const base = Float32Array.from(colors.array as Float32Array);
+  return {
+    object: mesh,
+    fog(washOf) {
+      const out = colors.array as Float32Array;
+      for (const { tile, start, end } of runs) {
+        const w = washOf(tile);
+        for (let v = start * 3; v < end * 3; v += 3) {
+          for (let k = 0; k < 3; k++) out[v + k] = w ? base[v + k] * (1 - w[3]) + w[k] * w[3] : base[v + k];
+        }
+      }
+      colors.needsUpdate = true;
+    },
+  };
 }
 
 // ---- Ground details: hills, fields, dunes --------------------------------------------

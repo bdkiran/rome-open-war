@@ -3,7 +3,7 @@ import type { TerrainType } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { MapTopology, Point, TileId } from "@/map/topology.js";
 import { TERRAIN_COLORS } from "@/render/colors.js";
-import { buildGroundDetails, buildMountains, buildTrees, tintGroundDetails, type Clearing, type GroundDetails } from "@/render/three/scenery.js";
+import { buildGroundDetails, buildMountains, buildTrees, tintGroundDetails, type Clearing, type Fogged, type GroundDetails, type TileWash } from "@/render/three/scenery.js";
 
 /** How high each kind of ground stands, in world units (a hex is 64 across). */
 export const TERRAIN_HEIGHT: Record<TerrainType, number> = {
@@ -58,6 +58,9 @@ export class Terrain3D {
   /** Hills, fields and dunes, tinted with the overlay; and the overlay's last colours, to tint them again after a rebuild. */
   private details: GroundDetails | null = null;
   private overlayColorOf: ((tile: TileId) => readonly [number, number, number, number] | null) | null = null;
+  /** Trees and peaks, which take the fog (not the territory colours); and the fog's last colours. */
+  private fogged: Fogged<THREE.Object3D>[] = [];
+  private fogOf: TileWash | null = null;
 
   /** The layer over the hex tops, recoloured per tile. */
   private readonly overlay: THREE.Mesh;
@@ -101,11 +104,9 @@ export class Terrain3D {
     const clear = { settlements, spots };
     this.details = buildGroundDetails(this.topology, this.tiles, heightOf, clear);
     if (this.overlayColorOf) tintGroundDetails(this.details, this.overlayColorOf);
-    this.scenery.add(
-      buildTrees(this.topology, this.tiles, heightOf, clear),
-      buildMountains(this.topology, this.tiles, heightOf, clear),
-      this.details.mesh,
-    );
+    this.fogged = [buildTrees(this.topology, this.tiles, heightOf, clear), buildMountains(this.topology, this.tiles, heightOf, clear)];
+    if (this.fogOf) for (const f of this.fogged) f.fog(this.fogOf);
+    this.scenery.add(...this.fogged.map((f) => f.object), this.details.mesh);
   }
 
   /** Height of a tile's top. */
@@ -134,6 +135,16 @@ export class Terrain3D {
    * Colours the layer over the hex tops: `colorOf` returns [r, g, b, a] for a
    * tile (0 to 1), or null to leave it clear.
    */
+  /**
+   * Darkens the trees and peaks on each tile by `fogOf`: the fog of war's
+   * colour over a tile, or null where it's in sight. (The ground and its
+   * hills, fields and dunes take the fog through paintOverlay.)
+   */
+  paintFog(fogOf: TileWash): void {
+    this.fogOf = fogOf;
+    for (const f of this.fogged) f.fog(fogOf);
+  }
+
   paintOverlay(colorOf: (tile: TileId) => readonly [number, number, number, number] | null): void {
     this.overlayColorOf = colorOf;
     if (this.details) tintGroundDetails(this.details, colorOf);

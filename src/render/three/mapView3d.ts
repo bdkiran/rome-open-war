@@ -155,6 +155,7 @@ export class MapView3D {
     this.seen.overlay = key;
 
     const colors = new Map(state.factions.map((f) => [f.id, rgb(f.color)]));
+    this.terrain.paintFog((tile) => (view.visible && !view.visible.has(tile) ? FOG : null));
     this.terrain.paintOverlay((tile) => {
       let c: Rgba | null = null;
       // Worked land in full colour; the rest of the city's region fainter, so the gaps don't show.
