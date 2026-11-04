@@ -362,7 +362,7 @@ function recruitmentTab(input: InfoPanelInput, city: City): string {
       <button type="button" class="unit-box" data-train="${unit}" data-tier="${tier}" ${check.ok ? "" : "disabled"}
         title="${escapeHtml(check.ok ? `Queue a regiment of ${name}: ${cost.gold} gold, ${cost.population} people, upkeep ${formatUpkeep(upkeepFor(unit, regimentSize(unit), tier))} a turn. ${stats}${drilled}` : check.reason)}">
         ${tierMark(tier)}
-        ${figureSvg(unit, color)}
+        ${figureSvg(unit, color, tier)}
         <span class="unit-name">${escapeHtml(name)}</span>
         <span class="unit-stat">${regimentSize(unit)} soldiers</span>
         <span class="unit-stat">${formatNumber(cost.gold)} gold</span>
@@ -472,7 +472,7 @@ function recruitQueue(city: City, color: string): string {
     const label = order.kind === "train" ? name : `+${order.soldiers} ${name}`;
     return `
       <div class="queue-entry" title="${escapeHtml(`${order.kind === "train" ? "Training" : "Retraining"} ${name}: ${formatNumber(order.cost)} gold. Cancel to refund it.`)}">
-        ${figureSvg(order.unit, color)}
+        ${figureSvg(order.unit, color, order.kind === "train" ? order.tier : 1)}
         <span class="queue-entry-name">${escapeHtml(label)}</span>
         <span class="reg-status">${escapeHtml(when)}</span>
         <button type="button" class="queue-cancel" data-cancel-recruit="${index}" aria-label="Cancel ${escapeHtml(label)}">&times;</button>
