@@ -383,15 +383,17 @@ function townGeometry(look: TownLook): THREE.BufferGeometry {
 // ---- Siege works -------------------------------------------------------------------
 
 /** How far out the siege works stand (model units), just past the town's base. */
-const SIEGE_RINGS = [29.5, 31.2];
+const SIEGE_RINGS = [30.5];
 /** Stakes around each ring. */
-const STAKES_PER_RING = 84;
+const STAKES_PER_RING = 30;
+/** How big each stake is: about 9 tall, leaning in. */
+const STAKE_SIZE = 2;
 
 const siegeBuilt = new Map<string, THREE.BufferGeometry>();
 
 /**
- * The works around a besieged city: two staggered rows of sharpened stakes
- * leaning in toward it, three pennants in the besieger's colour, and a faint
+ * The works around a besieged city: a ring of big sharpened stakes leaning
+ * in toward it, three pennants in the besieger's colour, and a faint
  * ring on the ground in that colour. In the city's model units.
  */
 export function buildSiegeWorks(color: string, seed: number): THREE.Group {
@@ -404,7 +406,7 @@ export function buildSiegeWorks(color: string, seed: number): THREE.Group {
   const group = new THREE.Group();
   group.add(new THREE.Mesh(geometry, material));
   const ring = new THREE.Mesh(
-    new THREE.RingGeometry(SIEGE_RINGS[0] - 1, SIEGE_RINGS[1] + 1, 48),
+    new THREE.RingGeometry(SIEGE_RINGS[0] - 1.5, SIEGE_RINGS[0] + 1.5, 48),
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false }),
   );
   ring.rotation.x = -Math.PI / 2;
@@ -417,16 +419,15 @@ function siegeGeometry(color: string, seed: number): THREE.BufferGeometry {
   const b = new Builder(sequence(`siege:${seed}`));
   SIEGE_RINGS.forEach((radius, row) => {
     for (let i = 0; i < STAKES_PER_RING; i++) {
-      if (b.rand() < 0.12) continue; // a few gaps, so it reads as hand-built
-      const a = ((i + row * 0.5) / STAKES_PER_RING) * Math.PI * 2 + between(b.rand, -0.02, 0.02);
-      stake(b, Math.sin(a) * radius, Math.cos(a) * radius, between(b.rand, 0.85, 1.15));
+      const a = ((i + row * 0.5) / STAKES_PER_RING) * Math.PI * 2 + between(b.rand, -0.04, 0.04);
+      stake(b, Math.sin(a) * radius, Math.cos(a) * radius, STAKE_SIZE * between(b.rand, 0.85, 1.1));
     }
   });
   // Pennants on poles, in the besieger's colour.
   const cloth = new THREE.Color(color);
   for (const a of [0.35, 2.45, 4.55]) {
-    const x = Math.sin(a) * (SIEGE_RINGS[1] + 1.5);
-    const z = Math.cos(a) * (SIEGE_RINGS[1] + 1.5);
+    const x = Math.sin(a) * (SIEGE_RINGS[0] + 2.5);
+    const z = Math.cos(a) * (SIEGE_RINGS[0] + 2.5);
     b.prism(polygon(x, z, 0.35, 5), 0, 11, DARK_WOOD);
     b.face([[x, 11, z], [x + 4.5, 9.8, z], [x, 8.6, z]], cloth, [x + 1.5, 9.8, z - 1]);
     b.face([[x, 11, z], [x + 4.5, 9.8, z], [x, 8.6, z]], cloth, [x + 1.5, 9.8, z + 1]);
