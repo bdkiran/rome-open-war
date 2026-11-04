@@ -10,8 +10,9 @@ import { isSpent } from "@/systems/armies.js";
 import { regionOwner } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, siegeRing, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
+import { buildSiegeWorks } from "@/render/three/town.js";
 
 /** Walking pace, in strides per second. */
 const WALK_SPEED = 2.4;
@@ -274,7 +275,7 @@ export class MapView3D {
           this.library,
         ),
       );
-      if (besieger) group.add(siegeRing(besieger));
+      if (besieger) group.add(buildSiegeWorks(besieger, hash(city.id)));
       group.position.copy(this.terrain.top(city.tile));
       group.scale.setScalar(CITY_SCALE);
       this.scene.add(group);
@@ -363,6 +364,8 @@ export class MapView3D {
     const cityTiles = new Set(Object.values(state.cities).map((c) => c.tile));
     const shown = new Set<string>();
     let animating = false;
+    // Cities under siege, by tile and besieger: an army next to one its faction besieges is attacking it.
+    const sieges = Object.values(state.cities).filter((c) => c.besiegedBy !== null);
 
     for (const army of Object.values(state.armies)) {
       const mine = army.owner === view.activeFaction;
@@ -418,7 +421,15 @@ export class MapView3D {
         entry.figure.animate(done ? 0 : Math.sin((time * WALK_SPEED + hash(army.id)) * Math.PI * 2), delta);
       } else {
         entry.position.copy(target);
-        entry.figure.animate(0, delta);
+        const besieged = sieges.find((c) => c.besiegedBy === army.owner && this.topology.neighbors(army.tile).includes(c.tile));
+        if (besieged) {
+          // Face the city it's besieging.
+          const city = this.terrain.top(besieged.tile);
+          object.rotation.y = Math.atan2(city.x - entry.position.x, city.z - entry.position.z);
+        } else {
+          object.rotation.y = 0; // facing the camera, as after any march
+        }
+        entry.figure.animate(0, delta, besieged !== undefined);
       }
       object.position.copy(entry.position);
       // A garrison standing in its own city is shown by the city's banner, not a figure.

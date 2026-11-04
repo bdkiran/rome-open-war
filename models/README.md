@@ -28,6 +28,9 @@ Every entry is optional; anything not listed keeps the built-in model.
   name contains `walk`, it plays while the army is moving from tile to tile;
   one whose name contains `idle` plays while it stands. Without an idle clip
   a standing army holds the model's rest pose.
+- **Besieging.** An army besieging a city next to it faces the city and
+  plays a clip whose name contains `ready` (falling back to `idle`), with a
+  clip whose name contains `attack` played once every few seconds.
 - **Facing.** The army model should face +Z (towards the camera when
   standing); it's turned to face the way it walks.
 - **Culture kits.** Nodes named `kit_<culture>_<part>` (for example
@@ -51,5 +54,6 @@ and Kenney.
   (Celtic), and shields, spears, crests, caps and the falx made from simple
   shapes in the tool. The `Armor` material becomes `FactionArmor`; shields
   (`FactionShield`) and the Hellenistic crest (`FactionCrest`) also take the
-  owner's colour. Only the `Idle` and `Walking` clips are kept. To change a
+  owner's colour. Its clips are `Idle`, `Walking`, `Ready` (the pack's
+  `Idle_swordRight`) and `Attack` (its `swordAttackJump`). To change a
   kit, edit the tool and run it again.
