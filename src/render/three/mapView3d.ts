@@ -33,6 +33,8 @@ const ARMY_SCALE = 1.4;
 const CITY_SCALE = 1.2;
 /** Watchtowers are slim, so they're drawn larger to read at campaign zoom. */
 const TOWER_SCALE = 1.9;
+/** The fog over tiles out of sight: a dark blue-grey wash, [r, g, b, opacity]. */
+const FOG: Rgba = [0.02, 0.05, 0.07, 0.6];
 /** City name plates are hidden when zoomed out further than this. */
 const LABEL_MIN_ZOOM = 0.3;
 
@@ -159,7 +161,7 @@ export class MapView3D {
       const claim = state.territory[tile];
       const region = claim?.owner ?? regionOwner(state, tile);
       if (region) c = over(c, [...colors.get(region)!, claim ? 0.24 : 0.12]);
-      if (view.visible && !view.visible.has(tile)) c = over(c, [0.02, 0.05, 0.07, 0.45]);
+      if (view.visible && !view.visible.has(tile)) c = over(c, FOG);
       if (view.reachable.has(tile)) c = over(c, [0.96, 0.93, 0.87, 0.32]);
       if (view.attackable.has(tile)) c = over(c, [0.84, 0.23, 0.17, 0.45]);
       if (tile === view.hovered) c = over(c, [1, 1, 1, 0.16]);
