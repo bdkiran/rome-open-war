@@ -1,5 +1,6 @@
 import type { Regiment } from "@/core/state.js";
 import { MAX_CITY_LEVEL } from "@/data/buildings.js";
+import { experienceLevel, MAX_EXPERIENCE_LEVEL } from "@/data/experience.js";
 import { regimentSize, TIERS, type Tier } from "@/data/units.js";
 import { formatNumber } from "@/render/format.js";
 import { figureSvg } from "@/render/figures.js";
@@ -17,11 +18,20 @@ export function regimentBox(
   return `
     <${tag} ${tag === "button" ? 'type="button"' : ""} class="reg-box${opts.dim ? " dim" : ""}" ${opts.attr} ${pressed} title="${escapeHtml(opts.title)}">
       ${tierMark(r.tier)}
+      ${experiencePips(r.experience)}
       ${figureSvg(r.unit, color)}
       <span class="reg-count">${formatNumber(r.soldiers)}</span>
       <span class="strength"><span style="width:${strength}%"></span></span>
       ${opts.status ? `<span class="reg-status">${escapeHtml(opts.status)}</span>` : ""}
     </${tag}>`;
+}
+
+/** A regiment's experience level as a row of pips, filled up to it; nothing for raw troops. */
+export function experiencePips(points: number): string {
+  const level = experienceLevel(points);
+  if (level === 0) return "";
+  const pips = Array.from({ length: MAX_EXPERIENCE_LEVEL }, (_, i) => `<span class="xp-pip${i < level ? " on" : ""}"></span>`).join("");
+  return `<span class="xp-pips" aria-label="Experience level ${level} of ${MAX_EXPERIENCE_LEVEL}">${pips}</span>`;
 }
 
 /** A small II or III in a box's corner for advanced or elite troops; nothing for basic ones. */

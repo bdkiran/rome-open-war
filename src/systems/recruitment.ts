@@ -172,6 +172,12 @@ export function processRecruitment(state: GameState, factionId: FactionId): Game
   return next;
 }
 
+/** A regiment back at full strength: its new recruits dilute its experience. */
+function retrained(regiment: Regiment): Regiment {
+  const full = regimentSize(regiment.unit);
+  return { ...regiment, soldiers: full, experience: Math.floor((regiment.experience * regiment.soldiers) / full) };
+}
+
 /** Completes every retraining order in a city's queue that it can. */
 function retrainAll(state: GameState, factionId: FactionId, cityId: CityId): GameState {
   let next = state;
@@ -203,7 +209,7 @@ function retrainAll(state: GameState, factionId: FactionId, cityId: CityId): Gam
         ...next.armies,
         [own!.id]: {
           ...own!,
-          regiments: own!.regiments.map((r) => (r.id === regiment.id ? { ...r, soldiers: regimentSize(r.unit) } : r)),
+          regiments: own!.regiments.map((r) => (r.id === regiment.id ? retrained(r) : r)),
         },
       },
     };
@@ -240,6 +246,7 @@ function trainNext(state: GameState, factionId: FactionId, cityId: CityId): Game
     unit: order.unit,
     tier,
     soldiers: regimentSize(order.unit),
+    experience: 0,
     movementLeft: 0,
     pinned: false,
   };

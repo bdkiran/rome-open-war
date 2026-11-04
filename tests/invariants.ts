@@ -1,5 +1,6 @@
 import { armiesOf, citiesOf, type GameState } from "@/core/state.js";
 import { CONSTRUCTION_QUEUE_SIZE } from "@/data/buildings.js";
+import { MAX_EXPERIENCE } from "@/data/experience.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, UNITS, regimentSize } from "@/data/units.js";
 
@@ -30,6 +31,9 @@ export function brokenRules(state: GameState): string[] {
       }
       if (!(r.soldiers > 0 && r.soldiers <= regimentSize(r.unit))) {
         broken.push(`${at}: regiment ${r.id} has ${r.soldiers} ${r.unit}`);
+      }
+      if (!Number.isInteger(r.experience) || r.experience < 0 || r.experience > MAX_EXPERIENCE) {
+        broken.push(`${at}: regiment ${r.id} has ${r.experience} experience`);
       }
       if (!(r.movementLeft >= 0 && r.movementLeft <= UNITS[r.unit].movement)) {
         broken.push(`${at}: regiment ${r.id} has ${r.movementLeft} movement`);

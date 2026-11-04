@@ -17,6 +17,7 @@ import {
 } from "@/core/state.js";
 import { BUILDING_EFFECTS } from "@/data/buildings.js";
 import { COMBAT } from "@/data/combat.js";
+import { EXPERIENCE, experienceLevel, MAX_EXPERIENCE } from "@/data/experience.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, regimentSize, TIERS, UNITS, unitStats, type Tier, type UnitStats, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
@@ -55,6 +56,8 @@ export interface Troops {
   unit: UnitType;
   soldiers: number;
   tier?: Tier;
+  /** Experience points (see data/experience.ts). None if not given. */
+  experience?: number;
 }
 
 /** Where a battle is fought: the defender's bonus, and whether attacking cavalry can charge. */
@@ -65,7 +68,7 @@ export interface Battlefield {
   openGround: boolean;
 }
 
-/** One kind of troops on a side, a unit at a tier, with its soldiers pooled: they all fight alike. */
+/** One kind of troops on a side, a unit at a tier and level, with its soldiers pooled: they all fight alike. */
 interface Kind {
   stats: UnitStats;
   /** The tier's multiplier: better-drilled troops also weather arrows better. */
@@ -79,11 +82,12 @@ function kindsOf(side: readonly Troops[]): { kinds: Kind[]; kindOf: number[] } {
   const kinds: Kind[] = [];
   const kindOf = side.map((t) => {
     const tier = t.tier ?? 1;
-    const key = `${t.unit}:${tier}`;
+    const level = experienceLevel(t.experience ?? 0);
+    const key = `${t.unit}:${tier}:${level}`;
     let i = keys.indexOf(key);
     if (i < 0) {
       i = keys.push(key) - 1;
-      kinds.push({ stats: unitStats(t.unit, tier), drill: TIERS[tier].stats, soldiers: 0 });
+      kinds.push({ stats: unitStats(t.unit, tier, level), drill: TIERS[tier].stats, soldiers: 0 });
     }
     kinds[i].soldiers += t.soldiers;
     return i;
@@ -660,7 +664,8 @@ export function attack(
     : `${possessive(defenderName)} ${describeRegiments(holding)}${helped} repelled ${possessive(attackerName)} ` +
       `${describeRegiments(fighting)}${joined} ${placeName(state, target)}, losing ${fmt(defenderLosses)}. ${flight}`;
 
-  let afterBattle = addLog({ ...routed.state, rngState: rng.state }, report, {
+  const seasoned = gainExperience(routed.state, fighting, holding, won);
+  let afterBattle = addLog({ ...seasoned, rngState: rng.state }, report, {
     kind: "battle",
     factions: [army.owner, defender.owner],
   });
@@ -695,6 +700,34 @@ export function attack(
     rounds: result.rounds,
     cityCaptured: captured,
   });
+}
+
+/**
+ * Adds experience to the regiments that fought and are still alive, winners
+ * more than losers, capped at the top level. A side learns nothing from an
+ * enemy much smaller than itself, so chasing fleeing remnants earns nothing.
+ * Takes the regiments as they went into the battle.
+ */
+function gainExperience(state: GameState, attackers: readonly Regiment[], defenders: readonly Regiment[], attackerWon: boolean): GameState {
+  const count = (side: readonly Regiment[]) => side.reduce((sum, r) => sum + r.soldiers, 0);
+  const worthy = (enemy: readonly Regiment[], own: readonly Regiment[]) => count(enemy) >= count(own) * EXPERIENCE.minEnemyShare;
+  const points = new Map<RegimentId, number>();
+  if (worthy(defenders, attackers)) for (const r of attackers) points.set(r.id, attackerWon ? EXPERIENCE.win : EXPERIENCE.loss);
+  if (worthy(attackers, defenders)) for (const r of defenders) points.set(r.id, attackerWon ? EXPERIENCE.loss : EXPERIENCE.win);
+  if (points.size === 0) return state;
+
+  const armies = { ...state.armies };
+  for (const army of Object.values(state.armies)) {
+    if (!army.regiments.some((r) => points.has(r.id))) continue;
+    armies[army.id] = {
+      ...army,
+      regiments: army.regiments.map((r) => {
+        const gained = points.get(r.id);
+        return gained ? { ...r, experience: Math.min(MAX_EXPERIENCE, r.experience + gained) } : r;
+      }),
+    };
+  }
+  return { ...state, armies };
 }
 
 const MAX_BATTLE_REPORTS = 30;

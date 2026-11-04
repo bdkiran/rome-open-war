@@ -111,11 +111,13 @@ export function mergeRegiments(state: GameState, armyId: ArmyId): GameState {
     let soldiers = group.reduce((sum, r) => sum + r.soldiers, 0);
     const movementLeft = Math.min(...group.map((r) => r.movementLeft));
     const pinned = group.some((r) => r.pinned);
+    // Their experience is shared out, weighted by soldiers.
+    const experience = Math.floor(group.reduce((sum, r) => sum + r.experience * r.soldiers, 0) / soldiers);
     // Keep the ids of the first regiments in the group; the rest are folded in.
     for (const original of group) {
       if (soldiers <= 0) break;
       const size = Math.min(regimentSize(unit), soldiers);
-      regiments.push({ ...original, soldiers: size, movementLeft, pinned });
+      regiments.push({ ...original, soldiers: size, experience, movementLeft, pinned });
       soldiers -= size;
     }
   }
