@@ -260,7 +260,8 @@ export class MapView3D {
       const holding = Object.values(state.armies).find((a) => a.tile === city.tile && a.owner === city.owner);
       const garrisoned = inSight ? holding !== undefined : true;
       const garrison = inSight && holding ? { label: formatCompact(armySoldiers(holding)), regiments: holding.regiments.length } : null;
-      const key = `${color}|${city.isCapital}|${besieger}|${city.buildings.government}|${city.buildings.walls}|${garrisoned}|${garrison?.label}|${garrison?.regiments}`;
+      const culture = getFaction(state, city.owner)?.culture ?? "roman";
+      const key = `${color}|${culture}|${city.isCapital}|${besieger}|${city.buildings.government}|${city.buildings.walls}|${garrisoned}|${garrison?.label}|${garrison?.regiments}`;
       const existing = this.cities.get(city.id);
       if (existing?.key === key) continue;
       if (existing) this.scene.remove(existing.object);
@@ -269,7 +270,7 @@ export class MapView3D {
       group.add(
         buildCity(
           color,
-          { capital: city.isCapital, level: city.buildings.government, walls: city.buildings.walls, garrisoned, garrison, seed: hash(city.id) },
+          { capital: city.isCapital, level: city.buildings.government, walls: city.buildings.walls, culture, garrisoned, garrison, seed: hash(city.id) },
           this.library,
         ),
       );

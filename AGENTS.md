@@ -69,7 +69,8 @@ src/
   map/         hex topology, sea crossings (europe/europeMapEngine.ts),
                generated terrain (europe/europeTerrain.ts: do not hand-edit)
   render/      three/ (the 3D map: mapView3d, terrain3d, scenery (trees, peaks),
-               models, camera3d),
+               models, town (cities and walls), camera3d), cityPlate.ts
+               (city name plates),
                mapView.ts (ViewState, MapCamera), input.ts, figures.ts (SVG
                unit art for panels), colors.ts, format.ts
   ui/          panels as HTML strings: infoPanel (side panel: facts + city
