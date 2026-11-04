@@ -19,7 +19,7 @@ export function regimentBox(
     <${tag} ${tag === "button" ? 'type="button"' : ""} class="reg-box${opts.dim ? " dim" : ""}" ${opts.attr} ${pressed} title="${escapeHtml(opts.title)}">
       ${tierMark(r.tier)}
       ${experiencePips(r.experience)}
-      ${figureSvg(r.unit, color)}
+      ${figureSvg(r.unit, color, r.tier)}
       <span class="reg-count">${formatNumber(r.soldiers)}</span>
       <span class="strength"><span style="width:${strength}%"></span></span>
       ${opts.status ? `<span class="reg-status">${escapeHtml(opts.status)}</span>` : ""}
