@@ -135,7 +135,8 @@ city's garrison doesn't choose its regiments: click the ones you want to
 march out.
 
 In the panels, regiments are shown as boxes with their unit type's figure and
-a strength bar: in the bottom bar's Army tab (click a box to include or leave
+a strength bar (better-trained regiments are better equipped: a mail shirt
+at Advanced, a bronze cuirass, cloak and taller crest at Elite): in the bottom bar's Army tab (click a box to include or leave
 out that regiment), and in a city's Recruitment and Retraining tabs.
 
 **Fog of war.** You see the land around your cities (3 tiles), around your
