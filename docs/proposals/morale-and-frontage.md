@@ -194,8 +194,9 @@ Walls stay as they are (+15/30/50% defense, which works like the reference's for
 **Targets:**
 
 - Cities not with their first owner and factions fallen within ±20% of the baseline.
-- Battles won by the smaller side up from about 9% to 15–25%: fresh, flanking or well-placed
-  armies beat bigger ones sometimes.
+- Battles won by the smaller side measurably up (the new compare row gives the baseline;
+  today AI attackers lose only 9% of battles): fresh, flanking or well-placed armies
+  sometimes beat bigger ones.
 - Fewer than 30% of battles are chases.
 - AI ms per action no more than 25% higher.
 
