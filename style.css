@@ -983,3 +983,16 @@ button.bar-action:hover:not(:disabled) { background: rgba(224, 181, 79, 0.18); }
   pointer-events: none;
 }
 .playback-banner[hidden] { display: none; }
+
+/* A regiment's experience level, in a row across its figure's feet (the top corners are taken) */
+.xp-pips {
+  position: absolute;
+  top: 46px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1px;
+  pointer-events: none;
+}
+.xp-pip { width: 4px; height: 4px; border-radius: 50%; background: rgba(236, 228, 208, 0.25); }
+.xp-pip.on { background: var(--brass); }

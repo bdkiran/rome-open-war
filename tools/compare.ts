@@ -42,6 +42,10 @@ interface GameMetrics {
   medianAiGold: number;
   aiSoldiers: number;
   watchtowers: number;
+  veterans: number;
+  seasoned: number;
+  topLevel: number;
+  regiments: number;
   seconds: number;
 }
 
@@ -57,6 +61,10 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "level2", label: "Cities at level 2" },
   { key: "level3", label: "Cities at level 3" },
   { key: "watchtowers", label: "Watchtowers" },
+  { key: "regiments", label: "Regiments alive" },
+  { key: "veterans", label: "Regiments at experience 1-2" },
+  { key: "seasoned", label: "Regiments at experience 3-5" },
+  { key: "topLevel", label: "Regiments at experience 6" },
   { key: "seconds", label: "Seconds per game" },
 ];
 
@@ -101,6 +109,14 @@ async function runWorker(): Promise<void> {
   const aiIds = new Set(ai.map((f) => f.id));
   const cities = Object.values(state.cities);
   const level = (n: number) => cities.filter((c) => c.buildings.government === n).length;
+  // Versions before experience have no such file or field: every regiment counts as level 0.
+  const experienceLevel: (points: number) => number = await load("src/data/experience.js").then(
+    (m) => m.experienceLevel,
+    () => () => 0,
+  );
+  const levels = Object.values(state.armies).flatMap((a) =>
+    a.regiments.map((r) => experienceLevel((r as { experience?: number }).experience ?? 0)),
+  );
   const metrics: GameMetrics = {
     seed,
     invalid: result.invalid.length,
@@ -119,6 +135,10 @@ async function runWorker(): Promise<void> {
       .reduce((n, a) => n + a.regiments.reduce((m, r) => m + r.soldiers, 0), 0),
     // Versions before watchtowers have none.
     watchtowers: Object.keys((state as { watchtowers?: object }).watchtowers ?? {}).length,
+    regiments: levels.length,
+    veterans: levels.filter((l) => l >= 1 && l <= 2).length,
+    seasoned: levels.filter((l) => l >= 3 && l <= 5).length,
+    topLevel: levels.filter((l) => l >= 6).length,
     seconds: Math.round((performance.now() - started) / 100) / 10,
   };
   process.stdout.write(JSON.stringify(metrics));

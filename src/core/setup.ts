@@ -149,6 +149,7 @@ function placeStartingArmies(state: GameState): GameState {
             unit,
             tier: 1,
             soldiers: regimentSize(unit),
+            experience: 0,
             movementLeft: UNITS[unit].movement,
             pinned: false,
           });

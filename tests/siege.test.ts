@@ -30,7 +30,7 @@ function romaBesieged(): { ctx: GameContext; state: GameState; garrison: Army; b
         owner: "carthage",
         tile: besiegerTile,
         destination: null,
-        regiments: [{ id: "besieger", unit: "spearmen", tier: 1, soldiers: regimentSize("spearmen"), movementLeft: 12, pinned: false }],
+        regiments: [{ id: "besieger", unit: "spearmen", tier: 1, soldiers: regimentSize("spearmen"), experience: 0, movementLeft: 12, pinned: false }],
       },
     },
   };
@@ -63,7 +63,7 @@ describe("a besieged garrison", () => {
     const tiles = { ...besieged.tiles };
     for (const t of [outsider, far]) tiles[t] = { ...tiles[t], terrain: "plains" as const };
     for (const t of ctx.topology.neighbors(outsider)) if (t !== roma.tile) tiles[t] = { ...tiles[t], terrain: "water" as const };
-    const reg = (id: string) => ({ id, unit: "spearmen" as const, tier: 1 as const, soldiers: regimentSize("spearmen"), movementLeft: 12, pinned: false });
+    const reg = (id: string) => ({ id, unit: "spearmen" as const, tier: 1 as const, soldiers: regimentSize("spearmen"), experience: 0, movementLeft: 12, pinned: false });
     const state = {
       ...besieged,
       tiles,
@@ -91,7 +91,7 @@ describe("the AI's siege target", () => {
     let state = createGame(ctx, map, ROMAN_WORLD);
     const roma = Object.values(state.cities).find((c) => c.name === "Roma")!;
     const camp = ctx.topology.neighbors(roma.tile).find((t) => map.tiles[t].terrain !== "water" && !armyAt(state, t))!;
-    const reg = (id: string) => ({ id, unit: "spearmen" as const, tier: 1 as const, soldiers: regimentSize("spearmen"), movementLeft: 12, pinned: false });
+    const reg = (id: string) => ({ id, unit: "spearmen" as const, tier: 1 as const, soldiers: regimentSize("spearmen"), experience: 0, movementLeft: 12, pinned: false });
     // Roma is strongly held; Carthage's army stands next to it.
     const garrison = armyAt(state, roma.tile)!;
     state = {
@@ -111,7 +111,7 @@ describe("the end of a siege", () => {
   function lastTurn() {
     const setup = romaBesieged();
     const roma = Object.values(setup.state.cities).find((c) => c.name === "Roma")!;
-    const reg = (id: string) => ({ id, unit: "spearmen" as const, tier: 3 as const, soldiers: regimentSize("spearmen"), movementLeft: 12, pinned: false });
+    const reg = (id: string) => ({ id, unit: "spearmen" as const, tier: 3 as const, soldiers: regimentSize("spearmen"), experience: 0, movementLeft: 12, pinned: false });
     const state: GameState = {
       ...setup.state,
       cities: { ...setup.state.cities, [roma.id]: { ...roma, supplies: 1 } },

@@ -85,6 +85,8 @@ export interface Regiment {
   /** Basic, advanced or elite, fixed when it's trained (see TIERS in data/units.ts). */
   tier: Tier;
   soldiers: number;
+  /** Experience points from battles survived, which set its level (see data/experience.ts). */
+  experience: number;
   /** Movement points left this turn. Refilled at the start of the owner's turn. */
   movementLeft: number;
   /**

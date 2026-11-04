@@ -29,8 +29,8 @@ function stat(n: number): string {
 }
 
 /** "Attack 3 · Armor 3" for a unit at a tier. */
-export function describeAttackArmor(unit: UnitType, tier: Tier): string {
-  const s = unitStats(unit, tier);
+export function describeAttackArmor(unit: UnitType, tier: Tier, level = 0): string {
+  const s = unitStats(unit, tier, level);
   return `Attack ${stat(s.attack)} · Armor ${stat(s.armor)}`;
 }
 

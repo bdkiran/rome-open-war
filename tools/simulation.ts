@@ -122,6 +122,7 @@ function garrisonCities(state: GameState, player: string): GameState {
         unit,
         tier: 1 as const,
         soldiers: regimentSize(unit),
+        experience: 0,
         movementLeft: 0,
         pinned: false,
       })),

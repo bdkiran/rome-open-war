@@ -330,6 +330,14 @@ in it, so a stack moves at the pace of its slowest regiment. Leave some out
 (click their boxes) to send the rest on alone, which splits the army.
 Stopping on a friendly army merges into it, if the combined stack has room.
 
+**Experience.** Regiments that survive a battle gain experience: 2 points on
+the winning side, 1 on the losing side, and none if the enemy brought under a
+quarter of your side's soldiers. At 2, 4, 8, 12, 18 and 24 points a regiment
+reaches levels 1 to 6, each adding +0.5 attack and +0.5 armor, shown as pips on
+its box. It costs nothing to keep. Arrows ignore armor, so veterans fear archers
+most. Retraining's recruits dilute experience in proportion, and merged regiments
+share theirs out by soldiers.
+
 **Merging.** Damaged regiments of the same type and tier can be merged into fuller
 ones: 120 and 140 Spearmen become 180 and 80. Full regiments are left alone.
 It's free and takes no movement, but a merged regiment moves at the pace of

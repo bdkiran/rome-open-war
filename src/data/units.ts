@@ -1,3 +1,5 @@
+import { EXPERIENCE } from "@/data/experience.js";
+
 /**
  * Unit types, each a set of battle stats (see systems/combat.ts for how a
  * battle is fought). The stats are chosen so that spearmen beat cavalry,
@@ -88,13 +90,16 @@ export interface UnitStats {
   mounted: boolean;
 }
 
-/** A unit's battle stats at a tier: the unit's own, times the tier's multiplier. */
-export function unitStats(unit: UnitType, tier: Tier): UnitStats {
+/**
+ * A unit's battle stats: its own, times the tier's multiplier, plus the flat
+ * attack and armor of its experience level.
+ */
+export function unitStats(unit: UnitType, tier: Tier, level = 0): UnitStats {
   const def = UNITS[unit];
   const k = TIERS[tier].stats;
   return {
-    attack: def.attack * k,
-    armor: def.armor * k,
+    attack: def.attack * k + level * EXPERIENCE.attackPerLevel,
+    armor: def.armor * k + level * EXPERIENCE.armorPerLevel,
     ranged: def.ranged * k,
     charge: def.charge * k,
     antiCavalry: def.antiCavalry * k,

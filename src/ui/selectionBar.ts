@@ -1,5 +1,6 @@
 import { armyAt, cityAt, getFaction, type Army, type City } from "@/core/state.js";
 import { BUILDING_ORDER, BUILDINGS } from "@/data/buildings.js";
+import { experienceLevel, MAX_EXPERIENCE_LEVEL } from "@/data/experience.js";
 import { UNITS, regimentSize, unitName } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import { describeAttackArmor, describeSpecials } from "@/render/format.js";
@@ -62,7 +63,9 @@ function armyCards(input: InfoPanelInput, army: Army): string {
       const def = UNITS[r.unit];
       const status = !mine ? "" : r.pinned ? "Held" : `${r.movementLeft}/${def.movement}`;
       const specials = describeSpecials(r.unit, r.tier);
-      const title = `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers, ${describeAttackArmor(r.unit, r.tier).toLowerCase()}${specials ? `, ${specials.toLowerCase()}` : ""}${mine ? `, ${r.movementLeft} of ${def.movement} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
+      const level = experienceLevel(r.experience);
+      const veteran = level > 0 ? `, experience level ${level} of ${MAX_EXPERIENCE_LEVEL}` : "";
+      const title = `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers${veteran}, ${describeAttackArmor(r.unit, r.tier, level).toLowerCase()}${specials ? `, ${specials.toLowerCase()}` : ""}${mine ? `, ${r.movementLeft} of ${def.movement} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
       return regimentBox(r, color, {
         status,
         title,

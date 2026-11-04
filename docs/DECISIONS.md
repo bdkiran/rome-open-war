@@ -317,6 +317,19 @@ so.
   buildings widely but still trains mostly militia (most training happens
   early, before they exist), and no city reached level 3 in 100 turns: the
   gold goes into unit buildings. That's for the military AI balancing.
+- **Experience: flat +0.5 attack and armor per level, 6 levels, every unit.**
+  The player chose flat bonuses over percentages, so veterans matter most to
+  the weakest troops. Level 6 is worth, against the same unit, militia ×2.5,
+  spearmen ×2, cavalry ×1.9, against Elite's ×1.6; yet only ×1–1.3 against
+  archers, since arrows ignore armor and tiers alone weather them (`drill`).
+  Archers gain no ranged, by choice, so their veterans only help in melee
+  (level 6 archers ×1.5–2.5 against others, ×1 against archers). A big edge
+  comes early: one level-3 spearmen regiment always beats a raw one in the
+  preview. Levels are therefore slow (2 points a win, 24 for the top), and
+  battles against under a quarter of your soldiers earn nothing, because most
+  battles are chases of fleeing remnants. In 4 seeds, 100 turns: about a
+  quarter of regiments at level 1–2, 3% at 3–5, level 6 almost never (0–1 a
+  game); median AI income −3%, battles +13%, factions fallen unchanged.
 - **One army per tile, up to 10 regiments**; stacks move at the pace of the
   slowest chosen regiment; moving part of a stack splits it.
 - **Recruitment queue** per city (6 orders), shared by training and

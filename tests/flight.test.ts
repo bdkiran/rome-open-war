@@ -30,6 +30,7 @@ function regiments(unit: UnitType, count: number, tier: Tier = 1): Regiment[] {
     unit,
     tier,
     soldiers: regimentSize(unit),
+    experience: 0,
     movementLeft: 12,
     pinned: false,
   }));
