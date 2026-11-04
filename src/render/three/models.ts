@@ -16,8 +16,12 @@ import { contrastText } from "@/render/colors.js";
 /** Something on the map that can animate. */
 export interface Figure {
   object: THREE.Object3D;
-  /** Called every frame. `stride` from -1 to 1 swings the legs while walking; 0 stands still. */
-  animate(stride: number, delta: number): void;
+  /**
+   * Called every frame. `stride` from -1 to 1 swings the legs while walking;
+   * 0 stands still. `attacking`: it's besieging a city, so a model with the
+   * clips for it stands ready and strikes now and then.
+   */
+  animate(stride: number, delta: number, attacking?: boolean): void;
 }
 
 const SKIN = "#e3c29b";
@@ -323,8 +327,8 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
 
   return {
     object: figure.object,
-    animate(stride, delta) {
-      figure.animate(stride, delta);
+    animate(stride, delta, attacking = false) {
+      figure.animate(stride, delta, attacking);
       banner.setMotion(stride !== 0 ? FLAG_MOTION.marching : resting);
       // Keep the banner square to the camera whichever way the bearer faces.
       bannerHolder.rotation.y = -figure.object.rotation.y;
@@ -507,17 +511,6 @@ export function buildScout(color: string, culture: Culture, library: ModelLibrar
   return figure;
 }
 
-/** A ring on the ground around a besieged city, in the besieger's colour. */
-export function siegeRing(color: string): THREE.Mesh {
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(30, 34, 36),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }),
-  );
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.8;
-  return ring;
-}
-
 // ---- Models from files --------------------------------------------------------
 
 /** Names of kit parts in an army model: kit_<culture>_<part>. */
@@ -531,6 +524,9 @@ function inKit(node: THREE.Object3D): boolean {
 
 /** Where the banner pole stands beside an army model from a file: behind its right shoulder. */
 const FILE_MODEL_POLE = { x: -4, z: -7 };
+
+/** How often a soldier besieging a city strikes, in seconds. */
+const STRIKE_EVERY_SECONDS = 2.8;
 
 /** How long a model from a file takes to blend between standing and walking, in seconds. */
 const FILE_MODEL_BLEND_SECONDS = 0.2;
@@ -655,31 +651,61 @@ export class ModelLibrary {
     const holder = new THREE.Group();
     holder.add(object);
 
-    // A "walk" clip plays while moving; an "idle" clip, if there is one, while standing.
-    const walkClip = model.animations.find((clip) => /walk/i.test(clip.name));
-    const idleClip = model.animations.find((clip) => /idle/i.test(clip.name));
-    const mixer = walkClip || idleClip ? new THREE.AnimationMixer(object) : null;
-    const walk = walkClip && mixer ? mixer.clipAction(walkClip) : null;
-    const idle = idleClip && mixer ? mixer.clipAction(idleClip) : null;
+    // Clips by name: "walk" while moving, "idle" while standing, and while
+    // besieging a city "ready" (weapon raised) with an "attack" now and then.
+    const find = (pattern: RegExp) => model.animations.find((clip) => pattern.test(clip.name));
+    const clips = { walk: find(/walk/i), idle: find(/idle/i), ready: find(/ready/i), attack: find(/attack/i) };
+    const mixer = Object.values(clips).some(Boolean) ? new THREE.AnimationMixer(object) : null;
+    const action = (clip: THREE.AnimationClip | undefined) => (clip && mixer ? mixer.clipAction(clip) : null);
+    const walk = action(clips.walk);
+    const idle = action(clips.idle);
+    const ready = action(clips.ready);
+    const strike = action(clips.attack);
+    if (strike) {
+      strike.setLoop(THREE.LoopOnce, 1);
+      strike.clampWhenFinished = false;
+    }
+
+    // Start each copy at a different point, so a row of armies doesn't move in step.
+    idleStagger = (idleStagger + 0.37) % 1;
+    let current: THREE.AnimationAction | null = idle;
     if (idle) {
       idle.play();
-      // Start each copy at a different point, so a row of armies doesn't breathe in step.
-      idleStagger = (idleStagger + 0.37) % 1;
-      idle.time = idleStagger * idleClip!.duration;
+      idle.time = idleStagger * idle.getClip().duration;
     }
-    let walking = false;
+    let untilStrike = STRIKE_EVERY_SECONDS * (0.4 + idleStagger);
+
+    /** Blends from one looping clip to another. */
+    const switchTo = (next: THREE.AnimationAction | null) => {
+      if (next === current) return;
+      if (next) next.reset().fadeIn(FILE_MODEL_BLEND_SECONDS).play();
+      current?.fadeOut(FILE_MODEL_BLEND_SECONDS);
+      current = next;
+    };
+    // After a strike, go back to standing ready.
+    mixer?.addEventListener("finished", (e) => {
+      if (e.action !== strike) return;
+      strike.fadeOut(FILE_MODEL_BLEND_SECONDS);
+      current?.reset().fadeIn(FILE_MODEL_BLEND_SECONDS).play();
+    });
+
     return {
       object: holder,
-      animate(stride, delta) {
+      animate(stride, delta, attacking = false) {
         if (!mixer) return;
         const moving = stride !== 0;
-        if (moving !== walking) {
-          walking = moving;
-          const from = moving ? idle : walk;
-          const to = moving ? walk : idle;
-          if (to) to.reset().play();
-          if (from && to) from.crossFadeTo(to, FILE_MODEL_BLEND_SECONDS, false);
-          else if (from) from.stop();
+        const besieging = attacking && !moving;
+        switchTo(moving ? walk : besieging ? (ready ?? idle) : idle);
+        if (strike && besieging) {
+          untilStrike -= delta;
+          if (untilStrike <= 0 && !strike.isRunning()) {
+            untilStrike = STRIKE_EVERY_SECONDS;
+            current?.fadeOut(FILE_MODEL_BLEND_SECONDS);
+            strike.reset().fadeIn(FILE_MODEL_BLEND_SECONDS).play();
+          }
+        } else if (strike?.isRunning()) {
+          strike.stop();
+          current?.reset().play();
         }
         mixer.update(delta);
       },

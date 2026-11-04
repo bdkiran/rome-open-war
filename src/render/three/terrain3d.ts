@@ -3,7 +3,7 @@ import type { TerrainType } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { MapTopology, Point, TileId } from "@/map/topology.js";
 import { TERRAIN_COLORS } from "@/render/colors.js";
-import { buildMountains, buildTrees, type Clearing } from "@/render/three/scenery.js";
+import { buildGroundDetails, buildMountains, buildTrees, tintGroundDetails, type Clearing, type Fogged, type GroundDetails, type TileWash } from "@/render/three/scenery.js";
 
 /** How high each kind of ground stands, in world units (a hex is 64 across). */
 export const TERRAIN_HEIGHT: Record<TerrainType, number> = {
@@ -14,6 +14,21 @@ export const TERRAIN_HEIGHT: Record<TerrainType, number> = {
   hills: 5,
   mountains: 11,
 };
+
+/** How far in from a land tile's edge its bevelled rim starts, and how far the rim drops toward a lower neighbour. */
+const BEVEL_WIDTH = 2.2;
+const BEVEL_DROP = 0.8;
+/** The sand along a shore, beyond the rim. */
+const BEACH_WIDTH = 4.5;
+const BEACH = new THREE.Color("#d9c79a");
+/** Sea next to land. */
+const SHALLOWS = "#4f8aa0";
+
+/** A point moved `distance` toward `target`. */
+function toward(p: Point, target: Point, distance: number): Point {
+  const d = Math.hypot(target.x - p.x, target.y - p.y) || 1;
+  return { x: p.x + ((target.x - p.x) * distance) / d, y: p.y + ((target.y - p.y) * distance) / d };
+}
 
 /** One side of a tile, and the tile across it (null at the map edge). */
 export interface Edge {
@@ -40,6 +55,12 @@ export class Terrain3D {
   /** Trees and peaks, rebuilt when the cities and towers they make room for change. */
   private readonly scenery = new THREE.Group();
   private clearingsKey: string | null = null;
+  /** Hills, fields and dunes, tinted with the overlay; and the overlay's last colours, to tint them again after a rebuild. */
+  private details: GroundDetails | null = null;
+  private overlayColorOf: ((tile: TileId) => readonly [number, number, number, number] | null) | null = null;
+  /** Trees and peaks, which take the fog (not the territory colours); and the fog's last colours. */
+  private fogged: Fogged<THREE.Object3D>[] = [];
+  private fogOf: TileWash | null = null;
 
   /** The layer over the hex tops, recoloured per tile. */
   private readonly overlay: THREE.Mesh;
@@ -81,7 +102,11 @@ export class Terrain3D {
     }
     const heightOf = (tile: TileId) => this.heightOf(tile);
     const clear = { settlements, spots };
-    this.scenery.add(buildTrees(this.topology, this.tiles, heightOf, clear), buildMountains(this.topology, this.tiles, heightOf, clear));
+    this.details = buildGroundDetails(this.topology, this.tiles, heightOf, clear);
+    if (this.overlayColorOf) tintGroundDetails(this.details, this.overlayColorOf);
+    this.fogged = [buildTrees(this.topology, this.tiles, heightOf, clear), buildMountains(this.topology, this.tiles, heightOf, clear)];
+    if (this.fogOf) for (const f of this.fogged) f.fog(this.fogOf);
+    this.scenery.add(...this.fogged.map((f) => f.object), this.details.mesh);
   }
 
   /** Height of a tile's top. */
@@ -110,7 +135,19 @@ export class Terrain3D {
    * Colours the layer over the hex tops: `colorOf` returns [r, g, b, a] for a
    * tile (0 to 1), or null to leave it clear.
    */
+  /**
+   * Darkens the trees and peaks on each tile by `fogOf`: the fog of war's
+   * colour over a tile, or null where it's in sight. (The ground and its
+   * hills, fields and dunes take the fog through paintOverlay.)
+   */
+  paintFog(fogOf: TileWash): void {
+    this.fogOf = fogOf;
+    for (const f of this.fogged) f.fog(fogOf);
+  }
+
   paintOverlay(colorOf: (tile: TileId) => readonly [number, number, number, number] | null): void {
+    this.overlayColorOf = colorOf;
+    if (this.details) tintGroundDetails(this.details, colorOf);
     const arr = this.overlayColors.array as Float32Array;
     this.ids.forEach((id, i) => {
       const c = colorOf(id) ?? [0, 0, 0, 0];
@@ -122,42 +159,78 @@ export class Terrain3D {
 
   // ---- Building ------------------------------------------------------------
 
+  /**
+   * The ground: a hex top per tile, its edges bevelled where it stands above a
+   * neighbour, and walls down to lower neighbours. Land along the sea gets a
+   * sand beach, and sea next to land is a lighter, shallow blue.
+   */
   private buildGround(): { mesh: THREE.Mesh; triangleTile: Int32Array } {
     const positions: number[] = [];
     const colors: number[] = [];
     const triangleTile: number[] = [];
-    const color = new THREE.Color();
+    let tile = 0;
+
+    /** A triangle of the ground, in the given colour, for tile `tile`. */
+    const tri = (p: readonly number[], q: readonly number[], r: readonly number[], color: THREE.Color, up = true) => {
+      // Upward faces are wound to face up; walls are given in order already.
+      if (up) {
+        const ny = (q[2] - p[2]) * (r[0] - p[0]) - (q[0] - p[0]) * (r[2] - p[2]);
+        if (ny < 0) [q, r] = [r, q];
+      }
+      positions.push(...p, ...q, ...r);
+      for (let v = 0; v < 3; v++) colors.push(color.r, color.g, color.b);
+      triangleTile.push(tile);
+    };
 
     this.ids.forEach((id, i) => {
+      tile = i;
       const terrain = this.tiles[id].terrain;
       const h = this.heights[i];
       const c = this.topology.tileCenter(id);
-      const outline = this.topology.tileOutline(id);
+      const edges = this.edges.get(id)!;
+      const isSea = (n: TileId | null) => n !== null && this.tiles[n].terrain === "water";
+      const shallows = terrain === "water" && edges.some((e) => e.neighbor && !isSea(e.neighbor));
+
       // A slight random tint per land tile keeps large areas from looking flat;
-      // the sea is one even colour so it reads as a single surface.
-      color.set(TERRAIN_COLORS[terrain]);
-      if (terrain !== "water") color.offsetHSL(0, 0, (hash(id) - 0.5) * 0.05);
-      const side = color.clone().multiplyScalar(0.72);
+      // the sea is one even colour (lighter in the shallows) so it reads as one surface.
+      const top = new THREE.Color(shallows ? SHALLOWS : TERRAIN_COLORS[terrain]);
+      if (terrain !== "water") top.offsetHSL(0, 0, (hash(id) - 0.5) * 0.05);
+      const side = top.clone().multiplyScalar(0.72);
+      const sandSide = BEACH.clone().multiplyScalar(0.72);
 
-      for (let k = 0; k < outline.length; k++) {
-        const a = outline[k];
-        const b = outline[(k + 1) % outline.length];
-        positions.push(c.x, h, c.y, b.x, h, b.y, a.x, h, a.y);
-        for (let v = 0; v < 3; v++) colors.push(color.r, color.g, color.b);
-        triangleTile.push(i);
-      }
-
-      // Walls down to any lower neighbour, or to the sea bed at the map edge.
-      for (const edge of this.edges.get(id)!) {
-        const low = edge.neighbor ? this.heights[this.index.get(edge.neighbor)!] : TERRAIN_HEIGHT.water - 4;
-        if (low >= h) continue;
-        const { a, b } = edge;
-        positions.push(a.x, h, a.y, b.x, h, b.y, b.x, low, b.y);
-        positions.push(a.x, h, a.y, b.x, low, b.y, a.x, low, a.y);
-        for (let v = 0; v < 6; v++) colors.push(side.r, side.g, side.b);
-        triangleTile.push(i, i);
+      // The sea is flat; land has an inner top and a bevelled rim.
+      const inset = terrain === "water" ? 0 : BEVEL_WIDTH;
+      for (const { a, b, neighbor } of edges) {
+        const low = neighbor ? this.heights[this.index.get(neighbor)!] : TERRAIN_HEIGHT.water - 4;
+        const ia = toward(a, c, inset);
+        const ib = toward(b, c, inset);
+        const beach = terrain !== "water" && isSea(neighbor);
+        tri([c.x, h, c.y], [ia.x, h, ia.y], [ib.x, h, ib.y], top);
+        if (inset === 0) {
+          if (low < h) wall(a, b, h, low, side);
+          continue;
+        }
+        // The rim drops a little where the ground falls away, softening the edge.
+        const drop = low < h ? BEVEL_DROP : 0;
+        const rim = beach ? BEACH : top;
+        tri([ia.x, h, ia.y], [b.x, h - drop, b.y], [a.x, h - drop, a.y], rim);
+        tri([ia.x, h, ia.y], [ib.x, h, ib.y], [b.x, h - drop, b.y], rim);
+        if (beach) {
+          // A band of sand along the shore.
+          const ba = toward(ia, c, BEACH_WIDTH);
+          const bb = toward(ib, c, BEACH_WIDTH);
+          tri([ia.x, h + 0.05, ia.y], [ib.x, h + 0.05, ib.y], [bb.x, h + 0.05, bb.y], BEACH);
+          tri([ia.x, h + 0.05, ia.y], [bb.x, h + 0.05, bb.y], [ba.x, h + 0.05, ba.y], BEACH);
+        }
+        if (low < h) wall(a, b, h - drop, low, beach ? sandSide : side);
       }
     });
+
+    /** A wall from the top edge a-b down to `low` (the lower neighbour or the sea bed). */
+    function wall(a: Point, b: Point, h: number, low: number, color: THREE.Color): void {
+      tri([a.x, h, a.y], [b.x, h, b.y], [b.x, low, b.y], color, false);
+      tri([a.x, h, a.y], [b.x, low, b.y], [a.x, low, a.y], color, false);
+    }
 
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));

@@ -7,7 +7,9 @@
  * the shield to the left forearm, the weapon to the right palm. Kit parts are
  * named `kit_<culture>_<part>`, and the game shows only the parts for an
  * army's culture (src/data/cultures.ts). Materials whose name starts with
- * `Faction` take the owner's colour. Only the Idle and Walking clips are kept.
+ * `Faction` take the owner's colour. Four clips are kept: Idle and Walking,
+ * and for an army besieging a city, Ready (weapon raised) and Attack (an
+ * overhead strike).
  *
  *   npm run army-model
  *
@@ -358,8 +360,10 @@ knight.traverse((node) => {
   mesh.material = Array.isArray(mesh.material) ? mesh.material.map(convert) : convert(mesh.material);
 });
 
-const clips = knight.animations.filter((clip) => /\|(Idle|Walking)$/.test(clip.name));
-for (const clip of clips) clip.name = clip.name.split("|")[1];
+/** The pack's clips to keep, and the names the game knows them by. */
+const CLIPS: Record<string, string> = { Idle: "Idle", Walking: "Walking", Idle_swordRight: "Ready", swordAttackJump: "Attack" };
+const clips = knight.animations.filter((clip) => clip.name.split("|")[1] in CLIPS);
+for (const clip of clips) clip.name = CLIPS[clip.name.split("|")[1]];
 
 // ---- Writing the file ------------------------------------------------------------
 

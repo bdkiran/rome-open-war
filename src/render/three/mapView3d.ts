@@ -10,8 +10,9 @@ import { isSpent } from "@/systems/armies.js";
 import { regionOwner } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, buildScout, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, siegeRing, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, buildScout, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
+import { buildSiegeWorks } from "@/render/three/town.js";
 
 /** Walking pace, in strides per second. */
 const WALK_SPEED = 2.4;
@@ -34,6 +35,8 @@ const CITY_SCALE = 1.2;
 const SCOUT_SCALE = 1.1;
 /** Watchtowers are slim, so they're drawn larger to read at campaign zoom. */
 const TOWER_SCALE = 1.9;
+/** The fog over tiles out of sight: a dark blue-grey wash, [r, g, b, opacity]. */
+const FOG: Rgba = [0.02, 0.05, 0.07, 0.6];
 /** City name plates are hidden when zoomed out further than this. */
 const LABEL_MIN_ZOOM = 0.3;
 
@@ -157,13 +160,14 @@ export class MapView3D {
     this.seen.overlay = key;
 
     const colors = new Map(state.factions.map((f) => [f.id, rgb(f.color)]));
+    this.terrain.paintFog((tile) => (view.visible && !view.visible.has(tile) ? FOG : null));
     this.terrain.paintOverlay((tile) => {
       let c: Rgba | null = null;
       // Worked land in full colour; the rest of the city's region fainter, so the gaps don't show.
       const claim = state.territory[tile];
       const region = claim?.owner ?? regionOwner(state, tile);
       if (region) c = over(c, [...colors.get(region)!, claim ? 0.24 : 0.12]);
-      if (view.visible && !view.visible.has(tile)) c = over(c, [0.02, 0.05, 0.07, 0.45]);
+      if (view.visible && !view.visible.has(tile)) c = over(c, FOG);
       if (view.reachable.has(tile)) c = over(c, [0.96, 0.93, 0.87, 0.32]);
       if (view.attackable.has(tile)) c = over(c, [0.84, 0.23, 0.17, 0.45]);
       if (tile === view.hovered) c = over(c, [1, 1, 1, 0.16]);
@@ -279,7 +283,7 @@ export class MapView3D {
           this.library,
         ),
       );
-      if (besieger) group.add(siegeRing(besieger));
+      if (besieger) group.add(buildSiegeWorks(besieger, hash(city.id)));
       group.position.copy(this.terrain.top(city.tile));
       group.scale.setScalar(CITY_SCALE);
       this.scene.add(group);
@@ -368,6 +372,8 @@ export class MapView3D {
     const cityTiles = new Set(Object.values(state.cities).map((c) => c.tile));
     const shown = new Set<string>();
     let animating = false;
+    // Cities under siege, by tile and besieger: an army next to one its faction besieges is attacking it.
+    const sieges = Object.values(state.cities).filter((c) => c.besiegedBy !== null);
 
     for (const army of Object.values(state.armies)) {
       const mine = army.owner === view.activeFaction;
@@ -423,7 +429,15 @@ export class MapView3D {
         entry.figure.animate(done ? 0 : Math.sin((time * WALK_SPEED + hash(army.id)) * Math.PI * 2), delta);
       } else {
         entry.position.copy(target);
-        entry.figure.animate(0, delta);
+        const besieged = sieges.find((c) => c.besiegedBy === army.owner && this.topology.neighbors(army.tile).includes(c.tile));
+        if (besieged) {
+          // Face the city it's besieging.
+          const city = this.terrain.top(besieged.tile);
+          object.rotation.y = Math.atan2(city.x - entry.position.x, city.z - entry.position.z);
+        } else {
+          object.rotation.y = 0; // facing the camera, as after any march
+        }
+        entry.figure.animate(0, delta, besieged !== undefined);
       }
       object.position.copy(entry.position);
       // A garrison standing in its own city is shown by the city's banner, not a figure.

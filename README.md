@@ -103,8 +103,9 @@ Either way you can close the screen to look at the map, or play again.
 ## The map
 
 The map is drawn in 3D under a tilted campaign camera. Hills and mountains
-stand above the plains, mountains carry peaks and forests trees, and the sea
-sits below the coast. Cities are towns in their owner's style (tiled Roman
+stand above the plains, mountains carry peaks and forests trees, hills roll,
+plains are patched with fields and deserts ridged with dunes, and the sea sits
+below the coast, sand beaches along the shore and lighter shallows off it. Cities are towns in their owner's style (tiled Roman
 and Greek houses, flat-roofed Punic ones, Celtic roundhouses, Thracian timber
 houses) with a banner in their owner's colours and a name plate. They gain
 houses and civic buildings with each level (a temple or hall, then a basilica
@@ -451,6 +452,10 @@ of storming the walls now:
 
 Clicking a city you're already besieging reopens the screen. A city in sight
 with no garrison is simply taken.
+
+On the map a besieged city is ringed with stakes, with pennants in the
+besieger's colours, and the besieging soldiers face it, weapons raised,
+striking now and then.
 
 A besieged city earns no gold, doesn't grow, can't train or build, and from
 the first turn suffers **attrition**: its garrison loses 5% of its soldiers
