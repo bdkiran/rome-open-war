@@ -28,6 +28,8 @@ export function createGame(ctx: GameContext, map: GameMap, scenario: Scenario): 
     watchtowers: {},
     cities: {},
     armies: {},
+    scouts: {},
+    nextScoutNumber: 1,
     nextCityNumber: 1,
     nextArmyNumber: 1,
     nextRegimentNumber: 1,

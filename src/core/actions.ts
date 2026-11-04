@@ -6,6 +6,7 @@ import {
   type FactionId,
   type GameState,
   type RegimentId,
+  type ScoutId,
 } from "@/core/state.js";
 import { TAX_RATES, type TaxRate } from "@/data/economy.js";
 import type { Tier, UnitType } from "@/data/units.js";
@@ -26,11 +27,14 @@ import { canBuild, cancelConstruction, queueConstruction } from "@/systems/build
 import {
   canRetrain,
   canTrain,
+  canTrainScout,
   cancelRecruitOrder,
   dropStrayRetraining,
   queueRetraining,
+  queueScout,
   queueTraining,
 } from "@/systems/recruitment.js";
+import { canMoveScout, dismissScout, moveScout } from "@/systems/scouts.js";
 import { canSettle, settleCity, unsettledCities } from "@/systems/conquest.js";
 import type { SettlementChoice } from "@/data/conquest.js";
 import type { BuildingType } from "@/data/buildings.js";
@@ -69,6 +73,12 @@ export type Action =
   | { type: "cancelConstruction"; cityId: CityId; index: number }
   /** Builds a watchtower on a tile of your own region, at once. */
   | { type: "buildWatchtower"; tile: TileId }
+  /** Queues a scout for training in a city. */
+  | { type: "trainScout"; cityId: CityId }
+  /** Moves a scout. */
+  | { type: "moveScout"; scoutId: ScoutId; to: TileId }
+  /** Sends a scout home for good, ending its upkeep. */
+  | { type: "dismissScout"; scoutId: ScoutId }
   /** Sets a city's tax rate. */
   | { type: "setTaxRate"; cityId: CityId; rate: TaxRate }
   /**
@@ -185,6 +195,23 @@ function perform(ctx: GameContext, state: GameState, factionId: FactionId, actio
       const check = canBuildWatchtower(state, factionId, action.tile);
       if (!check.ok) return check;
       return { ok: true, state: buildWatchtower(state, factionId, action.tile) };
+    }
+
+    case "trainScout": {
+      const check = canTrainScout(state, factionId, action.cityId);
+      if (!check.ok) return check;
+      return { ok: true, state: queueScout(state, factionId, action.cityId) };
+    }
+
+    case "moveScout": {
+      const check = canMoveScout(ctx, state, factionId, action.scoutId, action.to);
+      if (!check.ok) return check;
+      return { ok: true, state: moveScout(ctx, state, action.scoutId, action.to) };
+    }
+
+    case "dismissScout": {
+      if (state.scouts[action.scoutId]?.owner !== factionId) return { ok: false, reason: "That scout isn't yours." };
+      return { ok: true, state: dismissScout(state, action.scoutId) };
     }
 
     case "liftSiege": {

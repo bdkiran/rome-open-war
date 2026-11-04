@@ -8,6 +8,7 @@ import type { TileId } from "@/map/topology.js";
 export type FactionId = string;
 export type CityId = string;
 export type ArmyId = string;
+export type ScoutId = string;
 export type RegimentId = string;
 
 export interface Faction {
@@ -61,7 +62,8 @@ export interface City {
 /** An order in a city's recruitment queue, paid for when it was queued. */
 export type RecruitOrder =
   | { kind: "train"; unit: UnitType; tier: Tier; cost: number }
-  | { kind: "retrain"; unit: UnitType; regimentId: RegimentId; soldiers: number; cost: number };
+  | { kind: "retrain"; unit: UnitType; regimentId: RegimentId; soldiers: number; cost: number }
+  | { kind: "scout"; cost: number };
 
 export interface Construction {
   building: BuildingType;
@@ -94,6 +96,18 @@ export interface Regiment {
    * and can't move again until the owner's next turn, though it can still attack.
    */
   pinned: boolean;
+}
+
+/**
+ * A lone rider who sees far and goes anywhere. Not a regiment or an army: it
+ * never fights and blocks nothing (see systems/scouts.ts).
+ */
+export interface Scout {
+  id: ScoutId;
+  owner: FactionId;
+  tile: TileId;
+  /** Movement points left this turn. Refilled at the start of the owner's turn. */
+  movementLeft: number;
 }
 
 /** A stack of regiments on one tile. At most one army per tile. */
@@ -182,6 +196,8 @@ export interface GameState {
   watchtowers: Record<TileId, true>;
   cities: Record<CityId, City>;
   armies: Record<ArmyId, Army>;
+  scouts: Record<ScoutId, Scout>;
+  nextScoutNumber: number;
   /** Used to give each new city and army a unique id. */
   nextCityNumber: number;
   nextArmyNumber: number;

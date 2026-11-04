@@ -13,6 +13,8 @@ import { factionUpkeep, upkeepFor } from "@/systems/armies.js";
 import { cityStats, factionIncome, factionPopulation } from "@/systems/cities.js";
 import { placeName } from "@/systems/combat.js";
 import { TAX_RATES } from "@/data/economy.js";
+import { SCOUT } from "@/data/scouts.js";
+import { scoutsOf } from "@/systems/scouts.js";
 import { escapeHtml, signed } from "@/ui/html.js";
 import { outcomeFor } from "@/systems/victory.js";
 
@@ -127,6 +129,14 @@ function moneyBreakdown(state: GameState, factionId: FactionId): string {
       </tr>`;
   }).join("");
 
+  const scouts = scoutsOf(state, factionId).length;
+  const scoutRow = scouts === 0 ? "" : `
+      <tr>
+        <th scope="row">Scouts</th>
+        <td class="how">${scouts} scout${scouts === 1 ? "" : "s"}</td>
+        <td class="amount negative">−${formatNumber(scouts * SCOUT.upkeep)}</td>
+      </tr>`;
+
   const income = factionIncome(state, factionId);
   const upkeep = factionUpkeep(state, factionId);
   return `
@@ -137,7 +147,7 @@ function moneyBreakdown(state: GameState, factionId: FactionId): string {
     </table>
     <table>
       <caption>Upkeep</caption>
-      ${armies || `<tr><td colspan="3">No armies.</td></tr>`}
+      ${armies || scoutRow ? `${armies}${scoutRow}` : `<tr><td colspan="3">No armies.</td></tr>`}
       <tr class="sum"><th scope="row">Total</th><td></td><td class="amount negative">−${formatNumber(Math.round(upkeep))}</td></tr>
     </table>
     <p class="net">Each turn: ${signed(Math.round(income - upkeep))} gold</p>`;

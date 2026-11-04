@@ -492,6 +492,21 @@ export function clashBurst(color: string): { object: THREE.Object3D; update(prog
   };
 }
 
+/**
+ * A scout on the map: a lone soldier with a small pennant in his owner's
+ * colours instead of an army's numbered banner.
+ */
+export function buildScout(color: string, culture: Culture, library: ModelLibrary): Figure {
+  const figure = library.army(color, false, culture) ?? standardBearer(color, false);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 44, 5), mat("#3b2c1e"));
+  pole.position.set(8, 22, 0);
+  const pennant = new THREE.Mesh(new THREE.ConeGeometry(4, 13, 3), mat(color));
+  pennant.rotation.z = -Math.PI / 2;
+  pennant.position.set(14.5, 40, 0);
+  figure.object.add(pole, pennant);
+  return figure;
+}
+
 /** A ring on the ground around a besieged city, in the besieger's colour. */
 export function siegeRing(color: string): THREE.Mesh {
   const ring = new THREE.Mesh(

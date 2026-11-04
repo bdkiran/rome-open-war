@@ -1,6 +1,7 @@
 import { armiesOf, citiesOf, type GameState } from "@/core/state.js";
 import { CONSTRUCTION_QUEUE_SIZE } from "@/data/buildings.js";
 import { MAX_EXPERIENCE } from "@/data/experience.js";
+import { SCOUT } from "@/data/scouts.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, UNITS, regimentSize } from "@/data/units.js";
 
@@ -51,6 +52,16 @@ export function brokenRules(state: GameState): string[] {
     if (city.constructionQueue.length > CONSTRUCTION_QUEUE_SIZE) broken.push(`${at}: ${city.name}'s construction queue overflows`);
     const level = city.buildings.government;
     if (!(level >= 1 && level <= 3)) broken.push(`${at}: ${city.name} is level ${level}`);
+  }
+
+  const scoutSpots = new Set<string>();
+  for (const scout of Object.values(state.scouts)) {
+    if (!alive.has(scout.owner)) broken.push(`${at}: ${scout.id} belongs to fallen ${scout.owner}`);
+    if (!TERRAIN[state.tiles[scout.tile].terrain].passable) broken.push(`${at}: ${scout.id} stands on impassable ${scout.tile}`);
+    if (!(scout.movementLeft >= 0 && scout.movementLeft <= SCOUT.movement)) broken.push(`${at}: ${scout.id} has ${scout.movementLeft} movement`);
+    const spot = `${scout.owner}@${scout.tile}`;
+    if (scoutSpots.has(spot)) broken.push(`${at}: two of ${scout.owner}'s scouts on ${scout.tile}`);
+    scoutSpots.add(spot);
   }
 
   for (const tile of Object.keys(state.watchtowers)) {

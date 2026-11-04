@@ -10,7 +10,7 @@ import { isSpent } from "@/systems/armies.js";
 import { regionOwner } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, siegeRing, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, buildScout, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, siegeRing, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
 
 /** Walking pace, in strides per second. */
@@ -30,6 +30,8 @@ const LUNGE_REACH = 0.35;
 /** Models are drawn a little larger than life so they read at campaign zoom. */
 const ARMY_SCALE = 1.4;
 const CITY_SCALE = 1.2;
+/** A scout is drawn a little smaller than an army's figure. */
+const SCOUT_SCALE = 1.1;
 /** Watchtowers are slim, so they're drawn larger to read at campaign zoom. */
 const TOWER_SCALE = 1.9;
 /** City name plates are hidden when zoomed out further than this. */
@@ -67,6 +69,8 @@ export class MapView3D {
   /** Where each regiment was last shown, so an army split off from another walks out from it. */
   private regimentSpots = new Map<string, { tile: TileId; position: THREE.Vector3 }>();
   private readonly cities = new Map<string, { key: string; object: THREE.Object3D }>();
+  /** Scouts on the map: they walk as armies do, but stand aside so both can be seen. */
+  private readonly scouts = new Map<string, { key: string; figure: Figure; tile: TileId; position: THREE.Vector3; walk: Walk | null }>();
   /** Battle clashes playing on the map. */
   private readonly clashes: { object: THREE.Object3D; update(progress: number): void; start: number }[] = [];
   /** Watchtowers by tile, keyed by their owner's colour. */
@@ -136,6 +140,7 @@ export class MapView3D {
     this.syncCities(state, view);
     this.syncWatchtowers(state);
     this.syncArmies(state, view, time, delta);
+    this.syncScouts(state, view, time, delta);
     this.syncClashes(time);
 
     this.renderer.render(this.scene, this.camera.three);
@@ -496,7 +501,7 @@ export class MapView3D {
   /** Seconds until every walk, lunge and clash on the map has finished, as of the last frame drawn. */
   animationLeft(): number {
     let left = 0;
-    for (const walk of [...[...this.armies.values()].map((e) => e.walk), ...this.ghosts.map((g) => g.walk)]) {
+    for (const walk of [...[...this.armies.values(), ...this.scouts.values()].map((e) => e.walk), ...this.ghosts.map((g) => g.walk)]) {
       if (walk) left = Math.max(left, walk.start + walk.duration - this.lastTime);
     }
     for (const clash of this.clashes) left = Math.max(left, clash.start + CLASH_SECONDS - this.lastTime);
@@ -520,6 +525,47 @@ export class MapView3D {
     const from = entry.position.clone();
     const reach = from.clone().lerp(this.terrain.top(toward), LUNGE_REACH);
     entry.walk = { points: [from, reach, from.clone()], start: this.lastTime, duration: LUNGE_SECONDS };
+  }
+
+  /** A figure for every scout in sight, walking to where it now stands. */
+  private syncScouts(state: GameState, view: ViewState, time: number, delta: number): void {
+    const shown = new Set<string>();
+    for (const scout of Object.values(state.scouts)) {
+      const mine = scout.owner === view.activeFaction;
+      if (view.visible && !mine && !view.visible.has(scout.tile)) continue;
+      shown.add(scout.id);
+      const faction = getFaction(state, scout.owner);
+      const target = this.terrain.top(scout.tile).add(new THREE.Vector3(-20, 0, 14));
+      let entry = this.scouts.get(scout.id);
+      if (!entry) {
+        const figure = buildScout(faction?.color ?? "#888888", faction?.culture ?? "roman", this.library);
+        figure.object.scale.setScalar(SCOUT_SCALE);
+        entry = { key: scout.id, figure, tile: scout.tile, position: target.clone(), walk: null };
+        this.scouts.set(scout.id, entry);
+        this.scene.add(figure.object);
+      }
+      if (entry.tile !== scout.tile) {
+        entry.walk = this.walkBetween(entry.position, entry.tile, scout.tile, target, time, !mine);
+        entry.tile = scout.tile;
+      }
+      if (entry.walk) {
+        const done = this.stepWalk(entry, time);
+        if (done) {
+          entry.walk = null;
+          entry.figure.object.rotation.y = 0;
+        }
+        entry.figure.animate(done ? 0 : Math.sin((time * WALK_SPEED + hash(scout.id)) * Math.PI * 2), delta);
+      } else {
+        entry.position.copy(target);
+        entry.figure.animate(0, delta);
+      }
+      entry.figure.object.position.copy(entry.position);
+    }
+    for (const [id, entry] of this.scouts) {
+      if (shown.has(id)) continue;
+      this.scene.remove(entry.figure.object);
+      this.scouts.delete(id);
+    }
   }
 
   /** Moves the clashes along and removes finished ones. */

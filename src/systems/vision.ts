@@ -7,7 +7,7 @@ import { towerSighter } from "@/systems/watchtowers.js";
 
 /**
  * Every tile a faction can currently see: around its cities, armies and
- * watchtowers (or an enemy's tower one of its armies stands on), and all of
+ * scouts and watchtowers (or an enemy's tower one of its armies stands on), and all of
  * its own territory. Everywhere else, enemy armies are hidden from it.
  * The map itself and the cities on it are always known.
  */
@@ -27,6 +27,9 @@ export function visibleTiles(ctx: GameContext, state: GameState, factionId: Fact
     const range = army.regiments.some((r) => r.unit === "cavalry") ? VISION.armyWithCavalry : VISION.army;
     add(tilesWithin(ctx.topology, army.tile, range));
   }
+  for (const scout of Object.values(state.scouts)) {
+    if (scout.owner === factionId) add(tilesWithin(ctx.topology, scout.tile, VISION.scout));
+  }
   for (const tile of Object.keys(state.watchtowers)) {
     if (towerSighter(state, tile) === factionId) add(tilesWithin(ctx.topology, tile, VISION.watchtower));
   }
@@ -34,8 +37,8 @@ export function visibleTiles(ctx: GameContext, state: GameState, factionId: Fact
 }
 
 /**
- * The game as a faction sees it: the same, except that enemy armies it can't
- * see are left out. Use it for decisions and display only. Actions are always
+ * The game as a faction sees it: the same, except that enemy armies and
+ * scouts it can't see are left out. Use it for decisions and display only. Actions are always
  * checked against the real state, so they can run into armies hidden here.
  */
 export function fogged(state: GameState, factionId: FactionId, visible: ReadonlySet<TileId>): GameState {
@@ -43,5 +46,8 @@ export function fogged(state: GameState, factionId: FactionId, visible: Readonly
   for (const [id, army] of Object.entries(state.armies)) {
     if (army.owner === factionId || visible.has(army.tile)) armies[id] = army;
   }
-  return { ...state, armies };
+  const scouts = Object.fromEntries(
+    Object.entries(state.scouts).filter(([, s]) => s.owner === factionId || visible.has(s.tile)),
+  );
+  return { ...state, armies, scouts };
 }

@@ -166,11 +166,27 @@ export function plainsTiles(state: GameState, cityId: CityId): number {
   return cityTiles(state, cityId).filter((t) => state.tiles[t].terrain === "plains").length;
 }
 
-/** Tiles claimed by a city. */
-export function cityTiles(state: GameState, cityId: CityId): TileId[] {
-  return Object.entries(state.territory)
-    .filter(([, claim]) => claim.cityId === cityId)
-    .map(([tile]) => tile);
+/**
+ * Each city's tiles, remembered for as long as the territory object lasts:
+ * city stats are read on every AI action, and scanning the whole map each
+ * time was most of an AI turn's cost. State never changes in place, so a new
+ * territory object is all it takes to start afresh.
+ */
+const tilesByCity = new WeakMap<GameState["territory"], Map<CityId, TileId[]>>();
+
+/** Tiles claimed by a city. Don't modify the list: it's shared. */
+export function cityTiles(state: GameState, cityId: CityId): readonly TileId[] {
+  let cities = tilesByCity.get(state.territory);
+  if (!cities) {
+    cities = new Map();
+    for (const [tile, claim] of Object.entries(state.territory)) {
+      const list = cities.get(claim.cityId);
+      if (list) list.push(tile);
+      else cities.set(claim.cityId, [tile]);
+    }
+    tilesByCity.set(state.territory, cities);
+  }
+  return cities.get(cityId) ?? [];
 }
 
 // ---- Population and gold ------------------------------------------------
@@ -374,6 +390,7 @@ export function eliminateIfDefeated(state: GameState, factionId: FactionId): Gam
   if (!faction || !faction.alive || citiesOf(state, factionId).length > 0) return state;
 
   const armies = Object.fromEntries(Object.entries(state.armies).filter(([, a]) => a.owner !== factionId));
-  const next = updateFaction({ ...state, armies }, factionId, (f) => ({ ...f, alive: false }));
+  const scouts = Object.fromEntries(Object.entries(state.scouts).filter(([, s]) => s.owner !== factionId));
+  const next = updateFaction({ ...state, armies, scouts }, factionId, (f) => ({ ...f, alive: false }));
   return addLog(next, `${faction.name} has fallen.`, { kind: "war", factions: [factionId], major: true });
 }
