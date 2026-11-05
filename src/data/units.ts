@@ -20,7 +20,7 @@ export interface UnitDef {
   attack: number;
   /** Divides the melee losses the unit takes. Arrows ignore it. */
   armor: number;
-  /** Losses dealt by volleys before the lines meet. Arrows ignore armor. */
+  /** Losses dealt by volleys before the lines meet, over COMBAT.arrowDivisor. Arrows ignore armor. */
   ranged: number;
   /** Added to attack in the first melee round, when attacking on open ground. */
   charge: number;
@@ -47,19 +47,19 @@ export interface UnitDef {
 export const UNITS: Record<UnitType, UnitDef> = {
   // A basic regiment costs 110 / 180 / 320 / 360 gold and about 2 / 4 / 5 / 6 gold a turn in upkeep.
   militia: {
-    name: "Militia", movement: 12, attack: 2, armor: 2, ranged: 0, charge: 0, antiCavalry: 0, mounted: false,
+    name: "Militia", movement: 12, attack: 20, armor: 20, ranged: 0, charge: 0, antiCavalry: 0, mounted: false,
     goldPerSoldier: 0.5, upkeep: 0.01, regimentSize: 220, building: null,
   },
   spearmen: {
-    name: "Spearmen", movement: 12, attack: 3, armor: 3, ranged: 0, charge: 0, antiCavalry: 6, mounted: false,
+    name: "Spearmen", movement: 12, attack: 30, armor: 30, ranged: 0, charge: 0, antiCavalry: 60, mounted: false,
     goldPerSoldier: 1, upkeep: 0.02, regimentSize: 180, building: "spearYard",
   },
   archers: {
-    name: "Archers", movement: 12, attack: 1, armor: 1, ranged: 6, charge: 0, antiCavalry: 0, mounted: false,
+    name: "Archers", movement: 12, attack: 10, armor: 10, ranged: 60, charge: 0, antiCavalry: 0, mounted: false,
     goldPerSoldier: 2, upkeep: 0.03125, regimentSize: 160, building: "archeryRange",
   },
   cavalry: {
-    name: "Cavalry", movement: 16, attack: 6, armor: 2, ranged: 0, charge: 2, antiCavalry: 0, mounted: true,
+    name: "Cavalry", movement: 16, attack: 60, armor: 20, ranged: 0, charge: 20, antiCavalry: 0, mounted: true,
     goldPerSoldier: 3, upkeep: 0.05, regimentSize: 120, building: "stables",
   },
 };

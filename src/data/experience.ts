@@ -5,8 +5,8 @@
  */
 export const EXPERIENCE = {
   /** Attack and armor each level adds, on top of the tier's multiplier. */
-  attackPerLevel: 0.5,
-  armorPerLevel: 0.5,
+  attackPerLevel: 5,
+  armorPerLevel: 5,
   /** Points needed for levels 1, 2, 3...; the last is the top level and the most a regiment can hold. */
   levels: [2, 4, 8, 12, 18, 24],
   /** Points for each surviving regiment on the side that won. */

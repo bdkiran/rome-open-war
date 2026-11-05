@@ -258,7 +258,7 @@ export function cityStats(state: GameState, city: City): CityStats {
   const levelLimit = LEVEL_POPULATION_LIMIT[city.buildings.government];
   const fedCapacity = Math.min(capacity, levelLimit);
   const base = ECONOMY.cityBaseGold;
-  const people = Math.floor(city.population / 1000) * ECONOMY.goldPer1000People;
+  const people = Math.round((city.population / 1000) * ECONOMY.goldPer1000People);
   const mine = mineable * BUILDING_EFFECTS.mineGoldPerTile[city.buildings.mine];
   const farmGold = Math.round(plains * BUILDING_EFFECTS.farmsGoldPerPlainsTile[city.buildings.farms]);
   const portGold = Math.round(city.coast * BUILDING_EFFECTS.portGoldPerSeaTile[city.buildings.port]);

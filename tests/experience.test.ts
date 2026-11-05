@@ -49,14 +49,14 @@ describe("experience levels", () => {
     assert.equal(experienceLevel(MAX_EXPERIENCE + 100), MAX_EXPERIENCE_LEVEL);
   });
 
-  it("add +0.5 attack and armor each, on top of the tier", () => {
+  it("add +5 attack and armor each, on top of the tier", () => {
     const basic = unitStats("spearmen", 1);
     const veteran = unitStats("spearmen", 1, 6);
-    assert.equal(veteran.attack, basic.attack + 3);
-    assert.equal(veteran.armor, basic.armor + 3);
+    assert.equal(veteran.attack, basic.attack + 30);
+    assert.equal(veteran.armor, basic.armor + 30);
     assert.equal(veteran.ranged, basic.ranged);
     const elite = unitStats("spearmen", 3);
-    assert.equal(unitStats("spearmen", 3, 2).attack, elite.attack + 1);
+    assert.equal(unitStats("spearmen", 3, 2).attack, elite.attack + 10);
   });
 
   it("let a veteran regiment beat a raw one of the same size", () => {

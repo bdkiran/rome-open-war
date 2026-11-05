@@ -213,7 +213,7 @@ Cities grow close to their base rate while small and slow down as they near
 capacity. A city over capacity shrinks. A city drained below 1,000 people
 (by sacking or recruiting) still grows as if it had 1,000, so it recovers.
 
-Each city adds a flat 5 gold per turn, plus 4 gold per 1,000 people, plus
+Each city adds a flat 5 gold per turn, plus 4 gold per 1,000 people (every person counts), plus
 whatever its mine, farms and port bring in (see below). The land itself pays
 nothing until a city builds on it: hills and mountains need a mine, plains
 need farms and the sea a port.
@@ -290,10 +290,10 @@ archers. Militia are big, cheap regiments of poor fighters.
 
 | Unit     | Movement | Attack | Armor | Special                  | Regiment     | Cost per regiment (basic) | Upkeep per regiment (basic) | Trained in       |
 |----------|----------|--------|-------|--------------------------|--------------|---------------------------|-----------------------------|------------------|
-| Militia  | 12       | 2      | 2     | none                     | 220 soldiers | 110 gold                  | about 2 gold a turn         | any city         |
-| Spearmen | 12       | 3      | 3     | Anti-cavalry +6          | 180 soldiers | 180 gold                  | about 4 gold a turn         | a Spear yard     |
-| Archers  | 12       | 1      | 1     | Ranged 6                 | 160 soldiers | 320 gold                  | 5 gold a turn               | an Archery range |
-| Cavalry  | 16       | 6      | 2     | Charge +2, mounted       | 120 soldiers | 360 gold                  | 6 gold a turn               | Stables          |
+| Militia  | 12       | 20     | 20    | none                     | 220 soldiers | 110 gold                  | about 2 gold a turn         | any city         |
+| Spearmen | 12       | 30     | 30    | Anti-cavalry +60         | 180 soldiers | 180 gold                  | about 4 gold a turn         | a Spear yard     |
+| Archers  | 12       | 10     | 10    | Ranged 60                | 160 soldiers | 320 gold                  | 5 gold a turn               | an Archery range |
+| Cavalry  | 16       | 60     | 20    | Charge +20, mounted      | 120 soldiers | 360 gold                  | 6 gold a turn               | Stables          |
 
 Any city can train militia. Spearmen, archers and cavalry each need their own
 building, which even a level-1 city can build. Each level of that building
@@ -352,7 +352,7 @@ Stopping on a friendly army merges into it, if the combined stack has room.
 **Experience.** Regiments that survive a battle gain experience: 2 points on
 the winning side, 1 on the losing side, and none if the enemy brought under a
 quarter of your side's soldiers. At 2, 4, 8, 12, 18 and 24 points a regiment
-reaches levels 1 to 6, each adding +0.5 attack and +0.5 armor, shown as pips on
+reaches levels 1 to 6, each adding +5 attack and +5 armor, shown as pips on
 its box. It costs nothing to keep. Arrows ignore armor, so veterans fear archers
 most. Retraining's recruits dilute experience in proportion, and merged regiments
 share theirs out by soldiers.

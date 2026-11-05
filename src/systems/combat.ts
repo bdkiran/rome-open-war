@@ -101,8 +101,9 @@ const soldiersIn = (kinds: readonly { soldiers: number }[]) => kinds.reduce((sum
 function blow(from: Kind, to: Kind, round: number, charging: boolean): number {
   if (round < COMBAT.volleys) {
     if (from.stats.ranged === 0) return 0;
-    if (!to.stats.mounted) return from.stats.ranged / to.drill;
-    return round === 0 ? (from.stats.ranged * COMBAT.rangedVsMounted) / to.drill : 0;
+    const arrows = from.stats.ranged / COMBAT.arrowDivisor / to.drill;
+    if (!to.stats.mounted) return arrows;
+    return round === 0 ? arrows * COMBAT.rangedVsMounted : 0;
   }
   let attack = from.stats.attack + (to.stats.mounted ? from.stats.antiCavalry : 0);
   if (charging && round === COMBAT.volleys) attack += from.stats.charge;

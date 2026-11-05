@@ -23,18 +23,18 @@ function trim(n: number): string {
   return n.toFixed(1).replace(/\.0$/, "");
 }
 
-/** A stat as shown to the player: at most one decimal, e.g. 3, 3.9, 4.8. */
+/** A stat as shown to the player: at most one decimal, e.g. 30, 39, 48. */
 function stat(n: number): string {
   return String(Math.round(n * 10) / 10);
 }
 
-/** "Attack 3 · Armor 3" for a unit at a tier. */
+/** "Attack 30 · Armor 30" for a unit at a tier. */
 export function describeAttackArmor(unit: UnitType, tier: Tier, level = 0): string {
   const s = unitStats(unit, tier, level);
   return `Attack ${stat(s.attack)} · Armor ${stat(s.armor)}`;
 }
 
-/** A unit's special abilities at a tier, e.g. "Anti-cavalry +6", or "" if it has none. */
+/** A unit's special abilities at a tier, e.g. "Anti-cavalry +60", or "" if it has none. */
 export function describeSpecials(unit: UnitType, tier: Tier): string {
   const s = unitStats(unit, tier);
   return [
@@ -44,7 +44,7 @@ export function describeSpecials(unit: UnitType, tier: Tier): string {
   ].filter(Boolean).join(" · ");
 }
 
-/** The same, short and in whole numbers, for a unit card: ["Atk 4 · Arm 4", "Anti-cav +8"]. */
+/** The same, short and in whole numbers, for a unit card: ["Atk 39 · Arm 39", "Anti-cav +78"]. */
 export function describeStatsShort(unit: UnitType, tier: Tier): [string, string] {
   const s = unitStats(unit, tier);
   const n = (x: number) => Math.round(x);
