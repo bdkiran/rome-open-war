@@ -21,6 +21,7 @@ To apply one:
 | [Mercenaries](mercenaries.md) | Proposed | Hire regiments at once for gold, without using people |
 | [Naval transport](naval-transport.md) | Proposed | Transports along the coast, and blockades of port cities |
 | [Battles](battles.md) | Proposed | Morale that carries over, frontage by terrain with reserves, and formation, doctrine and orders that decide the tactics (replaces battle stances) |
+| [Siege equipment](siege-equipment.md) | Proposed | Walled cities need siege works before a storm; bigger armies build faster, and more works weaken the walls |
 | [Trade routes](trade-routes.md) | Proposed | Gold from connected markets, which wars can cut |
 | [Events](events.md) | Proposed | Seeded events: plague, harvests, revolts, migrations |
 | [Victory conditions](victory-conditions.md) | Proposed | Win by key cities or by score, not only by being last standing |
