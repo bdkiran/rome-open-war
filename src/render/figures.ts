@@ -28,6 +28,7 @@ const HORSE = "#7a5232";
 const HORSE_SHADE = "#5e3d24";
 const MANE = "#2f2219";
 const STRING = "#efe6cf";
+const SCOUT_CLOAK = "#3f3529";
 const SHADOW = "rgba(0, 0, 0, 0.22)";
 
 /**
@@ -137,8 +138,37 @@ function drawFootSoldier(p: Painter, unit: "militia" | "spearmen" | "archers", c
   p.line(41, 31, 50.5, 31.5, SKIN, 3.4);
 }
 
-/** A rider on his horse; `scout` leaves off the lance, shield and crest. */
-function drawRider(p: Painter, color: string, tier: Tier, scout = false): void {
+/**
+ * A scout: a spy on foot, not a soldier. A long dark cloak with its hood up
+ * hides most of him; his tunic shows his colours down the front, one hand
+ * holds the cloak shut, and he carries no weapon.
+ */
+function drawSpy(p: Painter, color: string): void {
+  p.ellipse(32, 61.5, 13, 2.6, SHADOW);
+  // Legs and boots below the cloak
+  p.path("M27 50 L26 59 L30 59 L30.5 50 Z", LEGS, INK, 1.1);
+  p.path("M33.5 50 L34 59 L38 59 L37 50 Z", LEGS, INK, 1.1);
+  p.path("M25 58 Q25 61 28 61 L30.5 61 L30 58 Z", BOOTS, INK, 1);
+  p.path("M33.5 58 L33.5 61 L39 61 Q39.5 58 37.5 58 Z", BOOTS, INK, 1);
+  // The cloak behind him, flaring to his shins
+  p.path("M22.5 21 Q32 16.5 41.5 21 L46.5 55 Q32 58.5 17.5 55 Z", SCOUT_CLOAK, INK, 1.5);
+  // His tunic in his colours, showing where the cloak falls open
+  p.path("M28.5 23.5 L35.5 23.5 L37.5 53 L26.5 53 Z", color, INK, 1.2);
+  p.path("M32 23.5 L35.5 23.5 L37.5 53 L32.5 53 Z", shade(color, -0.2), null);
+  p.path("M27.3 40 L36.7 40 L36.9 42.6 L27.1 42.6 Z", LEATHER, INK, 0.9);
+  // The cloak's front edges, drawn over the tunic
+  p.path("M22.5 21 L29.5 23.5 L27.5 54.5 L18 55 Z", SCOUT_CLOAK, INK, 1.2);
+  p.path("M41.5 21 L34.5 23.5 L36.5 54.5 L46 55 Z", shade(SCOUT_CLOAK, -0.2), INK, 1.2);
+  // A hand holding the cloak shut
+  p.circle(34.8, 33, 2.4, SKIN, INK, 1);
+  // The hood up, his face in its shadow
+  p.circle(32, 16.5, 6, SKIN, INK, 1.3);
+  p.path("M27 17 Q32 14.2 37 17 L37 19.5 Q32 17.5 27 19.5 Z", "rgba(0, 0, 0, 0.35)", null);
+  p.path("M24.6 22.5 Q22.8 6.8 32 6.2 Q41.2 6.8 39.4 22.5 Q37.6 18 37.2 14.2 Q32 11 26.8 14.2 Q26.4 18 24.6 22.5 Z", SCOUT_CLOAK, INK, 1.3);
+}
+
+/** A rider on his horse, with a lance and a small shield. */
+function drawRider(p: Painter, color: string, tier: Tier): void {
   p.ellipse(33, 61.5, 21, 2.6, SHADOW);
   if (tier === 3) p.path("M27 18 Q18 21 13 30 L19 31 Q23 25 28.5 22 Z", shade(color, -0.38), INK, 1.1);
   // Far legs, in shade
@@ -168,15 +198,9 @@ function drawRider(p: Painter, color: string, tier: Tier, scout = false): void {
   p.circle(32.5, 10.5, 5.6, SKIN, INK, 1.3);
   p.path("M26.6 11 Q26.8 4.2 32.5 4 Q38.3 4.2 38.4 11 L36.4 11 L36 8.4 L28.8 8.4 L28.5 14 L26.6 13 Z", BRONZE, INK, 1.1);
   if (tier === 3) p.path("M26.4 5.6 Q30 -6 41 0.4 Q35.8 1.2 32.5 4 Q29.4 3.8 26.4 5.6 Z", color, INK, 1);
-  else if (!scout) p.path("M27.6 4.8 Q32.5 -1.5 38.6 2.4 Q35.5 2.4 32.5 4 Q29.8 3.8 27.6 4.8 Z", color, INK, 1);
+  else p.path("M27.6 4.8 Q32.5 -1.5 38.6 2.4 Q35.5 2.4 32.5 4 Q29.8 3.8 27.6 4.8 Z", color, INK, 1);
   // Elite horses wear a bronze face plate.
   if (tier === 3) p.path("M52 13 L57.5 17 L56.5 19 L51 16.5 Z", BRONZE, INK, 0.8);
-  if (scout) {
-    // Reins in hand, nothing else
-    p.line(36.5, 21, 44, 22, SKIN, 3.2);
-    p.line(44, 22, 51, 15, LEATHER, 0.9);
-    return;
-  }
   // A lance couched under his arm, pennon at the tip
   p.line(20, 40, 47, -1, WOOD, 2.2);
   p.path("M47 -1 L49.5 -4 L48.6 1.2 Z", IRON, INK, 0.8);
@@ -204,9 +228,9 @@ export function figureSvg(unit: UnitType, color: string, tier: Tier = 1, classNa
   return svgOf((p) => drawFigure(p, unit, color, tier), className);
 }
 
-/** A scout as an inline SVG string: a lone, lightly equipped rider (no lance, shield or crest). */
+/** A scout as an inline SVG string: a spy on foot in a long dark hooded cloak, unarmed. */
 export function scoutSvg(color: string, className = "figure"): string {
-  return svgOf((p) => drawRider(p, color, 1, true), className);
+  return svgOf((p) => drawSpy(p, color), className);
 }
 
 function svgOf(draw: (painter: Painter) => void, className: string): string {

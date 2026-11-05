@@ -37,7 +37,8 @@ Every entry is optional; anything not listed keeps the built-in model.
   `kit_roman_shield`) are shown only on armies of that culture
   (`src/data/cultures.ts`); everything else shows on every army. Kit parts
   are left out when the model is measured for size, so a long spear doesn't
-  shrink the soldier.
+  shrink the soldier. Scouts show the `kit_scout_*` parts instead of a
+  culture's (in `knight.glb`, a dark hood, mantle and cloak).
 
 Good free sources of low-poly, public-domain (CC0) models include Quaternius
 and Kenney.
