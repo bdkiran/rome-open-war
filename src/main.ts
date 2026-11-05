@@ -863,13 +863,33 @@ function queueNewBattles(state: GameState): void {
   for (const report of state.battles) {
     if (report.id <= lastBattleSeen) continue;
     if (report.attacker === humanId || report.defender === humanId) resultQueue.push(report);
+    if (report.attacker === humanId) {
+      strikeAt(state, report);
+      holdResultsForBlow();
+    }
   }
   lastBattleSeen = state.nextBattleNumber - 1;
 }
 
+/** Whether the player's own blow is still landing: its result opens after it. */
+let resultsHeld = false;
+
+/** Keeps the result shut until the player's army has walked up and struck, so the blow can be seen. */
+function holdResultsForBlow(): void {
+  if (resultsHeld) return;
+  resultsHeld = true;
+  requestRedraw();
+  void waitForFrames(() => mapView.animationLeft() <= 0)
+    .then(() => pause(RESULT_AFTER_BLOW))
+    .then(() => {
+      resultsHeld = false;
+      showNextResult();
+    });
+}
+
 /** Shows the next queued result, unless another dialog is in the way. */
 function showNextResult(): void {
-  if (!humanId || resultQueue.length === 0) return;
+  if (!humanId || resultQueue.length === 0 || resultsHeld) return;
   if (!battleResult.root.hidden || !battlePanel.root.hidden || !siegePanel.root.hidden) return;
   showBattleResult(battleResult, controller.getState(), resultQueue.shift()!, humanId);
 }
@@ -917,6 +937,8 @@ battleResult.close.addEventListener("click", closeBattleResult);
 /** How long the map holds once a step has played (ms): after a move, and after a battle, siege or city taken. */
 const HOLD_AFTER_MOVE = 80;
 const HOLD_AFTER_BATTLE = 450;
+/** How long the player's own battle result waits after their army's lunge, so the blow lands (ms). */
+const RESULT_AFTER_BLOW = 500;
 /** How long a battle's banner says who attacks whom before it gives the outcome (ms). */
 const BANNER_SWITCH = 500;
 /** A plain move lets the next step start while this much of its walk is left (s), so moves overlap. */
@@ -1068,11 +1090,16 @@ function playClash(step: AiStep): void {
   for (const battle of step.after.battles) {
     if (battle.id < step.before.nextBattleNumber || !seen(battle.tile)) continue;
     mapView.clash(battle.tile, getFaction(step.after, battle.attacker)?.color ?? "#888888");
-    for (const army of Object.values(step.after.armies)) {
-      if (army.owner === battle.attacker && topology.distance(army.tile, battle.tile) === 1) mapView.lunge(army.id, battle.tile);
-    }
+    strikeAt(step.after, battle);
   }
   requestRedraw();
+}
+
+/** The attacker's armies beside a battle, or just moved onto it, strike at it. */
+function strikeAt(state: GameState, battle: BattleReport): void {
+  for (const army of Object.values(state.armies)) {
+    if (army.owner === battle.attacker && topology.distance(army.tile, battle.tile) <= 1) mapView.lunge(army.id, battle.tile);
+  }
 }
 
 const playbackBanner = document.createElement("div");

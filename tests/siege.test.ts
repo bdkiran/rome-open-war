@@ -9,7 +9,7 @@ import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize } from "@/data/units.js";
 import { attackOptions, reachableTiles, SHUT_IN } from "@/systems/armies.js";
 import { assess } from "@/ai/assess.js";
-import { maxSupplies } from "@/systems/siege.js";
+import { besiege, maxSupplies, processSieges } from "@/systems/siege.js";
 
 /** A new game with Roma besieged by a Carthaginian army standing next to it. */
 function romaBesieged(): { ctx: GameContext; state: GameState; garrison: Army; besiegerTile: string } {
@@ -36,6 +36,38 @@ function romaBesieged(): { ctx: GameContext; state: GameState; garrison: Army; b
   };
   return { ctx, state, garrison: armyAt(state, roma.tile)!, besiegerTile };
 }
+
+describe("the wearing down of a city", () => {
+  it("starts on the first full turn of a siege, not the turn it's laid", () => {
+    const { ctx, state: fixture } = romaBesieged();
+    const roma = Object.values(fixture.cities).find((c) => c.name === "Roma")!;
+    const soldiers = (s: GameState) => armyAt(s, roma.tile)!.regiments.reduce((n, r) => n + r.soldiers, 0);
+    const start = soldiers(fixture);
+
+    const laid = besiege({ ...fixture, cities: { ...fixture.cities, [roma.id]: { ...roma, besiegedBy: null } } }, "carthage", roma.tile);
+    const first = processSieges(ctx, laid, "carthage");
+    assert.equal(soldiers(first), start, "no soldiers lost the turn it's laid");
+    assert.equal(first.cities[roma.id].population, roma.population, "nor people");
+    assert.equal(first.cities[roma.id].supplies, roma.supplies, "nor supplies");
+
+    const second = processSieges(ctx, { ...first, turn: first.turn + 1 }, "carthage");
+    assert.ok(soldiers(second) < start, "soldiers lost the next turn");
+    assert.ok(second.cities[roma.id].population < roma.population, "and people");
+    assert.equal(second.cities[roma.id].supplies, roma.supplies - 1, "and a turn of supplies");
+  });
+
+  it("lets a city hold out for as many full turns as it has supplies", () => {
+    const { ctx, state: fixture } = romaBesieged();
+    const roma = Object.values(fixture.cities).find((c) => c.name === "Roma")!;
+    let state = processSieges(ctx, besiege({ ...fixture, cities: { ...fixture.cities, [roma.id]: { ...roma, besiegedBy: null } } }, "carthage", roma.tile), "carthage");
+    for (let held = 1; held < roma.supplies; held++) {
+      state = processSieges(ctx, { ...state, turn: state.turn + 1 }, "carthage");
+      assert.equal(state.cities[roma.id].owner, "rome", `still holding after ${held} full turns`);
+    }
+    state = processSieges(ctx, { ...state, turn: state.turn + 1 }, "carthage");
+    assert.equal(state.cities[roma.id].owner, "carthage", `surrendered after ${roma.supplies} full turns`);
+  });
+});
 
 describe("a besieged garrison", () => {
   it("can't move, split off or march out", () => {

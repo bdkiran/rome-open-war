@@ -37,6 +37,8 @@ export interface City {
   supplies: number;
   /** The faction besieging this city, if any. */
   besiegedBy: FactionId | null;
+  /** The turn the siege was laid, if any: attrition starts on the next. */
+  besiegedSince: number | null;
   /**
    * Regiments to train and regiments to retrain, in order. The city completes
    * one order at the end of each of its owner's turns.

@@ -455,15 +455,15 @@ Clicking a city you're already besieging reopens the screen. A city in sight
 with no garrison is simply taken.
 
 On the map a besieged city is ringed with stakes, with pennants in the
-besieger's colours, and the besieging soldiers face it, weapons raised,
-striking now and then.
+besieger's colours, and the besieging soldiers strike once as the siege
+starts, then face it with weapons raised.
 
-A besieged city earns no gold, doesn't grow, can't train or build, and from
-the first turn suffers **attrition**: its garrison loses 5% of its soldiers
-and the city 1% of its people each turn. Every city holds supplies: 3 turns
-at level 1, 4 at level 2 and 5 at level 3, and a turn more for a capital.
-Each turn under siege uses one, and **when they run out the city
-surrenders**: its garrison is destroyed and the besieger's strongest army
+A besieged city earns no gold, doesn't grow and can't train or build. The
+turn a siege is laid costs it nothing more. From the first full turn it suffers
+**attrition**: its garrison loses 5% of its soldiers and the city 1% of its
+people each turn. Every city holds supplies: 3 turns at level 1, 4 at level 2
+and 5 at level 3, and a turn more for a capital. Each full turn under siege
+uses one, and **when they run out the city surrenders**: its garrison is destroyed and the besieger's strongest army
 next to it marches in. The siege holds as long as the besieger ends its turn
 with an army next to the city; otherwise it's lifted. It's also **broken at
 once if the besiegers lose a battle** at the city or next to it: a failed
