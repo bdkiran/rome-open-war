@@ -493,6 +493,7 @@ export class MapView3D {
       if (joined && (!view.visible || view.visible.has(joined.tile) || joined.owner === view.activeFaction)) {
         const target = this.standingPoint(joined.tile, cityTiles);
         const walk = this.walkBetween(entry.position, entry.tile, joined.tile, target, time, joined.owner !== view.activeFaction);
+        entry.figure.object.visible = true; // A garrison's figure was hidden in its city.
         this.ghosts.push({ figure: entry.figure, position: entry.position.clone(), walk, id });
       } else {
         this.scene.remove(entry.figure.object);

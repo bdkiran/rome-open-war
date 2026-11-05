@@ -32,11 +32,15 @@ export function showBattleResult(el: BattleResultElements, state: GameState, rep
         : fled
           ? `Your troops broke the army of ${enemy}, and it fled.`
           : `Your troops destroyed the army of ${enemy}: it had nowhere to flee.`
-      : fled
+      : report.cityCaptured
+        ? `Your attack was thrown back, and ${enemy} took ${escapeHtml(report.cityCaptured)}.`
+        : fled
         ? `Your attack was thrown back, and your troops fled.`
         : `Your attack was thrown back, and with nowhere to flee your troops fought to the last.`
     : playerWon
-      ? fled
+      ? report.cityCaptured
+        ? `${enemy} attacked, and your troops destroyed them and took ${escapeHtml(report.cityCaptured)}.`
+        : fled
         ? `${enemy} attacked, and your troops held and drove them off.`
         : `${enemy} attacked, and your troops held and destroyed them.`
       : report.cityCaptured

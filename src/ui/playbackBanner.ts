@@ -23,7 +23,7 @@ export function describeStep(before: GameState, after: GameState): BannerText | 
     const cityName = battle.place.startsWith("at ") ? battle.place.slice(3) : null;
     const winner = battle.attackerWon ? attacker : name(battle.defender);
     const outcome = battle.cityCaptured
-      ? `${battle.cityCaptured} falls to ${attacker}`
+      ? `${battle.cityCaptured} falls to ${winner}`
       : cityName && !battle.attackerWon
         ? `${cityName} holds`
         : `Victory for ${winner} ${battle.place}`;

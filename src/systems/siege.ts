@@ -103,7 +103,8 @@ export function breakSieges(ctx: GameContext, state: GameState, besiegerId: Fact
  * it's laid costs the city nothing. From the first full turn, each held turn
  * wears the city down a little (attrition) and uses up a turn of supplies, so
  * a city with 3 turns of supplies holds out for 3 full turns. When the
- * supplies run out, the city surrenders.
+ * supplies run out, the city surrenders. If attrition kills the last of the
+ * garrison, the besieger marches in at once.
  */
 export function processSieges(ctx: GameContext, state: GameState, besiegerId: FactionId): GameState {
   let next = state;
@@ -121,7 +122,12 @@ export function processSieges(ctx: GameContext, state: GameState, besiegerId: Fa
 
     if (city.besiegedSince === next.turn) continue;
 
+    const held = armyAt(next, city.tile) !== undefined;
     next = attrition(next, city);
+    if (held && !armyAt(next, city.tile)) {
+      next = garrisonFell(ctx, next, besiegerId, next.cities[city.id]);
+      continue;
+    }
     const worn = next.cities[city.id];
     const supplies = Math.max(0, worn.supplies - 1);
     next = setCity(next, { ...worn, supplies });
@@ -160,22 +166,54 @@ function surrender(ctx: GameContext, state: GameState, besiegerId: FactionId, ci
   const garrison = armyAt(state, city.tile);
   if (garrison && garrison.owner !== besiegerId) delete armies[garrison.id];
 
-  let next = captureCity({ ...state, armies }, city.id, besiegerId);
-
-  const near = new Set(ctx.topology.neighbors(city.tile));
-  const strongest = armiesOf(next, besiegerId)
-    .filter((a) => near.has(a.tile))
-    .sort((a, b) => armySoldiers(b) - armySoldiers(a))[0];
-  if (strongest) {
-    next = { ...next, armies: { ...next.armies, [strongest.id]: { ...strongest, tile: city.tile } } };
-  }
-
-  next = addLog(
-    next,
+  const next = addLog(
+    marchIn(ctx, { ...state, armies }, besiegerId, city),
     `${city.name} ran out of supplies and surrendered to ${name}.${garrison && garrison.owner !== besiegerId ? " Its garrison was destroyed." : ""}`,
     { kind: "siege", factions: [besiegerId, previousOwner], major: true },
   );
   return eliminateIfDefeated(next, previousOwner);
+}
+
+/** The city goes to the besieger, and its strongest army next to the city moves in. */
+function marchIn(ctx: GameContext, state: GameState, besiegerId: FactionId, city: City): GameState {
+  const next = captureCity(state, city.id, besiegerId);
+  const near = new Set(ctx.topology.neighbors(city.tile));
+  const strongest = armiesOf(next, besiegerId)
+    .filter((a) => near.has(a.tile))
+    .sort((a, b) => armySoldiers(b) - armySoldiers(a))[0];
+  if (!strongest) return next;
+  return { ...next, armies: { ...next.armies, [strongest.id]: { ...strongest, tile: city.tile } } };
+}
+
+/** A besieged city's garrison is dead: the besieger takes the city at once, before anyone else can walk in. */
+function garrisonFell(ctx: GameContext, state: GameState, besiegerId: FactionId, city: City): GameState {
+  const name = getFaction(state, besiegerId)?.shortName ?? "Unknown";
+  const next = addLog(marchIn(ctx, state, besiegerId, city), `${city.name}'s garrison fell, and ${name} marched in.`, {
+    kind: "siege",
+    factions: [besiegerId, city.owner],
+    major: true,
+  });
+  return eliminateIfDefeated(next, city.owner);
+}
+
+/**
+ * After a battle: any besieged city whose garrison died in it goes to its
+ * besieger straight away, whoever's turn it is, and the battle's report says
+ * so. `before` is the state before the battle; a city that was already empty
+ * isn't affected.
+ */
+export function takeCitiesWithFallenGarrisons(ctx: GameContext, before: GameState, after: GameState): GameState {
+  let next = after;
+  for (const city of Object.values(after.cities)) {
+    const besieger = city.besiegedBy;
+    if (!besieger || !armyAt(before, city.tile) || armyAt(after, city.tile)) continue;
+    if (!besiegerStillThere(ctx, after, besieger, city)) continue;
+    next = garrisonFell(ctx, next, besieger, city);
+    const battles = [...next.battles];
+    battles[battles.length - 1] = { ...battles[battles.length - 1], cityCaptured: city.name };
+    next = { ...next, battles };
+  }
+  return next;
 }
 
 function besiegerStillThere(ctx: GameContext, state: GameState, besiegerId: FactionId, city: City): boolean {

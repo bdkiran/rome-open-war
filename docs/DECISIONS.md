@@ -261,6 +261,10 @@ so.
   laid: the player's call, so a city showing 3 turns holds out for 3 full turns.
   Being shut in, with no gold, growth or training, still starts at once. When
   supplies run out the city surrenders and its garrison is destroyed. The old "starve then lose 25% a turn" model felt too abrupt.
+- **A besieger marches in the moment the garrison dies**, whoever's turn it is,
+  with no choice offered: there's no reason to stay outside. The empty city used
+  to wait for the besieger's next turn, and another faction could walk in and
+  take it. A faction can therefore lose its last city on its own turn.
 - **A beaten siege ends at once, and an ended siege refills the city.**
   The siege used to be checked only at the end of the besieger's turn, and
   only for an army next to the city: a storm lost on the city's last turn

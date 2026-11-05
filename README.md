@@ -469,7 +469,10 @@ uses one, and **when they run out the city surrenders**: its garrison is destroy
 next to it marches in. The siege holds as long as the besieger ends its turn
 with an army next to the city; otherwise it's lifted. It's also **broken at
 once if the besiegers lose a battle** at the city or next to it: a failed
-storm, a successful sally or a relief force beating them. However a siege
+storm, a successful sally or a relief force beating them. If the **garrison
+dies**, in a failed sally, beside a relief force or to attrition, the besieger's
+strongest army next to the city marches in at once and takes it, whoever's turn
+it is; a city taken on another's turn has its fate decided on your own. However a siege
 ends, the city's supplies are refilled at once, so another siege starts from
 full stores.
 
