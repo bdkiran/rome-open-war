@@ -23,8 +23,8 @@ The player's two rules:
 
 1. **Taking a walled city needs siege equipment, and building it takes turns.** How many
    depends on the size of the besieging army.
-2. **More equipment gives a better chance**, so there's a reason to wait and build more
-   before storming.
+2. **More equipment gives a better chance.** The odds come from the equipment, not from
+   time spent: there's a reason to build more before storming.
 
 ## Baseline (current code, seeds 1 and 2, 100 turns, passive Rome)
 
@@ -95,8 +95,9 @@ What the walls are worth as the works grow:
 | Great walls (+50%) | +20% | +10% | 0 | 0 |
 
 - The city's own +10% and the terrain bonus stay.
-- Waiting always helps until 5, but each turn costs time and gives the defender's relief
-  a chance.
+- **More works mean better odds, up to 5.** Time on its own changes nothing. A big army
+  builds full works in a turn or two; a small one needs longer, and every extra turn gives
+  the defender's relief a chance.
 
 ### The race against supplies
 
@@ -105,7 +106,7 @@ Supplies are unchanged: 3 / 4 / 5 turns by city level, +1 for a capital.
 - **A small army** (2 regiments) can't storm great walls before a level-1 city would
   surrender anyway, so it just starves it out. That's fine: it's a slow siege, not a storm.
 - **A real army** (4 or more regiments) reaches the minimum in 1–2 turns. It can storm well
-  before the supplies run out, or wait a turn or two for better works.
+  before the supplies run out, or build a point or two more for better odds.
 - That keeps storming as the main way to take a city (DECISIONS, Sieges), now with a wait
   that grows with the walls and shrinks with the army.
 
@@ -186,7 +187,7 @@ Supplies are unchanged: 3 / 4 / 5 turns by city level, +1 for a capital.
 - Cities not with their first owner and factions fallen within −25% of the baseline. Some
   slowdown is the point.
 - Walled storms happen after a median of 2–3 turns of siege, not 0–1.
-- Most walled storms happen above the minimum works, which shows the "wait for more"
+- Most walled storms happen above the minimum works, which shows the "build more"
   incentive works.
 - No more than a quarter of walled sieges are abandoned by the AI.
 
