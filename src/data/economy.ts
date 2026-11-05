@@ -4,7 +4,7 @@ export const ECONOMY = {
   startingGold: 500,
   /** Flat gold every city adds to its owner's treasury each turn. */
   cityBaseGold: 5,
-  /** Extra gold per turn for every full 1,000 people in a city. */
+  /** Extra gold per turn per 1,000 people in a city, paid for every person: 2,500 people pay 10. */
   goldPer1000People: 4,
   /**
    * A city grows at least as fast as if it had this many people, so one

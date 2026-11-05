@@ -1,11 +1,16 @@
 /** Battle numbers. See systems/combat.ts for how a battle is fought. */
 export const COMBAT = {
   /**
-   * Soldiers each soldier kills per round, per point of attack over the
-   * target's armor (or per point of ranged). Sets how many rounds a battle
+   * Soldiers each soldier kills per round, times its attack over the target's
+   * armor (or its ranged over arrowDivisor). Sets how many rounds a battle
    * lasts, not who wins.
    */
   killRate: 0.06,
+  /**
+   * Ranged is divided by this, since arrows ignore armor and so have no armor
+   * to be measured against: it's about what a line soldier's armor is worth.
+   */
+  arrowDivisor: 10,
   /** Rounds of volleys before the lines meet, when only ranged troops fight. */
   volleys: 2,
   /** Arrows count this much against mounted troops, and only in the first volley: horsemen close fast. */

@@ -349,6 +349,19 @@ so.
   battles are chases of fleeing remnants. In 4 seeds, 100 turns: about a
   quarter of regiments at level 1–2, 3% at 3–5, level 6 almost never (0–1 a
   game); median AI income −3%, battles +13%, factions fallen unchanged.
+- **Unit stats are on a scale 10 times larger** (militia 20/20, spearmen 30/30,
+  elite spearmen 48/48, +5 per experience level). Experience showed +1 was too big
+  a step at the old scale: +50% on militia, +33% on spearmen. Losses depend on
+  attack ÷ armor, so this changes no battle. Arrows ignore armor and have no such
+  ratio, so ranged goes over `COMBAT.arrowDivisor`. ×10 keeps tiers in whole
+  numbers, which ×2 and ×5 don't. On its own, in 8 seeds, every number in
+  `npm run compare` matched the old scale, ranges included. A flat bonus still
+  favours the weak, as the ratio makes it: level 6 is ×2.5 for militia, ×2 for
+  spearmen.
+- **Militia are too good for their gold (not fixed).** On equal gold they beat every
+  other unit 99–100% of the time, and 54–75% of AI regiments are militia. Doubling
+  their price (measured with +5 city gold) took them from 72% to 49% at turn 50, but
+  halved early conquest and makes the early game tighter.
 - **One army per tile, up to 10 regiments**; stacks move at the pace of the
   slowest chosen regiment; moving part of a stack splits it.
 - **Recruitment queue** per city (6 orders), shared by training and
@@ -426,6 +439,20 @@ so.
   fallen about the same; AI watchtowers fell by 60% (23 to 9), since it's usually
   saving when it would build one. Cities at level 2 by turn 50 hardly change: they
   haven't the people yet. Fewer people needed is the lever if early cities matter.
+
+- **People pay per person, not per full 1,000.** Rounding down had no recorded
+  reason, and a city earned nothing from growth until the next thousand. The player
+  chose this first, over raising flat city gold from 5 to 10. It eases early money
+  only a little. 16 seeds, master then this: AI net gold 46 / 83 / 117 to 62 / 92 /
+  128 at turns 10 / 30 / 50, buildings per city 1.5 to 1.7 at turn 30. 24 seeds, turn
+  100 (normal, then `--garrison`): AI income +16% and +20%, level-3 cities 13 to 14
+  and 12 to 14, watchtowers 9 to 12 and 8 to 12; soldiers about the same. Levers still
+  measured if it isn't enough, in 16 seeds at turns 10 / 30 / 50: flat city gold 10,
+  net 64 / 108 / 158 and 2.0 buildings per city at turn 30, with war pace unchanged;
+  first-level buildings a third cheaper, 58 / 112 / 160 and 3.0, but cities changing
+  hands by turn 50 fell from 18 to 12. Both overshot: the richest AI doubled its
+  gold. Upkeep cuts and more starting gold did little. Those were measured with the
+  old rounding.
 
 ## Economy tuning history
 
