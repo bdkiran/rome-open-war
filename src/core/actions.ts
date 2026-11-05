@@ -22,7 +22,7 @@ import {
   moveRegiments,
 } from "@/systems/armies.js";
 import { attack, canAttack } from "@/systems/combat.js";
-import { besiege, breakSieges, canBesiege, canLiftSiege, liftSiege } from "@/systems/siege.js";
+import { besiege, breakSieges, takeCitiesWithFallenGarrisons, canBesiege, canLiftSiege, liftSiege } from "@/systems/siege.js";
 import { canBuild, cancelConstruction, queueConstruction } from "@/systems/buildings.js";
 import {
   canRetrain,
@@ -144,7 +144,8 @@ function perform(ctx: GameContext, state: GameState, factionId: FactionId, actio
       if (after.nextBattleNumber === state.nextBattleNumber) return { ok: true, state: after };
       const battle = after.battles[after.battles.length - 1];
       const loser = battle.attackerWon ? battle.defender : battle.attacker;
-      return { ok: true, state: breakSieges(ctx, after, loser, battle.tile) };
+      // A garrison that died leaves its city to the besieger, there and then.
+      return { ok: true, state: takeCitiesWithFallenGarrisons(ctx, state, breakSieges(ctx, after, loser, battle.tile)) };
     }
 
     case "march": {

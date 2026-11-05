@@ -1,4 +1,4 @@
-/** Sieges: a garrison is shut in, a beaten siege ends at once, and a city restocks fully when one ends. */
+/** Sieges: a garrison is shut in, a beaten siege ends at once, a city restocks fully when one ends, and a dead garrison gives up the city. */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { applyAction } from "@/core/actions.js";
@@ -8,6 +8,7 @@ import { armyAt, type Army, type GameState } from "@/core/state.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize } from "@/data/units.js";
 import { attackOptions, reachableTiles, SHUT_IN } from "@/systems/armies.js";
+import { nextAction } from "@/ai/ai.js";
 import { assess } from "@/ai/assess.js";
 import { besiege, maxSupplies, processSieges } from "@/systems/siege.js";
 
@@ -182,5 +183,74 @@ describe("the end of a siege", () => {
     const lifted = applyAction(ctx, { ...state, currentFactionIndex: carthage }, "carthage", { type: "liftSiege", cityId: roma.id });
     assert.ok(lifted.ok);
     assert.equal(lifted.state.cities[roma.id].supplies, maxSupplies(roma));
+  });
+});
+
+describe("a garrison dying under siege", () => {
+  /** Carthage besieging Roma, whose lone militia sallies into three strong regiments and dies. */
+  function doomedSally() {
+    const setup = romaBesieged();
+    const roma = Object.values(setup.state.cities).find((c) => c.name === "Roma")!;
+    const reg = (id: string, unit: "militia" | "spearmen", tier: 1 | 3) => ({ id, unit, tier, soldiers: regimentSize(unit), experience: 0, movementLeft: 12, pinned: false });
+    const state: GameState = {
+      ...setup.state,
+      armies: {
+        ...setup.state.armies,
+        [setup.garrison.id]: { ...setup.garrison, regiments: [reg("g1", "militia", 1)] },
+        besiegers: { ...setup.state.armies.besiegers, regiments: [reg("b1", "spearmen", 3), reg("b2", "spearmen", 3), reg("b3", "spearmen", 3)] },
+      },
+    };
+    return { ...setup, roma, state };
+  }
+
+  it("hands the city to the besieger at once, on the garrison's own turn", () => {
+    const { ctx, state, roma, garrison, besiegerTile } = doomedSally();
+    const sally = applyAction(ctx, state, "rome", { type: "attack", armyId: garrison.id, regimentIds: ["g1"], target: besiegerTile });
+    assert.ok(sally.ok);
+    const city = sally.state.cities[roma.id];
+    assert.equal(city.owner, "carthage");
+    assert.equal(city.besiegedBy, null);
+    assert.equal(city.unsettled, true, "its fate is decided on the conqueror's turn");
+    assert.equal(armyAt(sally.state, roma.tile)?.id, "besiegers", "and the besiegers have moved in");
+    assert.equal(sally.state.battles[sally.state.battles.length - 1].cityCaptured, "Roma", "the battle's report says so");
+  });
+
+  it("does the same when attrition kills the last of it", () => {
+    const { ctx, state, roma, garrison } = doomedSally();
+    const few: GameState = {
+      ...state,
+      armies: { ...state.armies, [garrison.id]: { ...garrison, regiments: [{ ...garrison.regiments[0], soldiers: 1 }] } },
+    };
+    const after = processSieges(ctx, few, "carthage");
+    assert.equal(after.cities[roma.id].owner, "carthage");
+    assert.equal(armyAt(after, roma.tile)?.id, "besiegers");
+  });
+
+  it("leaves alone a besieged city that was already empty", () => {
+    const { ctx, state, roma, garrison, besiegerTile } = doomedSally();
+    const armies = { ...state.armies };
+    delete armies[garrison.id];
+    const relief = ctx.topology.neighbors(besiegerTile).find((t) => t !== roma.tile && state.tiles[t].terrain !== "water" && !armyAt(state, t))!;
+    armies.relief = { id: "relief", owner: "rome", tile: relief, destination: null, regiments: [{ id: "r1", unit: "militia", tier: 1, soldiers: regimentSize("militia"), experience: 0, movementLeft: 12, pinned: false }] };
+    const fought = applyAction(ctx, { ...state, armies }, "rome", { type: "attack", armyId: "relief", regimentIds: ["r1"], target: besiegerTile });
+    assert.ok(fought.ok);
+    assert.equal(fought.state.cities[roma.id].owner, "rome");
+  });
+
+  it("passes play on when a faction loses its last city on its own turn", () => {
+    const { ctx, state, roma, garrison, besiegerTile } = doomedSally();
+    // Roma is Rome's only city, and the AI is playing Rome.
+    const cities = Object.fromEntries(Object.entries(state.cities).map(([id, c]) => [id, c.owner === "rome" && c.id !== roma.id ? { ...c, owner: "carthage" } : c]));
+    const factions = state.factions.map((f) => (f.id === "rome" ? { ...f, controller: "ai" as const } : f));
+    const armies = Object.fromEntries(Object.entries(state.armies).filter(([id, a]) => a.owner !== "rome" || id === garrison.id));
+    const sally = applyAction(ctx, { ...state, cities, factions, armies }, "rome", { type: "attack", armyId: garrison.id, regimentIds: ["g1"], target: besiegerTile });
+    assert.ok(sally.ok);
+    assert.equal(sally.state.factions.find((f) => f.id === "rome")?.alive, false, "Rome has fallen");
+
+    const action = nextAction(ctx, sally.state, "rome");
+    assert.equal(action.type, "endTurn");
+    const ended = applyAction(ctx, sally.state, "rome", action);
+    assert.ok(ended.ok);
+    assert.notEqual(ended.state.factions[ended.state.currentFactionIndex].id, "rome");
   });
 });
