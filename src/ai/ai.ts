@@ -45,7 +45,7 @@ import { canBesiege } from "@/systems/siege.js";
 import { buildingAvailable, canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
 import { bestTier, canRetrain, canTrain, canTrainScout, trainableUnits, unitUnlocked } from "@/systems/recruitment.js";
-import type { BuildingType } from "@/data/buildings.js";
+import { BUILDING_EFFECTS, type BuildingType } from "@/data/buildings.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { costToTarget } from "@/systems/pathfinding.js";
 
@@ -514,13 +514,13 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
 
 /**
  * The order the AI builds in a city: government, market, the unit buildings
- * (spear yard, archery range, stables), a mine (only with a few hills or
+ * (spear yard, archery range, stables), a mine (only with enough hills or
  * mountains to dig), farms, a port (only with sea), walls, then roads. With
  * enemies near, walls come first. The market comes before the military
  * buildings so the economy isn't starved early.
  */
 export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boolean): BuildingType[] {
-  const mine: BuildingType[] = mineableTiles(state, cityId) >= AI.mineWorthTiles ? ["mine"] : [];
+  const mine: BuildingType[] = mineableTiles(state, cityId) >= BUILDING_EFFECTS.mineMinTiles ? ["mine"] : [];
   const port: BuildingType[] = state.cities[cityId].coast > 0 ? ["port"] : [];
   const military: BuildingType[] = ["spearYard", "archeryRange", "stables"];
   return threatened

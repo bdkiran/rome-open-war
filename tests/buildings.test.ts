@@ -25,12 +25,22 @@ function withCity(state: GameState, city: City): GameState {
 }
 
 describe("buildingAvailable", () => {
-  it("offers a mine only where there are hills or mountains to dig", () => {
+  it("offers a mine only where there are enough hills or mountains to dig", () => {
     const state = newGame();
-    const hilly = Object.values(state.cities).find((c) => mineableTiles(state, c.id) > 0)!;
+    const min = BUILDING_EFFECTS.mineMinTiles;
+    const enough = Object.values(state.cities).find((c) => mineableTiles(state, c.id) === min)!;
+    const tooFew = Object.values(state.cities).find((c) => mineableTiles(state, c.id) === min - 1)!;
     const flat = Object.values(state.cities).find((c) => mineableTiles(state, c.id) === 0)!;
-    assert.equal(buildingAvailable(state, hilly.id, "mine"), true);
+    assert.equal(buildingAvailable(state, enough.id, "mine"), true);
+    assert.equal(buildingAvailable(state, tooFew.id, "mine"), false);
     assert.equal(buildingAvailable(state, flat.id, "mine"), false);
+  });
+
+  it("refuses a mine below the minimum, whatever the gold", () => {
+    const state = newGame();
+    const tooFew = Object.values(state.cities).find((c) => mineableTiles(state, c.id) === BUILDING_EFFECTS.mineMinTiles - 1)!;
+    const rich = { ...state, factions: state.factions.map((f) => (f.id === tooFew.owner ? { ...f, gold: 10000 } : f)) };
+    assert.equal(canBuild(rich, tooFew.owner, tooFew.id, "mine").ok, false);
   });
 
   it("holds back a building's next level until the city reaches it", () => {

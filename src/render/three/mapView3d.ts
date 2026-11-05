@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { armySoldiers, getFaction, type GameState } from "@/core/state.js";
+import { armySoldiers, getFaction, type Army, type City, type CityId, type GameState } from "@/core/state.js";
 import { TERRAIN } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { MapTopology, Point, TileId } from "@/map/topology.js";
@@ -48,6 +48,8 @@ interface Walk {
   points: THREE.Vector3[];
   start: number;
   duration: number;
+  /** A lunge at the enemy: the army keeps facing this way and strikes rather than walks. */
+  lungeFacing?: number;
 }
 
 /**
@@ -65,8 +67,10 @@ export class MapView3D {
 
   private readonly armies = new Map<
     string,
-    { key: string; figure: Figure; tile: TileId; position: THREE.Vector3; walk: Walk | null }
+    { key: string; figure: Figure; tile: TileId; position: THREE.Vector3; walk: Walk | null; besieging: CityId | null; facing: { y: number; until: number } | null }
   >();
+  /** Armies due to strike at a tile, as soon as they're drawn and standing beside it. */
+  private readonly pendingBlows = new Map<string, TileId>();
   /** Armies that merged into another, walking to it before they disappear. */
   private readonly ghosts: { figure: Figure; position: THREE.Vector3; walk: Walk; id: string }[] = [];
   /** Where each regiment was last shown, so an army split off from another walks out from it. */
@@ -372,6 +376,8 @@ export class MapView3D {
     const cityTiles = new Set(Object.values(state.cities).map((c) => c.tile));
     const shown = new Set<string>();
     let animating = false;
+    // Armies that appeared or changed tile this frame: their regiments' last spots say nothing about a transfer.
+    const justPlaced = new Set<string>();
     // Cities under siege, by tile and besieger: an army next to one its faction besieges is attacking it.
     const sieges = Object.values(state.cities).filter((c) => c.besiegedBy !== null);
 
@@ -397,10 +403,13 @@ export class MapView3D {
         // A new army made of regiments we've seen elsewhere (split off from
         // another army) walks out from where they were.
         const from = this.regimentSpots.get(army.regiments[0]?.id ?? "");
+        // One already besieging when first seen doesn't strike: it's not the siege's first blow.
+        const besieging = this.besiegedBeside(army, sieges)?.id ?? null;
         entry = from && from.tile !== army.tile
-          ? { key, figure, tile: from.tile, position: from.position.clone(), walk: null }
-          : { key, figure, tile: army.tile, position: target.clone(), walk: null };
+          ? { key, figure, tile: from.tile, position: from.position.clone(), walk: null, besieging: null, facing: null }
+          : { key, figure, tile: army.tile, position: target.clone(), walk: null, besieging, facing: null };
         this.armies.set(army.id, entry);
+        justPlaced.add(army.id);
         this.scene.add(figure.object);
       } else if (entry.key !== key) {
         // Its look changed (strength, colour, spent): swap the model, keeping where it stands.
@@ -410,40 +419,67 @@ export class MapView3D {
         this.scene.add(entry.figure.object);
       }
 
-      if (entry.tile !== army.tile) {
+      const blowAt = this.pendingBlows.get(army.id);
+      if (blowAt !== undefined && !entry.walk) {
+        const distance = this.topology.distance(entry.tile, blowAt);
+        if (distance === 1) {
+          const reach = entry.position.clone().lerp(this.terrain.top(blowAt), LUNGE_REACH);
+          const facing = Math.atan2(reach.x - entry.position.x, reach.z - entry.position.z);
+          entry.walk = { points: [entry.position.clone(), reach, entry.position.clone()], start: time, duration: LUNGE_SECONDS, lungeFacing: facing };
+          entry.facing = { y: facing, until: time + (entry.figure.strike?.() ?? 0) };
+          this.pendingBlows.delete(army.id);
+        } else if (distance === 0 || entry.tile === army.tile) {
+          this.pendingBlows.delete(army.id); // nowhere to strike from
+        }
+      }
+
+      // An army that won its way onto the tile strikes first, then walks in.
+      if (entry.tile !== army.tile && entry.walk?.lungeFacing === undefined) {
         entry.walk = this.walkBetween(entry.position, entry.tile, army.tile, target, time, !mine);
         entry.tile = army.tile;
+        justPlaced.add(army.id);
       }
 
       const object = entry.figure.object;
       object.scale.setScalar(ARMY_SCALE * (cityTiles.has(army.tile) && !entry.walk ? 0.8 : 1));
       if (entry.walk) {
+        const lunging = entry.walk.lungeFacing;
         const done = this.stepWalk(entry, time);
         if (done) {
           // Arrived: face the camera again (before animate, which squares the banner to it).
+          object.rotation.y = entry.walk.lungeFacing ?? 0;
           entry.walk = null;
-          object.rotation.y = 0;
         } else {
           animating = true;
         }
-        entry.figure.animate(done ? 0 : Math.sin((time * WALK_SPEED + hash(army.id)) * Math.PI * 2), delta);
+        const walking = !done && lunging === undefined;
+        entry.figure.animate(walking ? Math.sin((time * WALK_SPEED + hash(army.id)) * Math.PI * 2) : 0, delta);
       } else {
-        entry.position.copy(target);
-        const besieged = sieges.find((c) => c.besiegedBy === army.owner && this.topology.neighbors(army.tile).includes(c.tile));
+        // Where a walk left it, until the walk to where it now stands begins.
+        if (entry.tile === army.tile) entry.position.copy(target);
+        const besieged = this.besiegedBeside(army, sieges);
         if (besieged) {
           // Face the city it's besieging.
           const city = this.terrain.top(besieged.tile);
           object.rotation.y = Math.atan2(city.x - entry.position.x, city.z - entry.position.z);
         } else {
-          object.rotation.y = 0; // facing the camera, as after any march
+          // Facing the camera, as after any march, once a blow has landed.
+          object.rotation.y = entry.facing && time < entry.facing.until ? entry.facing.y : 0;
         }
         entry.figure.animate(0, delta, besieged !== undefined);
+        // The first blow of a siege, once: the entry remembers it, as the figure is rebuilt whenever its look changes.
+        const besieging = besieged?.id ?? null;
+        if (besieging !== null && besieging !== entry.besieging) entry.figure.strike?.();
+        entry.besieging = besieging;
       }
       object.position.copy(entry.position);
       // A garrison standing in its own city is shown by the city's banner, not a figure.
       const cityHere = Object.values(state.cities).find((c) => c.tile === army.tile);
       object.visible = !(cityHere?.owner === army.owner && !entry.walk);
     }
+
+    // A blow for an army that's gone, or out of sight, is never struck.
+    for (const id of this.pendingBlows.keys()) if (!shown.has(id)) this.pendingBlows.delete(id);
 
     for (const [id, entry] of this.armies) {
       if (shown.has(id)) continue;
@@ -460,6 +496,41 @@ export class MapView3D {
         this.ghosts.push({ figure: entry.figure, position: entry.position.clone(), walk, id });
       } else {
         this.scene.remove(entry.figure.object);
+      }
+    }
+
+    // Regiments that moved from one standing army to another: the armies stay
+    // where they are, so a figure for the regiments walks across.
+    for (const army of Object.values(state.armies)) {
+      if (justPlaced.has(army.id) || !this.armies.has(army.id)) continue;
+      const movedFrom = new Map<TileId, { soldiers: number; regiments: number; position: THREE.Vector3 }>();
+      for (const r of army.regiments) {
+        const spot = this.regimentSpots.get(r.id);
+        if (!spot || spot.tile === army.tile) continue;
+        const group = movedFrom.get(spot.tile) ?? { soldiers: 0, regiments: 0, position: spot.position };
+        group.soldiers += r.soldiers;
+        group.regiments++;
+        movedFrom.set(spot.tile, group);
+      }
+      const mine = army.owner === view.activeFaction;
+      for (const [fromTile, group] of movedFrom) {
+        // If nothing's left behind the old army has gone, and the loop above already walks its figure across.
+        const leftBehind = Object.values(state.armies).some((a) => a.tile === fromTile && a.owner === army.owner);
+        if (!leftBehind || (!mine && view.visible && !view.visible.has(army.tile))) continue;
+        const id = `${army.id}:${fromTile}`;
+        const faction = getFaction(state, army.owner);
+        const figure = buildArmy({
+          color: faction?.color ?? "#888888",
+          label: formatCompact(group.soldiers),
+          regiments: group.regiments,
+          faded: false,
+          seed: hash(id),
+          culture: faction?.culture ?? "roman",
+        }, this.library);
+        figure.object.scale.setScalar(ARMY_SCALE);
+        this.scene.add(figure.object);
+        const walk = this.walkBetween(group.position, fromTile, army.tile, this.standingPoint(army.tile, cityTiles), time, !mine);
+        this.ghosts.push({ figure, position: group.position.clone(), walk, id });
       }
     }
 
@@ -485,6 +556,11 @@ export class MapView3D {
     }
     this.regimentSpots = spots;
     return animating;
+  }
+
+  /** The city this army's faction is besieging from beside it, if any. */
+  private besiegedBeside(army: Army, sieges: readonly City[]): City | undefined {
+    return sieges.find((c) => c.besiegedBy === army.owner && this.topology.neighbors(army.tile).includes(c.tile));
   }
 
   /**
@@ -518,6 +594,7 @@ export class MapView3D {
     for (const walk of [...[...this.armies.values(), ...this.scouts.values()].map((e) => e.walk), ...this.ghosts.map((g) => g.walk)]) {
       if (walk) left = Math.max(left, walk.start + walk.duration - this.lastTime);
     }
+    if (this.pendingBlows.size > 0) left = Math.max(left, LUNGE_SECONDS);
     for (const clash of this.clashes) left = Math.max(left, clash.start + CLASH_SECONDS - this.lastTime);
     return left;
   }
@@ -532,13 +609,9 @@ export class MapView3D {
     this.clashes.push({ ...burst, start: this.lastTime });
   }
 
-  /** An army lunges toward a tile and back, as it strikes. Ignored if it's walking or not shown. */
+  /** An army strikes at a tile, lunging toward it and back, once it's drawn and standing beside it. */
   lunge(armyId: string, toward: TileId): void {
-    const entry = this.armies.get(armyId);
-    if (!entry || entry.walk) return;
-    const from = entry.position.clone();
-    const reach = from.clone().lerp(this.terrain.top(toward), LUNGE_REACH);
-    entry.walk = { points: [from, reach, from.clone()], start: this.lastTime, duration: LUNGE_SECONDS };
+    this.pendingBlows.set(armyId, toward);
   }
 
   /** A figure for every scout in sight, walking to where it now stands. */
@@ -627,7 +700,8 @@ export class MapView3D {
     entry.position.lerpVectors(a, b, along - i);
     const dx = b.x - a.x;
     const dz = b.z - a.z;
-    if (dx !== 0 || dz !== 0) entry.figure.object.rotation.y = Math.atan2(dx, dz);
+    if (walk.lungeFacing !== undefined) entry.figure.object.rotation.y = walk.lungeFacing;
+    else if (dx !== 0 || dz !== 0) entry.figure.object.rotation.y = Math.atan2(dx, dz);
     return progress >= 1;
   }
 }

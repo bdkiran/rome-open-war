@@ -52,7 +52,7 @@ export function canBesiege(ctx: GameContext, state: GameState, factionId: Factio
 export function besiege(state: GameState, factionId: FactionId, cityTile: TileId): GameState {
   const city = Object.values(state.cities).find((c) => c.tile === cityTile)!;
   const name = getFaction(state, factionId)?.shortName ?? "Unknown";
-  const next = { ...state, cities: { ...state.cities, [city.id]: { ...city, besiegedBy: factionId } } };
+  const next = { ...state, cities: { ...state.cities, [city.id]: { ...city, besiegedBy: factionId, besiegedSince: state.turn } } };
   return addLog(next, `${name} laid siege to ${city.name}.`, { kind: "siege", factions: [factionId, city.owner] });
 }
 
@@ -77,7 +77,7 @@ export function liftSiege(state: GameState, factionId: FactionId, cityId: string
 function endSiege(state: GameState, cityId: string, text: string): GameState {
   const city = state.cities[cityId];
   const besieger = city.besiegedBy;
-  const next = setCity(state, { ...city, besiegedBy: null, supplies: maxSupplies(city) });
+  const next = setCity(state, { ...city, besiegedBy: null, besiegedSince: null, supplies: maxSupplies(city) });
   return addLog(next, text, { kind: "siege", factions: besieger ? [besieger, city.owner] : [city.owner] });
 }
 
@@ -99,9 +99,11 @@ export function breakSieges(ctx: GameContext, state: GameState, besiegerId: Fact
 
 /**
  * Runs at the end of the besieger's turn, for each city it's besieging. The
- * siege holds only if one of its armies is still next to the city. A held
- * siege wears the city down a little every turn (attrition) and uses up a
- * turn of supplies. When the supplies run out, the city surrenders.
+ * siege holds only if one of its armies is still next to the city. The turn
+ * it's laid costs the city nothing. From the first full turn, each held turn
+ * wears the city down a little (attrition) and uses up a turn of supplies, so
+ * a city with 3 turns of supplies holds out for 3 full turns. When the
+ * supplies run out, the city surrenders.
  */
 export function processSieges(ctx: GameContext, state: GameState, besiegerId: FactionId): GameState {
   let next = state;
@@ -116,6 +118,8 @@ export function processSieges(ctx: GameContext, state: GameState, besiegerId: Fa
       next = endSiege(next, city.id, `${name} lifted the siege of ${city.name}.`);
       continue;
     }
+
+    if (city.besiegedSince === next.turn) continue;
 
     next = attrition(next, city);
     const worn = next.cities[city.id];

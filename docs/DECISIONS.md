@@ -242,6 +242,11 @@ so.
 - **Battles pull in every army within one tile of either side**
   (`battleSides`): attackers bring regiments that can still move, defenders
   bring everything. Losing side loses every army that fought.
+- **Marching into your own army to attack keeps that army in the fight.** The
+  march merged them, and only the chosen regiments fought, so a relief army
+  routed through a besieged city left its garrison out. Attacks now avoid a
+  besieged city of your own when another tile will do, as a beaten army can't
+  flee from inside one.
 - **Besieged garrisons are shut in**: they can't move, march or lay siege,
   can only attack their besiegers (from their own walls), and only join
   battles against them. Letting them walk out left the city empty for free.
@@ -251,9 +256,11 @@ so.
 - Clicking an enemy city lays siege and opens the siege screen (Continue /
   Storm / Withdraw). An empty city in sight is simply taken.
 - **Supplies are a countdown to surrender**, not starvation: 3/4/5 turns by
-  city level, +1 for capitals. Attrition from turn one (garrison −5%, people
-  −1% a turn). When supplies run out the city surrenders and its garrison is
-  destroyed. The old "starve then lose 25% a turn" model felt too abrupt.
+  city level, +1 for capitals. Attrition (garrison −5%, people −1% a turn) and
+  the countdown both start on the first full turn, not the turn the siege is
+  laid: the player's call, so a city showing 3 turns holds out for 3 full turns.
+  Being shut in, with no gold, growth or training, still starts at once. When
+  supplies run out the city surrenders and its garrison is destroyed. The old "starve then lose 25% a turn" model felt too abrupt.
 - **A beaten siege ends at once, and an ended siege refills the city.**
   The siege used to be checked only at the end of the besieger's turn, and
   only for an army next to the city: a storm lost on the city's last turn
@@ -399,7 +406,8 @@ so.
 - **Income**: 5 per city + 4 per 1,000 people + mine gold, × tax rate ×
   market. No gold from the land itself: hills and mountains only pay through
   a **mine**, a real choice that's worth a lot in hill country and nothing on
-  plains.
+  plains. A mine needs at least 5 hills or mountain tiles, for the AI too: below
+  that it takes 50 turns or more to repay, and it was a trap for the player.
 - **Tax rates** trade gold for growth (low ×0.6 gold / ×1.5 growth, high
   ×1.5 / ×0.5).
 - **Only a finished government unlocks the next level of other buildings**;
@@ -556,6 +564,15 @@ in detail, and `npm run levers` covers the economy.
   about 2 s with nothing in sight and 3–6 s with enemies close; Space or
   Esc skips. Banners never put a verb after a faction's name (Greeks,
   Gauls and Pontus would need different ones).
+- **An army that attacks strikes**, with the same clip as a siege's first blow,
+  lunging at the target: the player's armies too, whose result opens about a second
+  later so the blow can be seen. The player's army that wins its way onto a tile
+  strikes, then walks in; an AI army has already walked in by the time its battle
+  plays, so it shows no blow. Nor does an attacker that was beaten and fled.
+- **Besiegers strike once, as the siege starts, then stand ready.** A strike
+  every few seconds kept going off for as long as a siege lasted, and the player
+  didn't like it. The map view remembers the first blow, as an army's figure is
+  rebuilt whenever its look changes.
 - **Money breakdown** under the treasury; per-city income line in the city
   panel. March routes are coloured per turn.
 

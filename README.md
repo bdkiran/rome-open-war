@@ -245,9 +245,9 @@ militia until it builds one.
 | Port     | +30% / +60% / +90% growth, times the city's share of sea, and +0.25 / +0.5 / +0.75 gold per sea tile on its coast (cities whose land touches the sea) | 200 / 400 / 650 gold | 2 / 3 / 4 |
 | Roads    | Faster movement across the city's land, for every army (see Movement) | 150 / 300 / 500 gold | 2 / 3 / 4 |
 
-A mine can only be built in a city whose territory has hills or mountains, so
-it's worth a lot in hill country and nothing on the plains; the Construction
-tab shows how many tiles it can dig and what the next level would earn. Its
+A mine can only be built in a city whose territory has at least 5 hills or
+mountain tiles, so it's worth a lot in hill country and isn't on offer
+elsewhere; the Construction tab shows how many tiles it can dig and what the next level would earn. Its
 gold counts toward the city's income before taxes and the market, so both
 multiply it. Farms and ports work the same way for their plains and sea,
 on top of their growth: a trickle that pays for them while the growth
@@ -430,7 +430,9 @@ less, so +50% makes a garrison fight like one half as big again.
 defender joins the battle on its own side: the attacker's other armies bring
 their regiments that can still move, the defender's bring all of theirs. A
 beaten side's armies each flee (or fight to the death), and every attacking
-army uses up its turn. If the attackers win a battle for a city, the leading army marches
+army uses up its turn. An army that marches through one of your own on its way
+to attack fights alongside it, and it only goes through a besieged city of
+yours if there's no other way. If the attackers win a battle for a city, the leading army marches
 in and captures it.
 
 Before any attack on an army, the **battle panel** shows who would fight,
@@ -455,15 +457,15 @@ Clicking a city you're already besieging reopens the screen. A city in sight
 with no garrison is simply taken.
 
 On the map a besieged city is ringed with stakes, with pennants in the
-besieger's colours, and the besieging soldiers face it, weapons raised,
-striking now and then.
+besieger's colours, and the besieging soldiers strike once as the siege
+starts, then face it with weapons raised.
 
-A besieged city earns no gold, doesn't grow, can't train or build, and from
-the first turn suffers **attrition**: its garrison loses 5% of its soldiers
-and the city 1% of its people each turn. Every city holds supplies: 3 turns
-at level 1, 4 at level 2 and 5 at level 3, and a turn more for a capital.
-Each turn under siege uses one, and **when they run out the city
-surrenders**: its garrison is destroyed and the besieger's strongest army
+A besieged city earns no gold, doesn't grow and can't train or build. The
+turn a siege is laid costs it nothing more. From the first full turn it suffers
+**attrition**: its garrison loses 5% of its soldiers and the city 1% of its
+people each turn. Every city holds supplies: 3 turns at level 1, 4 at level 2
+and 5 at level 3, and a turn more for a capital. Each full turn under siege
+uses one, and **when they run out the city surrenders**: its garrison is destroyed and the besieger's strongest army
 next to it marches in. The siege holds as long as the besieger ends its turn
 with an army next to the city; otherwise it's lifted. It's also **broken at
 once if the besiegers lose a battle** at the city or next to it: a failed

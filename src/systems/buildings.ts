@@ -11,6 +11,7 @@ import {
   type GameState,
 } from "@/core/state.js";
 import {
+  BUILDING_EFFECTS,
   BUILDINGS,
   CONSTRUCTION_QUEUE_SIZE,
   LEVEL_POPULATION,
@@ -49,7 +50,7 @@ export function nextLevel(city: City, building: BuildingType): { level: number; 
  * Why a building's next level isn't open to a city at all, or null if it is.
  * Buildings go up to the city's level, which only a finished government
  * raises; the government building itself needs enough people first; a mine
- * needs hills or mountains. Gold, a full queue and a siege only hold a
+ * needs enough hills or mountains to be worth digging. Gold, a full queue and a siege only hold a
  * building up for now, so they don't count here.
  */
 function unavailableReason(state: GameState, city: City, building: BuildingType): string | null {
@@ -57,8 +58,11 @@ function unavailableReason(state: GameState, city: City, building: BuildingType)
   if (!next) {
     return `${BUILDINGS[building].name} ${plannedLevel(city, building) > city.buildings[building] ? "will be" : "are"} at their highest level.`;
   }
-  if (building === "mine" && mineableTiles(state, city.id) === 0) {
-    return `${city.name}'s land has no hills or mountains to mine.`;
+  if (building === "mine") {
+    const tiles = mineableTiles(state, city.id);
+    if (tiles < BUILDING_EFFECTS.mineMinTiles) {
+      return `A mine needs ${BUILDING_EFFECTS.mineMinTiles} hills or mountain tiles. ${city.name} has ${tiles}.`;
+    }
   }
   if (building === "port" && city.coast === 0) {
     return `${city.name} has no sea to fish.`;
