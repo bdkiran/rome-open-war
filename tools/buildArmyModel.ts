@@ -6,7 +6,8 @@
  * weapon), each attached to the bone that moves it: the helmet to the head,
  * the shield to the left forearm, the weapon to the right palm. Kit parts are
  * named `kit_<culture>_<part>`, and the game shows only the parts for an
- * army's culture (src/data/cultures.ts). Materials whose name starts with
+ * army's culture (src/data/cultures.ts). Scouts get `kit_scout_*` instead:
+ * a dark hood, mantle and cloak, and no arms. Materials whose name starts with
  * `Faction` take the owner's colour. Four clips are kept: Idle and Walking,
  * and for an army besieging a city, Ready (weapon raised) and Attack (an
  * overhead strike).
@@ -31,6 +32,7 @@ const WOOD = "#6b4f33";
 const PLUME = "#2a2522";
 const HAIR = "#6a4426";
 const DARK_BRONZE = "#7d6234";
+const SCOUT_CLOAK = "#3f3529";
 const SKIN = "#dfb388";
 
 /** Pack colours changed on the way in: both pack helmets become bronze, as they were in this age. */
@@ -344,6 +346,41 @@ for (const culture of CULTURES) {
     ? { at: palmAt.clone().add(new THREE.Vector3(0, -8, 4)), turn: new THREE.Euler(Math.PI - 0.45, 0, 0) }
     : { at: palmAt.clone().add(new THREE.Vector3(0, 0, 10)), turn: new THREE.Euler(0.1, 0, 0) };
   attach(kit.weapon, rightPalm, held.at, held.turn, kit.weaponScale ?? 1);
+}
+
+// The scout's kit: no helmet, shield or weapon, just a dark hooded cloak, so
+// a lone rider reads as a spy rather than a small army. Named kit_scout_*;
+// the game shows it in place of a culture's kit for scouts.
+{
+  const cloth = mat("ScoutCloak", SCOUT_CLOAK);
+  // The hood: a deep cap over the head, peaked at the back.
+  const r = HEAD_SIZE.x * 0.68;
+  const hood = part(new THREE.SphereGeometry(r, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.68), cloth);
+  hood.scale.set(1.04, 1.12, 1.14);
+  hood.position.set(HEAD_CENTRE.x, HEAD_CENTRE.y + HEAD_SIZE.y * 0.04, HEAD_CENTRE.z - 6);
+  const peak = part(new THREE.ConeGeometry(r * 0.45, r * 0.95, 6), cloth);
+  peak.rotation.x = -1.05;
+  peak.position.set(HEAD_CENTRE.x, HEAD_CENTRE.y + HEAD_SIZE.y * 0.32, HEAD_CENTRE.z - r * 0.85);
+  const hoodGroup = group("kit_scout_hood", hood, peak);
+  attach(hoodGroup, head, new THREE.Vector3(), new THREE.Euler());
+
+  // A short mantle over the shoulders, so the cloak shows from the front too.
+  const mantle = part(new THREE.CylinderGeometry(HEAD_SIZE.x * 0.5, 96, 105, 10, 1, true), cloth);
+  const mantleGroup = group("kit_scout_mantle", mantle);
+  attach(mantleGroup, bone("Torso"), new THREE.Vector3(0, 345, -6), new THREE.Euler());
+
+  // The cloak: a long panel down his back, from the shoulders to below the knees.
+  const shape = new THREE.Shape();
+  shape.moveTo(-62, 0);
+  shape.lineTo(62, 0);
+  shape.lineTo(84, -250);
+  shape.lineTo(-84, -250);
+  shape.closePath();
+  const panel = new THREE.ExtrudeGeometry(shape, { depth: 6, bevelEnabled: false });
+  const back = part(panel, cloth);
+  back.rotation.x = -0.12; // hanging slightly out from his back
+  const cloakGroup = group("kit_scout_cloak", back);
+  attach(cloakGroup, bone("Torso"), new THREE.Vector3(0, 365, -52), new THREE.Euler());
 }
 
 // The pack's own materials become the same matte kind as the kits', and the

@@ -156,7 +156,8 @@ hidden. Press Space or Esc to skip to your turn; the camera then returns to
 where you left it.
 
 **Scouts.** A level 2 city can train a scout from its Recruitment tab, for 100
-gold and 2 gold a turn: a lone rider, not a regiment. It moves 20 points a turn
+gold and 2 gold a turn: a lone spy, not a regiment, shown in a dark hooded
+cloak with no weapons. It moves 20 points a turn
 (cavalry move 16), sees 5 tiles, ignores zones of control, and rides through
 armies and cities, enemy ones too. It never fights, blocks nothing, and can't be
 killed; it only goes if its faction falls, or if you click Dismiss in the

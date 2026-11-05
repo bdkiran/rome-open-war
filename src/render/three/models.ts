@@ -500,23 +500,28 @@ export function clashBurst(color: string): { object: THREE.Object3D; update(prog
 }
 
 /**
- * A scout on the map: a lone soldier with a small pennant in his owner's
- * colours instead of an army's numbered banner.
+ * A scout on the map: a lone figure in a dark hooded cloak, unarmed and with
+ * no banner, so it reads as a spy rather than an army; his tunic shows his
+ * owner's colour. (Without an army model from a file, the built-in figure
+ * with a small pennant.)
  */
-export function buildScout(color: string, culture: Culture, library: ModelLibrary): Figure {
-  const figure = library.army(color, false, culture) ?? standardBearer(color, false);
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 44, 5), mat("#3b2c1e"));
-  pole.position.set(8, 22, 0);
+export function buildScout(color: string, _culture: Culture, library: ModelLibrary): Figure {
+  const spy = library.army(color, false, "scout");
+  if (spy) return spy;
+  const figure = standardBearer(color, false);
   const pennant = new THREE.Mesh(new THREE.ConeGeometry(4, 13, 3), mat(color));
   pennant.rotation.z = -Math.PI / 2;
   pennant.position.set(14.5, 40, 0);
-  figure.object.add(pole, pennant);
+  figure.object.add(pennant);
   return figure;
 }
 
 // ---- Models from files --------------------------------------------------------
 
-/** Names of kit parts in an army model: kit_<culture>_<part>. */
+/** Which kit an army model carries: a culture's arms, or the scout's hooded cloak. */
+type Kit = Culture | "scout";
+
+/** Names of kit parts in an army model: kit_<culture>_<part> (or kit_scout_<part>). */
 const KIT_PART = /^kit_([a-z]+)_/;
 
 /** Whether a node is, or hangs from, a kit part. */
@@ -591,10 +596,10 @@ export class ModelLibrary {
   }
 
   /**
-   * The army model from a file, if one is listed, carrying `culture`'s kit:
-   * parts named `kit_<culture>_...` show only for that culture.
+   * The army model from a file, if one is listed, carrying `culture`'s kit
+   * (or the scout's): parts named `kit_<culture>_...` show only for that one.
    */
-  army(color: string, faded: boolean, culture: Culture): Figure | null {
+  army(color: string, faded: boolean, culture: Kit): Figure | null {
     const model = this.loaded.get("army");
     return model ? this.fromFile(model, color, faded, this.manifest.soldierHeight ?? 36, 0, culture) : null;
   }
@@ -606,7 +611,7 @@ export class ModelLibrary {
   }
 
   /** A copy of a loaded model, recoloured, scaled to size, with its walk animation hooked up. */
-  private fromFile(model: LoadedModel, color: string | null, faded: boolean, height: number, width = 0, culture: Culture | null = null): Figure {
+  private fromFile(model: LoadedModel, color: string | null, faded: boolean, height: number, width = 0, culture: Kit | null = null): Figure {
     const object = cloneSkinned(model.scene);
     // Show only this culture's kit.
     object.traverse((node) => {
