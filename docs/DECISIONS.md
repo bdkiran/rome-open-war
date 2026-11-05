@@ -242,6 +242,11 @@ so.
 - **Battles pull in every army within one tile of either side**
   (`battleSides`): attackers bring regiments that can still move, defenders
   bring everything. Losing side loses every army that fought.
+- **Attacking costs 6 movement, not all of it.** An army that attacked from a
+  city was stuck there until next turn, and the player disliked it. Infantry can
+  attack twice a turn and cavalry three times if they don't move: the player was
+  happy for winners to chase down survivors, so nothing else limits it. Taking a
+  city or fleeing still ends a move.
 - **Marching into your own army to attack keeps that army in the fight.** The
   march merged them, and only the chosen regiments fought, so a relief army
   routed through a besieged city left its garrison out. Attacks now avoid a

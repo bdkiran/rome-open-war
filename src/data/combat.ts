@@ -15,6 +15,8 @@ export const COMBAT = {
   volleys: 2,
   /** Arrows count this much against mounted troops, and only in the first volley: horsemen close fast. */
   rangedVsMounted: 0.5,
+  /** Movement each regiment that attacks spends on the battle. With less left, it spends what it has. */
+  attackMovementCost: 6,
   /** A side breaks, and is routed, once it has lost this share of its soldiers. */
   breakPoint: 0.5,
   /** How far a routed army flees, in tiles. With nowhere to go, it fights to the death. */

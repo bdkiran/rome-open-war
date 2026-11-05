@@ -605,7 +605,9 @@ function withArmyMarchedInto(holder: Army, regimentIds: readonly RegimentId[]): 
  * regiments that can still move, and one battle is fought. Losses are shared
  * across everyone who fought. If the attackers win a siege, the leading
  * army's survivors march in and capture the city; supporting armies stay put.
- * Everyone who fought has used their turn.
+ * Everyone who attacked spends COMBAT.attackMovementCost of their movement, so
+ * they can move or attack again with what's left. Taking a city or fleeing
+ * ends their move.
  */
 export function attack(
   ctx: GameContext,
@@ -631,7 +633,7 @@ export function attack(
   if (!defender) return takeCity(state, army, lead, target);
 
   const { attackers: sides, defenders: defending } = battleSides(ctx, state, army, regimentIds, target);
-  const fighting = sides.flatMap((s) => s.regiments.map((r) => ({ ...r, movementLeft: 0 })));
+  const fighting = sides.flatMap((s) => s.regiments.map((r) => ({ ...r, movementLeft: Math.max(0, r.movementLeft - COMBAT.attackMovementCost) })));
   const holding = defending.flatMap((s) => s.regiments);
 
   const rng = createRng(state.rngState);
@@ -688,7 +690,7 @@ export function attack(
   let captured: string | null = null;
   if (result.attackerWins && city && city.owner !== army.owner && leadAfter) {
     const leadIds = new Set(lead.map((r) => r.id));
-    const marching = leadAfter.regiments.filter((r) => leadIds.has(r.id));
+    const marching = leadAfter.regiments.filter((r) => leadIds.has(r.id)).map((r) => ({ ...r, movementLeft: 0 }));
     if (marching.length > 0) {
       afterBattle = takeCity(afterBattle, leadAfter, marching, target);
       captured = city.name;

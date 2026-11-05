@@ -182,7 +182,8 @@ function marchIn(ctx: GameContext, state: GameState, besiegerId: FactionId, city
     .filter((a) => near.has(a.tile))
     .sort((a, b) => armySoldiers(b) - armySoldiers(a))[0];
   if (!strongest) return next;
-  return { ...next, armies: { ...next.armies, [strongest.id]: { ...strongest, tile: city.tile } } };
+  const regiments = strongest.regiments.map((r) => ({ ...r, movementLeft: 0 })); // Taking a city ends its move.
+  return { ...next, armies: { ...next.armies, [strongest.id]: { ...strongest, tile: city.tile, regiments } } };
 }
 
 /** A besieged city's garrison is dead: the besieger takes the city at once, before anyone else can walk in. */
