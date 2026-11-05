@@ -242,6 +242,11 @@ so.
 - **Battles pull in every army within one tile of either side**
   (`battleSides`): attackers bring regiments that can still move, defenders
   bring everything. Losing side loses every army that fought.
+- **Marching into your own army to attack keeps that army in the fight.** The
+  march merged them, and only the chosen regiments fought, so a relief army
+  routed through a besieged city left its garrison out. Attacks now avoid a
+  besieged city of your own when another tile will do, as a beaten army can't
+  flee from inside one.
 - **Besieged garrisons are shut in**: they can't move, march or lay siege,
   can only attack their besiegers (from their own walls), and only join
   battles against them. Letting them walk out left the city empty for free.
@@ -401,7 +406,8 @@ so.
 - **Income**: 5 per city + 4 per 1,000 people + mine gold, × tax rate ×
   market. No gold from the land itself: hills and mountains only pay through
   a **mine**, a real choice that's worth a lot in hill country and nothing on
-  plains.
+  plains. A mine needs at least 5 hills or mountain tiles, for the AI too: below
+  that it takes 50 turns or more to repay, and it was a trap for the player.
 - **Tax rates** trade gold for growth (low ×0.6 gold / ×1.5 growth, high
   ×1.5 / ×0.5).
 - **Only a finished government unlocks the next level of other buildings**;

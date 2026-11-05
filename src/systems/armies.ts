@@ -530,7 +530,8 @@ export function mayFightAt(state: GameState, army: Army, target: TileId): boolea
  * they'd have to march up to first. Each target maps to the tile they'd
  * attack from: where they stand if it's adjacent, otherwise the reachable
  * tile next to it that leaves them the most movement (they need some left to
- * attack).
+ * attack). They go through one of their own besieged cities only if there's no
+ * other way: inside, they'd be shut in, and couldn't flee if beaten.
  */
 export function attackOptions(
   ctx: GameContext,
@@ -541,7 +542,7 @@ export function attackOptions(
   const attackers = pickRegiments(army, regimentIds);
   if (!attackers || attackers.some((r) => r.movementLeft <= 0)) return new Map();
 
-  const best = new Map<TileId, { via: TileId; left: number }>();
+  const best = new Map<TileId, { via: TileId; left: number; shutIn: boolean }>();
   const consider = (via: TileId, left: number) => {
     // Marching into one of our own cities under siege shuts the regiments in:
     // from there they can only fight its besiegers.
@@ -550,7 +551,8 @@ export function attackOptions(
     for (const target of attackableFrom(ctx, state, army.owner, via)) {
       if (shutIn && armyAt(state, target)?.owner !== shutIn) continue;
       const current = best.get(target);
-      if (!current || left > current.left) best.set(target, { via, left });
+      const better = !current || (current.shutIn && !shutIn) || (current.shutIn === Boolean(shutIn) && left > current.left);
+      if (better) best.set(target, { via, left, shutIn: Boolean(shutIn) });
     }
   };
 

@@ -166,6 +166,8 @@ export const BUILDING_EFFECTS = {
   marketGold: [0, 0.3, 0.6, 1],
   /** Gold per hills or mountain tile in the city's territory, before taxes and the market. */
   mineGoldPerTile: [0, 1, 2, 3],
+  /** Hills and mountain tiles a city needs to build a mine: with fewer, it would take too long to repay. */
+  mineMinTiles: 5,
   /** Gold per plains tile in the city's territory, before taxes and the market. */
   farmsGoldPerPlainsTile: [0, 0.25, 0.5, 0.75],
   /** Extra population growth from a port, scaled by the share of the city's reach that is sea. */

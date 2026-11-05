@@ -586,6 +586,17 @@ export function battleSides(
 }
 
 /**
+ * The regiments that fight once the chosen ones have marched up to `holder`,
+ * the army now holding them. If they marched into an army of their own side,
+ * its regiments that can still move fight too, as they would from the next
+ * tile: merging mustn't leave them out of the battle.
+ */
+function withArmyMarchedInto(holder: Army, regimentIds: readonly RegimentId[]): RegimentId[] {
+  const chosen = new Set(regimentIds);
+  return holder.regiments.filter((r) => chosen.has(r.id) || r.movementLeft > 0).map((r) => r.id);
+}
+
+/**
  * The chosen regiments attack a tile. Call canAttack first. With `via`, they
  * march to that tile first and attack from there.
  *
@@ -608,7 +619,8 @@ export function attack(
   // a different army (if only some moved, or they joined one on the way).
   if (via && via !== state.armies[armyId].tile) {
     const moved = moveRegiments(ctx, state, armyId, regimentIds, via);
-    return attack(ctx, moved, armyHolding(moved, regimentIds[0])!.id, regimentIds, target);
+    const holder = armyHolding(moved, regimentIds[0])!;
+    return attack(ctx, moved, holder.id, withArmyMarchedInto(holder, regimentIds), target);
   }
 
   const army = state.armies[armyId];
@@ -927,15 +939,17 @@ export function previewBattle(
   // Where the regiments would stand after marching up.
   let staged = state;
   let lead = army;
+  let fighting = regimentIds;
   if (via && via !== army.tile) {
     staged = moveRegiments(ctx, state, armyId, regimentIds, via);
     lead = armyHolding(staged, regimentIds[0])!;
+    fighting = withArmyMarchedInto(lead, regimentIds);
   }
 
   const defender = armyAt(staged, target);
   if (!defender) return null;
 
-  const sides = battleSides(ctx, staged, lead, regimentIds, target);
+  const sides = battleSides(ctx, staged, lead, fighting, target);
   const attackers = sides.attackers.flatMap((s) => s.regiments);
   const defenders = sides.defenders.flatMap((s) => s.regiments);
   const terrainBonus = TERRAIN[staged.tiles[target].terrain].defenseBonus;
