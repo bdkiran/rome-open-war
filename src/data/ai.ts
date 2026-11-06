@@ -67,6 +67,16 @@ export const AI = {
    */
   armyUpkeepShare: 0.15,
   /**
+   * ...and only with this much gold in hand. Below it, buildings and watchtowers
+   * buy first as usual, so the army takes the surplus and not the economy's share.
+   */
+  armyFirstGold: 500,
+  /**
+   * Choosing a muster city, each level of unit building above the first is worth
+   * this many tiles of distance: better troops are worth a longer march.
+   */
+  musterTilesPerTier: 4,
+  /**
    * Watchtowers the AI builds in the region of each city that borders
    * another faction's land. Its own limit: the game has none.
    */

@@ -156,7 +156,7 @@ hidden. Press Space or Esc to skip to your turn; the camera then returns to
 where you left it.
 
 **Scouts.** A level 2 city can train a scout from its Recruitment tab, for 100
-gold and 2 gold a turn: a lone spy, not a regiment, shown in a dark hooded
+gold and 4 gold a turn: a lone spy, not a regiment, shown in a dark hooded
 cloak with no weapons. It moves 20 points a turn
 (cavalry move 16), sees 5 tiles, ignores zones of control, and rides through
 armies and cities, enemy ones too. It never fights, blocks nothing, and can't be
@@ -167,7 +167,7 @@ a highlighted tile to move it: within one turn's reach, as it can't take march
 orders. Enemy scouts show only within your sight.
 
 **Watchtowers.** Select a tile of your own region (any land drawn in your
-colour, except a city) and build a watchtower there for 300 gold. It's
+colour, except a city) and build a watchtower there for 150 gold. It's
 finished at once, costs nothing to keep and sees 3 tiles around it. It's
 never destroyed: an enemy army standing on it sees through it instead of
 you until it leaves, and whoever takes the city whose region it stands in
@@ -539,10 +539,12 @@ to expect from them:
   trains only when it's empty or threatened), build walls near their
   borders, advance their cities, build markets, then a spear yard, archery
   range and stables, then mines, farms, ports and, last, roads. They train
-  the best tier of a unit they can afford to keep. Armies gather in the
-  nearest city with a unit building and the people to train, and any city
-  with 3 regiments to spare sends them out. While upkeep is a small part of
-  their income, field regiments come before other buildings. Once a border city's
+  the best tier of a unit they can afford to keep, and militia only where
+  they have no unit building or in an emergency. Armies gather in the nearest
+  city with a unit building and the people to train, counting a better building
+  as a shorter march, and any city with 3 regiments to spare sends them out.
+  With gold to spare and upkeep a small part of their income, field regiments
+  come before other buildings. Once a border city's
   buildings are seen to, they keep a scout (one more per 5 cities) a few
   tiles from the city they're after (dismissing scouts when they can't pay
   their upkeep), and put one watchtower in its region, on the

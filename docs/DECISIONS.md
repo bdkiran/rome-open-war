@@ -90,6 +90,14 @@ so.
 - **`cityTiles` remembers its result** per territory object. It scanned the whole
   map on every AI action and was 28% of game time; games now run in 30 s (36
   before scouts), and the numbers don't change.
+- **Watchtowers cost 150 and scouts 4 gold a turn.** The player found scouts far
+  better value, and they were: over 100 turns a scout cost the same as a tower
+  (300 gold) and saw 91 tiles against 37, moving and unkillable. Now a tower gives
+  0.25 tiles per gold; a scout 0.30 over 50 turns and 0.18 over 100. This drops the
+  rule that a tower costs more than any first-level building. Raising the scout's
+  price to 150 as well was tried and rejected: AI scouts halved. A gold threshold for
+  building towers ahead of the army was tuned first and dropped: 500 gold gave 22
+  towers, 600 gave 19, 700 gave 13, 800 gave 7, so it was too touchy to mean anything.
 - **Watchtowers make new sight.** Only armies could see past a city, so
   most of a region sat in fog. A tower is built at once on any land tile of
   your region (not a city) for 300 gold and sees 3 tiles. The player chose:
@@ -344,8 +352,19 @@ so.
   regiments, cities not with their first owner 21 to 23, factions fallen 2 to 2,
   net income -29% (upkeep 11% to 16% of income, and more war), level-3 cities 15
   to 11 (one more than the 3 we meant to allow), watchtowers 13 to 24 (they stay
-  ahead of the army, and got more gold). Regiments remain 98% basic tier: cities
-  reach level 2-3 late and old regiments never upgrade. That's still open.
+  ahead of the army, and got more gold). Regiments remained 98% basic tier.
+- **The AI stops choosing militia where it has a unit building, and values tier.**
+  After turn 25, about 68 militia regiments a game came from cities with a unit
+  building, since big regiments looked strongest, and in the last 25 turns only 8 of
+  113 regiments trained were advanced. Now those cities choose among line units,
+  judged at their best tier (militia stay the fallback in an emergency), and each
+  unit-building level counts as 4 tiles nearer when choosing a muster
+  (`AI.musterTilesPerTier`). The army also only goes ahead of buildings with 500 gold
+  in hand (`AI.armyFirstGold`), so it takes the surplus. Over 8 seeds, with the tower
+  and scout prices above, without / with `--garrison`: militia 39% to 24% / 41% to
+  26% of regiments, basic tier 97% to 85% / 96% to 89%, net income 268 to 301 / 311 to
+  320, soldiers -10% / -2%, watchtowers 23 to 17 / 25 to 17, factions fallen 3 to 2 /
+  3 to 2, level-3 cities 12 to 12 / 12 to 10. Old regiments still never upgrade.
 - **An army can't stage an attack from inside one of its own besieged
   cities** (except on the besiegers): marching in shuts it in. This was
   allowed by mistake and only showed once the AI laid sieges.
