@@ -23,6 +23,8 @@ export interface SimulationOptions {
   freeze?: boolean;
   /** Called at the start of every round (each time the player's turn comes up). */
   onRound?: (state: GameState) => void;
+  /** Called after each AI action that went through, with the state before and after it. */
+  onAction?: (before: GameState, action: Action, factionId: string, after: GameState) => void;
 }
 
 export interface SimulationResult {
@@ -89,6 +91,7 @@ export function simulate(options: SimulationOptions): SimulationResult {
         state = keep(mustApply(ctx, state, faction.id, { type: "endTurn" }));
         break;
       }
+      options.onAction?.(state, action, faction.id, applied.state);
       state = keep(applied.state);
       result.actions++;
     }

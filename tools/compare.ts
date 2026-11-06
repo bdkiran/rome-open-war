@@ -24,6 +24,7 @@ import { existsSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import type { Action } from "@/core/actions.js";
 import type { GameState } from "@/core/state.js";
 
 /** One game's numbers. */
@@ -52,6 +53,13 @@ interface GameMetrics {
   fieldArmySize: number;
   basicShare: number;
   militiaShare: number;
+  walledSieges: number;
+  walledSiegesAbandoned: number;
+  walledStorms: number;
+  stormSiegeTurns: number;
+  stormWorks: number;
+  stormsAboveMinimum: number;
+  surrenders: number;
   scouts: number;
   seconds: number;
 }
@@ -76,6 +84,13 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "fieldArmySize", label: "Regiments per field army, largest" },
   { key: "basicShare", label: "AI regiments of basic tier, %" },
   { key: "militiaShare", label: "AI regiments of militia, %" },
+  { key: "walledSieges", label: "Sieges of walled cities" },
+  { key: "walledSiegesAbandoned", label: "...walked away from" },
+  { key: "walledStorms", label: "Storms of walled cities" },
+  { key: "stormSiegeTurns", label: "...siege turns first, median ×10" },
+  { key: "stormWorks", label: "...siege works at the storm, median ×10" },
+  { key: "stormsAboveMinimum", label: "...with more works than needed" },
+  { key: "surrenders", label: "Cities that surrendered" },
   { key: "veterans", label: "Regiments at experience 1-2" },
   { key: "seasoned", label: "Regiments at experience 3-5" },
   { key: "topLevel", label: "Regiments at experience 6" },
@@ -108,12 +123,38 @@ async function runWorker(): Promise<void> {
   const seed = Number(option("seed"));
   let firstOwners: Record<string, string> | null = null;
   const started = performance.now();
+  const sieges = { laid: 0, abandoned: 0, storms: 0, aboveMinimum: 0, surrenders: 0, siegeTurns: [] as number[], works: [] as number[] };
+  // Versions before siege works have none, so every storm counts as 0 works.
+  const worksOf = (city: object) => (city as { siegeWorks?: number }).siegeWorks ?? 0;
   const result = simulate({
     turns: Number(option("turns")),
     seed,
     garrison: flag("garrison"),
     onRound: (s: GameState) => {
       firstOwners ??= Object.fromEntries(Object.values(s.cities).map((c) => [c.id, c.owner]));
+    },
+    // Versions before this option ignore it, and show 0 in the siege rows.
+    onAction: (before: GameState, action: Action, factionId: string, after: GameState) => {
+      if (action.type === "besiege") {
+        const city = Object.values(before.cities).find((c) => c.tile === action.target);
+        if (city && city.buildings.walls > 0) sieges.laid++;
+      }
+      if (action.type === "attack") {
+        const city = Object.values(before.cities).find((c) => c.tile === action.target);
+        const garrisoned = Object.values(before.armies).some((a) => a.tile === action.target);
+        if (city && city.owner !== factionId && city.buildings.walls > 0 && garrisoned) {
+          sieges.storms++;
+          sieges.siegeTurns.push(city.besiegedBy === factionId && city.besiegedSince !== null ? before.turn - city.besiegedSince : 0);
+          sieges.works.push(worksOf(city));
+          if (Math.floor(worksOf(city)) > city.buildings.walls) sieges.aboveMinimum++;
+        }
+      }
+      for (const city of Object.values(before.cities)) {
+        if (city.besiegedBy !== factionId) continue;
+        const now = after.cities[city.id];
+        if (action.type === "endTurn" && now.owner === factionId) sieges.surrenders++;
+        if (action.type !== "attack" && city.buildings.walls > 0 && now.besiegedBy === null && now.owner === city.owner) sieges.abandoned++;
+      }
     },
   });
   const state: GameState = result.state;
@@ -166,6 +207,13 @@ async function runWorker(): Promise<void> {
     fieldArmySize: Math.max(0, ...fieldArmies.map((a) => a.regiments.length)),
     basicShare: percent(aiRegiments.filter((r) => r.tier === 1).length, aiRegiments.length),
     militiaShare: percent(aiRegiments.filter((r) => r.unit === "militia").length, aiRegiments.length),
+    walledSieges: sieges.laid,
+    walledSiegesAbandoned: sieges.abandoned,
+    walledStorms: sieges.storms,
+    stormSiegeTurns: Math.round(medianExact(sieges.siegeTurns) * 10),
+    stormWorks: Math.round(medianExact(sieges.works) * 10),
+    stormsAboveMinimum: sieges.aboveMinimum,
+    surrenders: sieges.surrenders,
     veterans: levels.filter((l) => l >= 1 && l <= 2).length,
     seasoned: levels.filter((l) => l >= 3 && l <= 5).length,
     topLevel: levels.filter((l) => l >= 6).length,
@@ -273,6 +321,14 @@ async function runAll<T, R>(tasks: T[], limit: number, work: (t: T) => Promise<R
 }
 
 // ---- Report -----------------------------------------------------------------
+
+/** The median of possibly fractional values, not rounded. */
+function medianExact(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
 
 function median(values: number[]): number {
   if (values.length === 0) return 0;
