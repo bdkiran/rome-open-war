@@ -20,7 +20,7 @@ export interface Assessment {
   garrisonNeed: Map<CityId, number>;
   /** The enemy city we're campaigning against, if any. */
   target: City | null;
-  /** Our city nearest the target, where field armies gather. */
+  /** Where field armies gather: our city nearest the target with a unit building and the people to train, or simply the nearest. */
   muster: City | null;
   /**
    * One of our cities under siege, if any: the one closest to surrendering.
@@ -99,17 +99,29 @@ function chooseTarget(ctx: GameContext, state: GameState, factionId: FactionId):
 
   for (const city of Object.values(state.cities)) {
     if (city.owner === factionId) continue;
-    let muster: City | null = null;
+    // The target is judged by our nearest city, but armies gather in the nearest
+    // one that can train more than militia and has the people for it, when
+    // there is one. A small border town stopped all field training, and any
+    // big city without a unit building only turned its people into militia.
+    let nearest: City | null = null;
     let distance = Infinity;
+    let recruiter: City | null = null;
+    let recruiterDistance = Infinity;
     for (const home of own) {
       if (land.get(home.tile) !== land.get(city.tile)) continue;
       const d = ctx.topology.distance(home.tile, city.tile);
       if (d < distance) {
-        muster = home;
+        nearest = home;
         distance = d;
       }
+      const hasUnitBuilding = home.buildings.spearYard > 0 || home.buildings.archeryRange > 0 || home.buildings.stables > 0;
+      if (hasUnitBuilding && home.population >= AI.minRecruitPopulation && d < recruiterDistance) {
+        recruiter = home;
+        recruiterDistance = d;
+      }
     }
-    if (!muster) continue;
+    if (!nearest) continue;
+    const muster = recruiter ?? nearest;
     if (city.besiegedBy && city.besiegedBy !== factionId) continue;
 
     const isCommitted = committed.has(city.id);

@@ -55,6 +55,17 @@ export const AI = {
    * government building it can't yet afford (see governmentToSave in ai/ai.ts).
    */
   regimentsBeforeGovernment: 3,
+  /** Regiments per city the AI wants before it saves up for other buildings instead of more field regiments. */
+  regimentsBeforeSaving: 5,
+  /** It saves for a building only if its income would pay for it within this many turns. */
+  savingTurns: 10,
+  /**
+   * While upkeep is under this share of income, a field regiment comes before
+   * any building but a government one. Without it buildings took 70% of the
+   * AI's gold, and armies stayed the same size as income quadrupled. It's low
+   * on purpose: 0.2 and above starved the economy (see DECISIONS, Sieges).
+   */
+  armyUpkeepShare: 0.15,
   /**
    * Watchtowers the AI builds in the region of each city that borders
    * another faction's land. Its own limit: the game has none.

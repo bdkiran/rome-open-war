@@ -7,10 +7,11 @@ import { createGame } from "@/core/setup.js";
 import { armyAt, type Army, type GameState } from "@/core/state.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize } from "@/data/units.js";
-import { attackOptions, reachableTiles, SHUT_IN } from "@/systems/armies.js";
+import { attackOptions, reachableTiles, SHUT_IN, siegeWorksPerTurn, stormBlocked } from "@/systems/armies.js";
 import { nextAction } from "@/ai/ai.js";
 import { assess } from "@/ai/assess.js";
-import { besiege, maxSupplies, processSieges } from "@/systems/siege.js";
+import { cityDefense } from "@/systems/combat.js";
+import { besiege, liftSiege, maxSupplies, processSieges } from "@/systems/siege.js";
 
 /** A new game with Roma besieged by a Carthaginian army standing next to it. */
 function romaBesieged(): { ctx: GameContext; state: GameState; garrison: Army; besiegerTile: string } {
@@ -252,5 +253,93 @@ describe("a garrison dying under siege", () => {
     const ended = applyAction(ctx, sally.state, "rome", action);
     assert.ok(ended.ok);
     assert.notEqual(ended.state.factions[ended.state.currentFactionIndex].id, "rome");
+  });
+});
+
+describe("siege works", () => {
+  /** Roma walled to `walls`, under a siege just laid by `soldiers` Carthaginian spearmen or cavalry next to it. */
+  function walledRoma(walls: number, soldiers = 180, unit: "spearmen" | "cavalry" = "spearmen") {
+    const { ctx, state: fixture, besiegerTile } = romaBesieged();
+    const roma = Object.values(fixture.cities).find((c) => c.name === "Roma")!;
+    const besiegers = fixture.armies.besiegers;
+    const state: GameState = {
+      ...fixture,
+      turn: 5,
+      armies: { ...fixture.armies, besiegers: { ...besiegers, regiments: [{ ...besiegers.regiments[0], unit, soldiers }] } },
+      cities: { ...fixture.cities, [roma.id]: { ...roma, besiegedBy: "carthage", besiegedSince: 5, buildings: { ...roma.buildings, walls } } },
+    };
+    return { ctx, state, cityId: roma.id, tile: roma.tile, besiegerTile };
+  }
+  const withWorks = (state: GameState, cityId: string, siegeWorks: number): GameState => ({
+    ...state,
+    cities: { ...state.cities, [cityId]: { ...state.cities[cityId], siegeWorks } },
+  });
+
+  it("go up with the soldiers next to the city, from the turn the siege is laid", () => {
+    const { ctx, state, cityId } = walledRoma(2);
+    const after = processSieges(ctx, state, "carthage");
+    assert.ok(Math.abs(after.cities[cityId].siegeWorks - 180 / 500) < 1e-9);
+    assert.equal(after.cities[cityId].supplies, state.cities[cityId].supplies, "the laying turn still costs the city nothing");
+  });
+
+  it("count horsemen at half", () => {
+    const { ctx, state, cityId } = walledRoma(2, 120, "cavalry");
+    assert.ok(Math.abs(siegeWorksPerTurn(ctx, state, "carthage", state.cities[cityId]) - 60 / 500) < 1e-9);
+  });
+
+  it("stop at the most there can be", () => {
+    const { ctx, state, cityId } = walledRoma(2);
+    const after = processSieges(ctx, withWorks(state, cityId, 4.9), "carthage");
+    assert.equal(after.cities[cityId].siegeWorks, 5);
+  });
+
+  it("aren't built around a city with no walls", () => {
+    const { ctx, state, cityId } = walledRoma(0);
+    assert.equal(processSieges(ctx, state, "carthage").cities[cityId].siegeWorks, 0);
+  });
+
+  it("are lost when the siege ends", () => {
+    const { state, cityId } = walledRoma(2);
+    assert.equal(liftSiege(withWorks(state, cityId, 3), "carthage", cityId).cities[cityId].siegeWorks, 0);
+  });
+
+  it("are needed to storm: the walls' level in whole points", () => {
+    const { ctx, state, cityId, tile } = walledRoma(2);
+    const attack = (s: GameState) =>
+      applyAction(ctx, s, "carthage", { type: "attack", armyId: "besiegers", regimentIds: ["besieger"], target: tile });
+    const carthageTurn = { ...state, currentFactionIndex: state.factions.findIndex((f) => f.id === "carthage") };
+    const refused = attack(withWorks(carthageTurn, cityId, 1.9));
+    assert.equal(refused.ok, false);
+    if (!refused.ok) assert.match(refused.reason, /Needs 2 siege works/);
+    assert.ok(!attackOptions(ctx, withWorks(state, cityId, 1.9), state.armies.besiegers, ["besieger"]).has(tile));
+    assert.ok(attackOptions(ctx, withWorks(state, cityId, 2), state.armies.besiegers, ["besieger"]).has(tile));
+  });
+
+  it("belong to the besieger: nobody else can storm on them", () => {
+    const { ctx, state, cityId, tile } = walledRoma(1);
+    assert.equal(stormBlocked(ctx, withWorks(state, cityId, 5), "carthage", tile), null);
+    assert.match(stormBlocked(ctx, withWorks(state, cityId, 5), "arverni", tile) ?? "", /lay siege first/);
+  });
+
+  it("don't stop anyone walking into an empty walled city", () => {
+    const { ctx, state, tile } = walledRoma(3);
+    const garrison = armyAt(state, tile)!;
+    const armies = { ...state.armies };
+    delete armies[garrison.id];
+    assert.equal(stormBlocked(ctx, { ...state, armies }, "arverni", tile), null);
+  });
+
+  it("don't stop a storm of a city with no walls", () => {
+    const { ctx, state, tile } = walledRoma(0);
+    assert.equal(stormBlocked(ctx, state, "arverni", tile), null);
+  });
+
+  it("take a fifth of the walls' bonus off for each whole point", () => {
+    const stone = { buildings: { walls: 2 } };
+    const bonus = (siegeWorks: number) => Math.round(cityDefense({ ...stone, siegeWorks }) * 100);
+    assert.equal(bonus(0), 40, "city 10 + walls 30");
+    assert.equal(bonus(1.9), 34);
+    assert.equal(bonus(2), 28);
+    assert.equal(bonus(5), 10, "only the city's own bonus is left");
   });
 });

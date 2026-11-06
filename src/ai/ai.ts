@@ -75,7 +75,8 @@ import { costToTarget } from "@/systems/pathfinding.js";
  *   5. Defend: replenish battered garrisons and train garrisons for its cities.
  *   6. Build: walls where enemies are near, then advancing the city, then
  *      markets and farms, keeping a little gold in reserve.
- *   7. Train field regiments that counter the target's defenders.
+ *   7. Train field regiments that counter the target's defenders. While the
+ *      army is cheap to keep, this comes before any building but a government.
  * Training never lets upkeep outgrow income.
  */
 export function nextAction(ctx: GameContext, real: GameState, factionId: FactionId): Action {
@@ -94,6 +95,7 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
     launchAction(ctx, real, seen, factionId, plan) ??
     advanceAction(ctx, real, seen, factionId, plan) ??
     trainingAction(ctx, seen, factionId, plan, "defense") ??
+    (armyIsCheap(seen, factionId) ? watchtowerAction(ctx, real, factionId, plan) ?? trainingAction(ctx, seen, factionId, plan, "field") : null) ??
     constructionAction(ctx, seen, factionId, plan) ??
     scoutAction(ctx, real, factionId, plan) ??
     watchtowerAction(ctx, real, factionId, plan) ??
@@ -279,30 +281,37 @@ function launchAction(ctx: GameContext, real: GameState, state: GameState, facti
   if (plan.relief) return launchRelief(ctx, real, state, factionId, plan);
   const { target, muster } = plan;
   if (!target || !muster) return null;
-  const army = armyAt(state, muster.tile);
-  if (!army || army.owner !== factionId) return null;
 
-  const keep = plan.garrisonNeed.get(muster.id) ?? 0;
-  const surplus = army.regiments.length - keep;
-  if (surplus < AI.minLaunchRegiments) return null;
+  // The muster city first, then any other with enough to spare, or regiments
+  // left behind when the target changes would sit there for the rest of the game.
+  const others = citiesOf(state, factionId).filter((c) => c.id !== muster.id);
+  for (const city of [muster, ...others]) {
+    const army = armyAt(state, city.tile);
+    if (!army || army.owner !== factionId) continue;
 
-  // Send the regiments best suited to the target's defenders; the rest stay home.
-  const defenders = armyAt(state, target.tile);
-  const ready = army.regiments
-    .filter((r) => r.movementLeft > 0)
-    .sort((a, b) => (defenders ? regimentStrengthAgainst(b, defenders) - regimentStrengthAgainst(a, defenders) : 0));
-  const group = ready.slice(0, surplus);
-  if (group.length < AI.minLaunchRegiments) return null;
+    const keep = plan.garrisonNeed.get(city.id) ?? 0;
+    const surplus = army.regiments.length - keep;
+    if (surplus < AI.minLaunchRegiments) continue;
 
-  // Big enough to hold its ground if the defenders sally out against it in the open.
-  if (defenders) {
-    const sally = battleStrength(defenders.regiments, group, { defenseBonus: 0, openGround: true });
-    if (sally.attacker * AI.launchMargin > sally.defender) return null;
+    // Send the regiments best suited to the target's defenders; the rest stay home.
+    const defenders = armyAt(state, target.tile);
+    const ready = army.regiments
+      .filter((r) => r.movementLeft > 0)
+      .sort((a, b) => (defenders ? regimentStrengthAgainst(b, defenders) - regimentStrengthAgainst(a, defenders) : 0));
+    const group = ready.slice(0, surplus);
+    if (group.length < AI.minLaunchRegiments) continue;
+
+    // Big enough to hold its ground if the defenders sally out against it in the open.
+    if (defenders) {
+      const sally = battleStrength(defenders.regiments, group, { defenseBonus: 0, openGround: true });
+      if (sally.attacker * AI.launchMargin > sally.defender) continue;
+    }
+
+    const regimentIds = group.map((r) => r.id);
+    const step = stepToward(ctx, real, state, army, regimentIds, target.tile);
+    if (step) return { type: "moveArmy", armyId: army.id, regimentIds, to: step };
   }
-
-  const regimentIds = group.map((r) => r.id);
-  const step = stepToward(ctx, real, state, army, regimentIds, target.tile);
-  return step ? { type: "moveArmy", armyId: army.id, regimentIds, to: step } : null;
+  return null;
 }
 
 /**
@@ -465,7 +474,7 @@ function trainingAction(
   }
 
   if (phase === "defense") return null;
-  if (savingForBuilding(ctx, state, factionId)) return null;
+  if (!armyIsCheap(state, factionId) && savingForBuilding(ctx, state, factionId)) return null;
 
   // Then a field regiment at the muster city, countering the target's defenders.
   const { target, muster } = plan;
@@ -482,10 +491,14 @@ function trainingAction(
 
 // ---- 6. Build ------------------------------------------------------------
 
-/** Regiments per city the AI wants before it saves up for buildings instead of more field regiments. */
-const ARMY_BEFORE_SAVING = 5;
-/** It saves for a building only if its income would pay for it within this many turns. */
-const SAVING_TURNS = 10;
+/**
+ * Whether the army comes before optional buildings: its upkeep is a small share
+ * of income, and no government building is being saved for.
+ */
+function armyIsCheap(state: GameState, factionId: FactionId): boolean {
+  if (governmentToSave(state, factionId)) return false;
+  return factionUpkeep(state, factionId) < factionIncome(state, factionId) * AI.armyUpkeepShare;
+}
 
 /**
  * Whether to hold back field training to save for a building: when the army
@@ -495,7 +508,7 @@ const SAVING_TURNS = 10;
 function savingForBuilding(ctx: GameContext, state: GameState, factionId: FactionId): boolean {
   const regiments = armiesOf(state, factionId).reduce((sum, a) => sum + a.regiments.length, 0);
   const cities = citiesOf(state, factionId);
-  if (regiments < cities.length * ARMY_BEFORE_SAVING) return false;
+  if (regiments < cities.length * AI.regimentsBeforeSaving) return false;
 
   const faction = getFaction(state, factionId);
   if (!faction) return false;
@@ -506,7 +519,7 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
     aiBuildOrder(state, city.id, false).some((building) => {
       const next = nextLevel(city, building);
       if (!next || faction.gold >= next.def.cost + AI.buildReserve) return false;
-      return next.def.cost - faction.gold <= income * SAVING_TURNS && canBuild(rich, factionId, city.id, building).ok;
+      return next.def.cost - faction.gold <= income * AI.savingTurns && canBuild(rich, factionId, city.id, building).ok;
     }),
   );
 }

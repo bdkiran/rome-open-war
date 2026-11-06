@@ -17,6 +17,7 @@ import {
   type RegimentId,
 } from "@/core/state.js";
 import { SCOUT } from "@/data/scouts.js";
+import { SIEGE } from "@/data/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, TIERS, UNITS, regimentSize, type Tier, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
@@ -482,7 +483,7 @@ export function isSpent(army: Army): boolean {
 function attackableFrom(ctx: GameContext, state: GameState, owner: FactionId, tile: TileId): TileId[] {
   return ctx.topology.neighbors(tile).filter((n) => {
     const other = armyAt(state, n);
-    if (other) return other.owner !== owner;
+    if (other) return other.owner !== owner && stormBlocked(ctx, state, owner, n) === null;
     const city = cityAt(state, n);
     return city !== undefined && city.owner !== owner;
   });
@@ -502,6 +503,38 @@ export function attackTargets(
   const attackers = pickRegiments(army, regimentIds);
   if (!attackers || attackers.some((r) => r.movementLeft <= 0)) return [];
   return attackableFrom(ctx, state, army.owner, army.tile).filter((t) => mayFightAt(state, army, t));
+}
+
+/** Points of siege works a faction's armies next to a city build in a turn. */
+export function siegeWorksPerTurn(ctx: GameContext, state: GameState, factionId: FactionId, city: City): number {
+  const near = new Set(ctx.topology.neighbors(city.tile));
+  let soldiers = 0;
+  for (const army of armiesOf(state, factionId)) {
+    if (!near.has(army.tile)) continue;
+    for (const r of army.regiments) soldiers += r.soldiers * (UNITS[r.unit].mounted ? SIEGE.mountedWorkShare : 1);
+  }
+  return soldiers * SIEGE.worksPerSoldier;
+}
+
+/**
+ * Why a faction can't storm the garrisoned walled city on `tile` yet, or null
+ * if nothing stops it. Only its besieger's works count, and at least as many
+ * whole points are needed as the walls' level. An empty city or one with no
+ * walls can be taken at once.
+ */
+export function stormBlocked(ctx: GameContext, state: GameState, factionId: FactionId, tile: TileId): string | null {
+  const city = cityAt(state, tile);
+  if (!city || city.owner === factionId || city.buildings.walls === 0) return null;
+  if (armyAt(state, tile)?.owner !== city.owner) return null;
+  const needed = city.buildings.walls;
+  const works = city.besiegedBy === factionId ? city.siegeWorks : 0;
+  if (Math.floor(works) >= needed) return null;
+  const points = `Needs ${needed} siege work${needed === 1 ? "" : "s"}`;
+  if (city.besiegedBy !== factionId) return `${points}: lay siege first.`;
+  const rate = siegeWorksPerTurn(ctx, state, factionId, city);
+  if (rate <= 0) return `${points}.`;
+  const turns = Math.ceil((needed - works) / rate);
+  return `${points}: ${turns} more turn${turns === 1 ? "" : "s"}.`;
 }
 
 /** Why a besieged garrison can't be ordered out. */

@@ -1,6 +1,6 @@
 # Decision: siege equipment
 
-- **Status:** Proposed. Not implemented yet.
+- **Status:** Implemented, with the recommended choices (see `docs/DECISIONS.md`, Sieges).
 - **Decides:** whether a walled city can be stormed at once, and how besiegers build the
   equipment they need to storm it.
 - **Where it goes once agreed:** a new entry under Sieges in `docs/DECISIONS.md` with the

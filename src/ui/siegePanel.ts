@@ -26,6 +26,10 @@ export interface SiegePanelInput {
   storm: BattlePreview | null;
   /** Why the player can't storm right now, when they can't. */
   stormBlocked: string | null;
+  /** The odds of storming once the siege works are finished, for a walled city under the player's siege. */
+  atFullWorks: BattlePreview | null;
+  /** Points of siege works the player's armies around the city build each turn. */
+  worksPerTurn: number;
 }
 
 /**
@@ -59,6 +63,11 @@ export function showSiegePanel(el: SiegePanelElements, input: SiegePanelInput): 
       : `<section class="side"><h3>The garrison</h3><p class="owner">${escapeHtml(owner?.name ?? "")}</p>
            <p class="side-note">The city is undefended.</p></section>`;
 
+  const worksLine = worksSummary(city, input.worksPerTurn);
+  const fullOdds = input.atFullWorks && city.siegeWorks < SIEGE.maxWorks
+    ? `<div class="odds odds-${verdict(input.atFullWorks.winChance)}" title="With full siege works the walls add nothing."><strong>${Math.round(input.atFullWorks.winChance * 100)}%</strong><span>with full siege works</span></div>`
+    : "";
+
   const you = getFaction(state, city.besiegedBy ?? "");
   const yours = forceSummary("Your besieging forces", you?.name ?? "", you?.color ?? "#000", input.besiegers,
     storm?.strength.attacker ?? null, []);
@@ -69,7 +78,9 @@ export function showSiegePanel(el: SiegePanelElements, input: SiegePanelInput): 
 
   el.body.innerHTML = `
     <p class="siege-plan">${besiegedBy} ${status}</p>
+    ${worksLine}
     ${odds}
+    ${fullOdds}
     <div class="sides">${yours}${theirs}</div>
     ${input.stormBlocked ? `<p class="battle-outcome">${escapeHtml(input.stormBlocked)}</p>` : ""}`;
 
@@ -81,6 +92,15 @@ export function showSiegePanel(el: SiegePanelElements, input: SiegePanelInput): 
 
 export function hideSiegePanel(el: SiegePanelElements): void {
   el.root.hidden = true;
+}
+
+/** The state of the siege works around a walled city, or nothing for a city with no walls. */
+function worksSummary(city: City, perTurn: number): string {
+  if (city.buildings.walls === 0 || !city.besiegedBy) return "";
+  const step = SIEGE.worksSteps[Math.floor(city.siegeWorks)];
+  const pace = city.siegeWorks < SIEGE.maxWorks ? `, +${perTurn.toFixed(1)} a turn` : "";
+  const title = `Storming needs ${city.buildings.walls} of ${SIEGE.maxWorks}. Each point takes ${Math.round(SIEGE.wallWeakeningPerWork * 100)}% off the walls. Lost if the siege ends.`;
+  return `<p class="siege-plan" title="${escapeHtml(title)}">Siege works: ${escapeHtml(step)} (${city.siegeWorks.toFixed(1)} of ${SIEGE.maxWorks}${pace}).</p>`;
 }
 
 function verdict(chance: number): string {

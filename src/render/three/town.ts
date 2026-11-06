@@ -393,14 +393,15 @@ const siegeBuilt = new Map<string, THREE.BufferGeometry>();
 
 /**
  * The works around a besieged city: a ring of big sharpened stakes leaning
- * in toward it, three pennants in the besieger's colour, and a faint
- * ring on the ground in that colour. In the city's model units.
+ * in toward it, three pennants in the besieger's colour, a faint ring on
+ * the ground in that colour, and the equipment built so far (`works`, in
+ * whole points). In the city's model units.
  */
-export function buildSiegeWorks(color: string, seed: number): THREE.Group {
-  const key = `${color}|${seed}`;
+export function buildSiegeWorks(color: string, seed: number, works = 0): THREE.Group {
+  const key = `${color}|${seed}|${works}`;
   let geometry = siegeBuilt.get(key);
   if (!geometry) {
-    geometry = siegeGeometry(color, seed);
+    geometry = siegeGeometry(color, seed, works);
     siegeBuilt.set(key, geometry);
   }
   const group = new THREE.Group();
@@ -415,7 +416,7 @@ export function buildSiegeWorks(color: string, seed: number): THREE.Group {
   return group;
 }
 
-function siegeGeometry(color: string, seed: number): THREE.BufferGeometry {
+function siegeGeometry(color: string, seed: number, works: number): THREE.BufferGeometry {
   const b = new Builder(sequence(`siege:${seed}`));
   SIEGE_RINGS.forEach((radius, row) => {
     for (let i = 0; i < STAKES_PER_RING; i++) {
@@ -432,7 +433,31 @@ function siegeGeometry(color: string, seed: number): THREE.BufferGeometry {
     b.face([[x, 18, z], [x + 6, 16.4, z], [x, 14.8, z]], cloth, [x + 2, 16.4, z - 1]);
     b.face([[x, 18, z], [x + 6, 16.4, z], [x, 14.8, z]], cloth, [x + 2, 16.4, z + 1]);
   }
+  siegeEquipment(b, works);
   return b.mesh.geometry();
+}
+
+/** Ladders from 1 point of works, a ram from 2, and a tower for each point from 3. */
+function siegeEquipment(b: Builder, works: number): void {
+  const at = (angle: number, radius = SIEGE_RINGS[0] - 4): P2 => [Math.sin(angle) * radius, Math.cos(angle) * radius];
+  if (works >= 1) {
+    for (const angle of [1.05, 3.2]) {
+      const [x, z] = at(angle);
+      for (const side of [-0.8, 0.8]) b.prism(polygon(x + side, z, 0.3, 4), 0, 12, DARK_WOOD);
+      for (let y = 2; y <= 11; y += 3) b.prism(polygon(x, z, 0.9, 4), y, y + 0.35, DARK_WOOD);
+    }
+  }
+  if (works >= 2) {
+    const [x, z] = at(5.3);
+    b.prism(polygon(x, z, 3.2, 4, Math.PI / 4), 0, 3.4, DARK_WOOD);
+    b.prism(polygon(x, z, 1.1, 6), 3.4, 5, DARK_WOOD);
+  }
+  for (const [i, angle] of [0.2, 2.1, 4.2].entries()) {
+    if (works < 3 + i) break;
+    const [x, z] = at(angle);
+    b.prism(polygon(x, z, 3, 4, Math.PI / 4), 0, 20, DARK_WOOD);
+    b.prism(polygon(x, z, 3.6, 4, Math.PI / 4), 20, 21.2, DARK_WOOD);
+  }
 }
 
 /** A sharpened stake planted at (x, z), leaning in toward the city at the centre. */

@@ -18,6 +18,7 @@ import {
 import { BUILDING_EFFECTS } from "@/data/buildings.js";
 import { COMBAT } from "@/data/combat.js";
 import { EXPERIENCE, experienceLevel, MAX_EXPERIENCE } from "@/data/experience.js";
+import { SIEGE } from "@/data/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, regimentSize, TIERS, UNITS, unitStats, type Tier, type UnitStats, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
@@ -25,6 +26,7 @@ import {
   armyHolding,
   attackTargets,
   besiegedCity,
+  stormBlocked,
   mayFightAt,
   canMove,
   describeRegiments,
@@ -323,9 +325,10 @@ export function defenseBonusAt(state: GameState, tile: TileId): number {
   return terrain + (city ? cityDefense(city) : 0);
 }
 
-/** A city's own defense bonus: the base city bonus plus its walls. */
-export function cityDefense(city: { buildings: { walls: number } }): number {
-  return COMBAT.cityDefenseBonus + BUILDING_EFFECTS.wallsDefense[city.buildings.walls];
+/** A city's own defense bonus: the base city bonus plus its walls, less what the besieger's siege works have taken off them. */
+export function cityDefense(city: { buildings: { walls: number }; siegeWorks?: number }): number {
+  const standing = Math.max(0, 1 - Math.floor(city.siegeWorks ?? 0) * SIEGE.wallWeakeningPerWork);
+  return COMBAT.cityDefenseBonus + BUILDING_EFFECTS.wallsDefense[city.buildings.walls] * standing;
 }
 
 // ---- Flight -------------------------------------------------------------
@@ -537,6 +540,8 @@ export function canAttack(
     if (besiegedCity(state, army)) {
       return { ok: false, reason: "A besieged garrison can only attack the besiegers outside its walls." };
     }
+    const walls = stormBlocked(ctx, state, factionId, target);
+    if (walls && ctx.topology.neighbors(army.tile).includes(target)) return { ok: false, reason: walls };
     return { ok: false, reason: "Armies can only attack an enemy army or undefended enemy city next to them." };
   }
   return { ok: true };

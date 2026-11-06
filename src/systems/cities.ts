@@ -39,6 +39,7 @@ export function createCity(
     supplies: maxSupplies({ isCapital, buildings: { government: isCapital ? 2 : 1 } }),
     besiegedBy: null,
     besiegedSince: null,
+    siegeWorks: 0,
     recruitQueue: [],
     taxRate: "normal",
     // Every city has a council hall; a capital starts with a forum (level 2). None can train more than militia yet.
@@ -373,6 +374,7 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
         isCapital: false,
         besiegedBy: null,
         besiegedSince: null,
+        siegeWorks: 0,
         taxRate: "normal",
         // Its new owner starts with full stores, an ordinary city's (it's no longer a capital).
         supplies: maxSupplies({ isCapital: false, buildings: city.buildings }),

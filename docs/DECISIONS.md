@@ -312,6 +312,40 @@ so.
   taken 250 (was 197), level-3 cities 27 (was 2: with less dithering the AI
   spends more on growth), AI income 558 a turn (was 345). `npm test` runs
   in about 45 s instead of 100, with armies no longer marching back and forth.
+- **Walled cities need siege works before a storm.** The player didn't like a
+  big army walking up and storming on arrival. A garrisoned walled city can only
+  be stormed by its besieger, with as many whole points of works as its wall
+  level. Soldiers next to the city build 1 point per 500 a turn (horsemen half),
+  up to 5, and each whole point takes 20% off the walls' bonus, so there's a
+  reason to wait past the minimum. The cost is time only, and all works are lost
+  when the siege ends, so sallies and relief forces matter more. Unwalled and
+  empty cities can still be taken at once, so early wars keep moving. The rule
+  sits in `attackableFrom`, which the AI and the player both go through, so the
+  AI needed no new code. Over 8 seeds, against the AI change below, without /
+  with `--garrison`: cities not with their first owner 23 to 24 / 23 to 23,
+  factions fallen 2 to 3 / 2 to 3, level-3 cities 11 to 12 / 10 to 12, income +3%
+  / +2%. Sieges of walled cities halved (55 to 27 / 52 to 22); why wasn't
+  measured. Walled storms are rare, which keeps their numbers thin (3 to 1 / 4 to
+  1 a game): 1.0-1.3 siege turns first and 1.4 works at the storm, short of the
+  2-3 turns hoped for. Walled sieges walked away from: 1 a game.
+- **AI armies now gather where they can train real troops.** Field regiments
+  could only be trained in the city nearest the target, usually a small border
+  town: under 2,000 people that blocked field training on about 20% of AI turns,
+  while income quadrupled and regiments per city stayed flat. Only that city
+  launched armies too, so regiments left behind when the target changed never
+  left. Now the muster is the nearest city with a unit building and the people
+  to train (or the nearest, if none has both), any city with 3 to spare launches,
+  and while upkeep is under 15% of income a field regiment comes before buildings
+  other than government (`AI.armyUpkeepShare`). Mustering in the nearest big city
+  of any kind was tried and rejected: it turned big cities' people into militia
+  (66% of regiments) and cost 33% of AI income. A share of 0.35 cut income 70%,
+  put factions in debt and fell 6 factions a game; 0.2 made 4. Measured over 8
+  seeds, master to now: soldiers +9%, regiments +12%, militia 53% to 39% of
+  regiments, cities not with their first owner 21 to 23, factions fallen 2 to 2,
+  net income -29% (upkeep 11% to 16% of income, and more war), level-3 cities 15
+  to 11 (one more than the 3 we meant to allow), watchtowers 13 to 24 (they stay
+  ahead of the army, and got more gold). Regiments remain 98% basic tier: cities
+  reach level 2-3 late and old regiments never upgrade. That's still open.
 - **An army can't stage an attack from inside one of its own besieged
   cities** (except on the besiegers): marching in shuts it in. This was
   allowed by mistake and only showed once the AI laid sieges.
