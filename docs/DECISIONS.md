@@ -301,7 +301,7 @@ so.
   from surrender, and at any odds on its last turn ("last stand").
 
 - **AI priorities**, one action at a time from a fresh look at the game:
-  merge damaged regiments; attack at good odds (20% stronger, counting joined
+  merge damaged regiments; attack at good odds (10% stronger, counting joined
   armies; garrisons only with regiments they can spare unless besieged);
   retreat field armies from stronger enemies; launch surplus regiments from
   the muster city (nearest the target) once they'd survive a sally; advance
@@ -353,6 +353,26 @@ so.
   net income -29% (upkeep 11% to 16% of income, and more war), level-3 cities 15
   to 11 (one more than the 3 we meant to allow), watchtowers 13 to 24 (they stay
   ahead of the army, and got more gold). Regiments remained 98% basic tier.
+- **The AI occupies.** The three fates are balanced for gold, each winning over its
+  own horizon, but occupy was out of the AI's reach by rule and it exterminated under
+  300 gold, so it razed most of what it took. Allowing for how long cities are really
+  held (443 captures: 24% lost within 10 turns, 37% within 25, 46% within 50), occupying
+  was best for 239 of 440 cities, enslaving 198, exterminating 3. Now it exterminates
+  under 100 gold, enslaves a city with enemy armies near (the gold and people are safe
+  if it's retaken) and otherwise occupies. Per game: 34 occupied, 12 enslaved, 2
+  exterminated (one report game before: 0 / 18 / 23). Over 8 seeds, against the launch
+  change below, without / with `--garrison`: cities not with their first owner 21 to
+  24 / 19 to 24, net income 370 to 351 / 360 to 404, level-1 cities 18 to 10, level-3
+  cities 17 to 18 / 15 to 16, factions fallen 2 to 2 / 1 to 2.
+- **The AI launches at 4 regiments, and attacks and launches at closer odds.**
+  `minLaunchRegiments` 3 to 4, `attackMargin` 1.2 to 1.1, `launchMargin` 1.4 to 1.25.
+  The margins alone did little (close battles 31% to 35%, attackers still winning 93%:
+  a stronger side rarely loses, whatever margin it picks its fights at). The bigger
+  launch did most of the rest: armies wait to be worth sending, so fewer die piecemeal.
+  Over 8 seeds with the experience change below, without / with `--garrison`: net income
+  295 to 370 / 274 to 360, soldiers +16% / +15%, level-3 cities 11 to 17 / 10 to 15,
+  battles 439 to 290 / 402 to 280, cities not with their first owner 24 to 21 / 21 to 19,
+  factions fallen 3 to 2 / 2 to 1. Wars are slower, which the player should judge.
 - **The AI stops choosing militia where it has a unit building, and values tier.**
   After turn 25, about 68 militia regiments a game came from cities with a unit
   building, since big regiments looked strongest, and in the last 25 turns only 8 of
@@ -416,6 +436,11 @@ so.
   buildings widely but still trains mostly militia (most training happens
   early, before they exist), and no city reached level 3 in 100 turns: the
   gold goes into unit buildings. That's for the military AI balancing.
+- **Experience levels come 30% sooner**: 2 / 3 / 6 / 8 / 13 / 17 points, from
+  2 / 4 / 8 / 12 / 18 / 24. Almost no regiment reached level 6, and few reached level 3.
+  The first level stays at 2 points, one win, so that surviving a single lost battle
+  doesn't make a veteran. Alone, over 8 seeds: regiments at levels 3-5 13 to 26, level 6
+  0 to 1, little else moved.
 - **Experience: flat +0.5 attack and armor per level, 6 levels, every unit.**
   The player chose flat bonuses over percentages, so veterans matter most to
   the weakest troops. Level 6 is worth, against the same unit, militia ×2.5,
@@ -562,7 +587,8 @@ The economy was retuned several times; the lesson each time:
      turns of the city's income, and halved cities regrow fast); occupying
      overtakes it after ~18 turns, enslaving sits between (and, since its
      losses were halved, is the best 25-turn choice in about half the cities).
-     The AI enslaves, or exterminates when short of gold; it never occupies.
+     The AI enslaved, or exterminated when short of gold, and never occupied
+     (changed since: see "The AI occupies", under Sieges).
    - Population caps (8k / 20k by level, then the land) matter: a city at
      its level cap gains nothing from low taxes.
    - Accepted exception: exterminating a big city (near its level's cap)

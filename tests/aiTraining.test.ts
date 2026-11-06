@@ -1,9 +1,10 @@
-/** What the AI chooses to train: line units over militia, and its best tier. */
+/** What the AI chooses: line units over militia, its best tier, and the fate of a city it takes. */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { GameContext } from "@/core/context.js";
 import { createGame } from "@/core/setup.js";
-import { citiesOf, type Army, type City } from "@/core/state.js";
+import { armyAt, citiesOf, type Army, type City, type GameState } from "@/core/state.js";
+import { nextAction } from "@/ai/ai.js";
 import { bestTierUnits, trainAgainst } from "@/ai/assess.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize, type UnitType } from "@/data/units.js";
@@ -48,4 +49,34 @@ describe("the AI's choice of unit", () => {
     assert.deepEqual(bestTierUnits(cityWith({ spearYard: 2, archeryRange: 1 })), ["spearmen"]);
     assert.deepEqual(bestTierUnits(cityWith({ spearYard: 1, stables: 1 })), ["spearmen", "cavalry"]);
   });
+});
+
+describe("the fate the AI gives a city it took", () => {
+  /** Carthage to play with this much gold, holding a city whose fate it hasn't decided, perhaps with an enemy army beside it. */
+  function taken(gold: number, enemyNear: boolean): { state: GameState; cityId: string } {
+    const start = createGame(ctx, map, ROMAN_WORLD);
+    const city = citiesOf(start, "carthage")[0];
+    const armies = { ...start.armies };
+    if (enemyNear) {
+      const tile = ctx.topology.neighbors(city.tile).find((t) => map.tiles[t].terrain !== "water" && !armyAt(start, t))!;
+      armies.raiders = { ...enemy("spearmen"), id: "raiders", tile };
+    }
+    const state: GameState = {
+      ...start,
+      armies,
+      currentFactionIndex: start.factions.findIndex((f) => f.id === "carthage"),
+      factions: start.factions.map((f) => (f.id === "carthage" ? { ...f, gold } : f)),
+      cities: { ...start.cities, [city.id]: { ...city, unsettled: true } },
+    };
+    return { state, cityId: city.id };
+  }
+  const fate = (gold: number, enemyNear: boolean) => {
+    const { state, cityId } = taken(gold, enemyNear);
+    assert.deepEqual(nextAction(ctx, state, "carthage"), { type: "settleCity", cityId, choice: choiceFor(gold, enemyNear) });
+  };
+  const choiceFor = (gold: number, enemyNear: boolean) => (gold < 100 ? "exterminate" : enemyNear ? "enslave" : "occupy");
+
+  it("is occupation when it looks safe", () => fate(500, false));
+  it("is enslavement with enemies near", () => fate(500, true));
+  it("is extermination only when nearly broke", () => fate(50, false));
 });
