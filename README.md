@@ -430,8 +430,9 @@ less, so +50% makes a garrison fight like one half as big again.
 **Joint battles.** Every army within one tile of either the attacker or the
 defender joins the battle on its own side: the attacker's other armies bring
 their regiments that can still move, the defender's bring all of theirs. A
-beaten side's armies each flee (or fight to the death), and every attacking
-army uses up its turn. An army that marches through one of your own on its way
+beaten side's armies each flee (or fight to the death). **Attacking costs 6
+movement** for every regiment that attacks, so a winner can move on or attack
+again with what's left, while taking a city or fleeing ends its move. An army that marches through one of your own on its way
 to attack fights alongside it, and it only goes through a besieged city of
 yours if there's no other way. If the attackers win a battle for a city, the leading army marches
 in and captures it.

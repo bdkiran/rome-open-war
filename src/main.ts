@@ -864,14 +864,18 @@ function queueNewBattles(state: GameState): void {
     if (report.id <= lastBattleSeen) continue;
     if (report.attacker === humanId || report.defender === humanId) resultQueue.push(report);
     if (report.attacker === humanId) {
+      // A clash always plays: an army that lost and fled is in no place to strike.
+      mapView.clash(report.tile, getFaction(state, report.attacker)?.color ?? "#888888");
       strikeAt(state, report);
       holdResultsForBlow();
+    } else if (report.defender === humanId && !skipPlayback) {
+      resultsHeld = true; // Until the enemy's step has played: see showAiStep.
     }
   }
   lastBattleSeen = state.nextBattleNumber - 1;
 }
 
-/** Whether the player's own blow is still landing: its result opens after it. */
+/** Whether a battle is still playing on the map: its result opens after it. */
 let resultsHeld = false;
 
 /** Keeps the result shut until the player's army has walked up and struck, so the blow can be seen. */
@@ -1048,10 +1052,21 @@ const pause = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
 /**
  * Plays one AI step for the player, if they could see it: the camera glides
  * there unless it's already on screen, the armies walk (enemies at a faster
- * pace), and the map holds a moment, longer for a fight. A battle the player
- * fought opens its result, and the AI waits until it's closed.
+ * pace), and the map holds a moment, longer for a fight. Only then does a
+ * battle the player fought open its result, and the AI waits until it's closed.
  */
 async function showAiStep(step: AiStep): Promise<void> {
+  try {
+    await playAiStep(step);
+  } finally {
+    resultsHeld = false;
+  }
+  showNextResult();
+  await waitForFrames(() => resultQueue.length === 0 && Boolean(battleResult.root.hidden), Infinity);
+}
+
+/** The camera, the walks, the clash and the banner of one AI step. */
+async function playAiStep(step: AiStep): Promise<void> {
   if (skipPlayback) return;
   const focus = stepFocus(step);
   if (!focus) return;
@@ -1077,8 +1092,6 @@ async function showAiStep(step: AiStep): Promise<void> {
   }
   await pause(focus.dramatic ? HOLD_AFTER_BATTLE : HOLD_AFTER_MOVE);
   hideBanner();
-  // Read your own battle's result before the enemy carries on.
-  await waitForFrames(() => resultQueue.length === 0 && Boolean(battleResult.root.hidden), Infinity);
 }
 
 /**
