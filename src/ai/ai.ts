@@ -22,6 +22,7 @@ import {
   assess,
   counterToNearestEnemy,
   regimentStrengthAgainst,
+  bestTierUnits,
   trainAgainst,
   enemyRegimentsNear,
   stackCanMove,
@@ -95,7 +96,7 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
     launchAction(ctx, real, seen, factionId, plan) ??
     advanceAction(ctx, real, seen, factionId, plan) ??
     trainingAction(ctx, seen, factionId, plan, "defense") ??
-    (armyIsCheap(seen, factionId) ? watchtowerAction(ctx, real, factionId, plan) ?? trainingAction(ctx, seen, factionId, plan, "field") : null) ??
+    (armyIsCheap(seen, factionId) ? trainingAction(ctx, seen, factionId, plan, "field") : null) ??
     constructionAction(ctx, seen, factionId, plan) ??
     scoutAction(ctx, real, factionId, plan) ??
     watchtowerAction(ctx, real, factionId, plan) ??
@@ -432,10 +433,8 @@ function trainingAction(
   if (phase === "defense" && relief?.muster) {
     const main = relief.besiegers.sort((a, b) => b.regiments.length - a.regiments.length)[0];
     const unit = trainAgainst(relief.muster, main) ?? leastRepresented(relief.muster, armyAt(state, relief.muster.tile));
-    const tier = affordableTier(state, factionId, relief.muster.id, unit, Infinity);
-    if (tier) {
-      return { type: "trainRegiment", cityId: relief.muster.id, unit, tier };
-    }
+    const order = unitOrMilitia(state, factionId, relief.muster.id, unit);
+    if (order) return order;
   }
 
   // Bring battered garrisons back to strength before training new regiments:
@@ -467,7 +466,12 @@ function trainingAction(
     // An empty or threatened city gets its garrison even if upkeep is tight.
     const emergency = regimentsAt(city.tile) === 0 || enemyRegimentsNear(ctx, state, factionId, city.tile) > 0;
     if (!emergency && city.population < AI.minRecruitPopulation) continue;
-    const tier = affordableTier(state, factionId, city.id, unit, emergency ? Infinity : spareIncome);
+    if (emergency) {
+      const order = unitOrMilitia(state, factionId, city.id, unit);
+      if (order) return order;
+      continue;
+    }
+    const tier = affordableTier(state, factionId, city.id, unit, spareIncome);
     if (tier) {
       return { type: "trainRegiment", cityId: city.id, unit, tier };
     }
@@ -493,9 +497,10 @@ function trainingAction(
 
 /**
  * Whether the army comes before optional buildings: its upkeep is a small share
- * of income, and no government building is being saved for.
+ * of income, there's gold to spare, and no government building is being saved for.
  */
 function armyIsCheap(state: GameState, factionId: FactionId): boolean {
+  if ((getFaction(state, factionId)?.gold ?? 0) < AI.armyFirstGold) return false;
   if (governmentToSave(state, factionId)) return false;
   return factionUpkeep(state, factionId) < factionIncome(state, factionId) * AI.armyUpkeepShare;
 }
@@ -682,9 +687,22 @@ function watchtowerAction(ctx: GameContext, real: GameState, factionId: FactionI
  * army, to keep stacks mixed (the cheapest, for an empty army).
  */
 function leastRepresented(city: City, army: Army | undefined): UnitType {
-  const totals = new Map<UnitType, number>(trainableUnits(city).map((t) => [t, 0]));
+  const totals = new Map<UnitType, number>(bestTierUnits(city).map((t) => [t, 0]));
   for (const r of army?.regiments ?? []) if (totals.has(r.unit)) totals.set(r.unit, totals.get(r.unit)! + r.soldiers);
   return [...totals].sort((a, b) => a[1] - b[1])[0][0];
+}
+
+/**
+ * An order to train a unit in an emergency, whatever the upkeep: at the best
+ * tier the gold allows, or militia if the unit can't be afforded at all. Help
+ * that's cheap and here is better than good troops that never come.
+ */
+function unitOrMilitia(state: GameState, factionId: FactionId, cityId: string, unit: UnitType): Action | null {
+  for (const choice of [unit, "militia"] as const) {
+    const tier = affordableTier(state, factionId, cityId, choice, Infinity);
+    if (tier) return { type: "trainRegiment", cityId, unit: choice, tier };
+  }
+  return null;
 }
 
 /**

@@ -7,7 +7,7 @@ export const SCOUT = {
   /** Gold, paid when it's queued. */
   cost: 100,
   /** Gold a turn, paid with the armies' upkeep. */
-  upkeep: 2,
+  upkeep: 4,
   /** Movement points a turn: more than cavalry (see data/units.ts). */
   movement: 20,
   /** The city level needed to train one. */

@@ -114,9 +114,9 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Port",
     purpose: "Faster growth, the more of the city's reach is sea, and a little gold from every sea tile on its coast. Needs sea.",
     levels: [
-      { name: "Jetty", cost: 200, turns: 2 },
-      { name: "Harbour", cost: 400, turns: 3 },
-      { name: "Great harbour", cost: 650, turns: 4 },
+      { name: "Jetty", cost: 150, turns: 2 },
+      { name: "Harbour", cost: 250, turns: 3 },
+      { name: "Great harbour", cost: 450, turns: 4 },
     ],
   },
   roads: {

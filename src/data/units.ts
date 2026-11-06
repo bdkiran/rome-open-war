@@ -45,7 +45,7 @@ export interface UnitDef {
 }
 
 export const UNITS: Record<UnitType, UnitDef> = {
-  // A basic regiment costs 110 / 180 / 320 / 360 gold and about 2 / 4 / 5 / 6 gold a turn in upkeep.
+  // A basic regiment costs 110 / 180 / 240 / 240 gold and about 2 / 4 / 4 / 4 gold a turn in upkeep.
   militia: {
     name: "Militia", movement: 12, attack: 20, armor: 20, ranged: 0, charge: 0, antiCavalry: 0, mounted: false,
     goldPerSoldier: 0.5, upkeep: 0.01, regimentSize: 220, building: null,
@@ -56,11 +56,11 @@ export const UNITS: Record<UnitType, UnitDef> = {
   },
   archers: {
     name: "Archers", movement: 12, attack: 10, armor: 10, ranged: 60, charge: 0, antiCavalry: 0, mounted: false,
-    goldPerSoldier: 2, upkeep: 0.03125, regimentSize: 160, building: "archeryRange",
+    goldPerSoldier: 1.5, upkeep: 0.0234375, regimentSize: 160, building: "archeryRange",
   },
   cavalry: {
     name: "Cavalry", movement: 16, attack: 60, armor: 20, ranged: 0, charge: 20, antiCavalry: 0, mounted: true,
-    goldPerSoldier: 3, upkeep: 0.05, regimentSize: 120, building: "stables",
+    goldPerSoldier: 2, upkeep: 1 / 30, regimentSize: 120, building: "stables",
   },
 };
 

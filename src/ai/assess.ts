@@ -11,7 +11,7 @@ import {
 import { AI } from "@/data/ai.js";
 import { ARMY_RULES, LINE_UNITS, regimentSize, UNIT_TYPES, type UnitType, UNITS } from "@/data/units.js";
 import { sideStrength, type Troops } from "@/systems/combat.js";
-import { trainableUnits } from "@/systems/recruitment.js";
+import { bestTier, trainableUnits } from "@/systems/recruitment.js";
 import { landmasses } from "@/systems/pathfinding.js";
 
 /** What an AI faction makes of its situation right now. */
@@ -99,10 +99,12 @@ function chooseTarget(ctx: GameContext, state: GameState, factionId: FactionId):
 
   for (const city of Object.values(state.cities)) {
     if (city.owner === factionId) continue;
-    // The target is judged by our nearest city, but armies gather in the nearest
-    // one that can train more than militia and has the people for it, when
-    // there is one. A small border town stopped all field training, and any
-    // big city without a unit building only turned its people into militia.
+    // The target is judged by our nearest city, but armies gather in one that
+    // can train more than militia and has the people for it, when there is one.
+    // A small border town stopped all field training, and any big city without a
+    // unit building only turned its people into militia. Better unit buildings
+    // count as a shorter march, or most regiments are trained below the best
+    // the faction can train.
     let nearest: City | null = null;
     let distance = Infinity;
     let recruiter: City | null = null;
@@ -114,10 +116,11 @@ function chooseTarget(ctx: GameContext, state: GameState, factionId: FactionId):
         nearest = home;
         distance = d;
       }
-      const hasUnitBuilding = home.buildings.spearYard > 0 || home.buildings.archeryRange > 0 || home.buildings.stables > 0;
-      if (hasUnitBuilding && home.population >= AI.minRecruitPopulation && d < recruiterDistance) {
+      const yard = Math.max(home.buildings.spearYard, home.buildings.archeryRange, home.buildings.stables);
+      const march = d - (yard - 1) * AI.musterTilesPerTier;
+      if (yard > 0 && home.population >= AI.minRecruitPopulation && march < recruiterDistance) {
         recruiter = home;
-        recruiterDistance = d;
+        recruiterDistance = march;
       }
     }
     if (!nearest) continue;
@@ -175,14 +178,33 @@ export function regimentStrengthAgainst(regiment: Troops, enemy: Army): number {
 }
 
 /**
+ * What a city should choose between: its line units if it has any. Militia's
+ * big regiments always looked strongest per regiment, so cities with a unit
+ * building kept spending their people on them. They're what a city with no
+ * unit building trains, and the fallback in an emergency.
+ */
+function lineUnitsFirst(city: City): UnitType[] {
+  const units = trainableUnits(city);
+  const line = units.filter((u) => u !== "militia");
+  return line.length > 0 ? line : units;
+}
+
+/** The units a city can train at its best tier, for when no enemy says what's needed. */
+export function bestTierUnits(city: City): UnitType[] {
+  const units = lineUnitsFirst(city);
+  const top = Math.max(...units.map((u) => bestTier(city, u) ?? 1));
+  return units.filter((u) => (bestTier(city, u) ?? 1) === top);
+}
+
+/**
  * The unit a city should train against an enemy army: whichever of those it
  * can train makes the strongest regiment against it (the dearer one on a
  * tie). Null with no enemy.
  */
 export function trainAgainst(city: City, army: Army | undefined): UnitType | null {
   if (!army) return null;
-  const value = (unit: UnitType) => regimentStrengthAgainst({ unit, soldiers: regimentSize(unit) }, army);
-  return [...trainableUnits(city)].sort((a, b) => value(b) - value(a) || UNIT_TYPES.indexOf(b) - UNIT_TYPES.indexOf(a))[0];
+  const value = (unit: UnitType) => regimentStrengthAgainst({ unit, soldiers: regimentSize(unit), tier: bestTier(city, unit) ?? 1 }, army);
+  return [...lineUnitsFirst(city)].sort((a, b) => value(b) - value(a) || UNIT_TYPES.indexOf(b) - UNIT_TYPES.indexOf(a))[0];
 }
 
 /** What a city should train against the nearest enemy army, or a rotating choice of what it can train when none are near. */
@@ -199,7 +221,7 @@ export function counterToNearestEnemy(ctx: GameContext, state: GameState, city: 
   }
   const counter = trainAgainst(city, nearest);
   if (counter) return counter;
-  const options = trainableUnits(city);
+  const options = bestTierUnits(city);
   const index = Number(city.id.replace(/\D/g, "")) || 0;
   return options[index % options.length];
 }
