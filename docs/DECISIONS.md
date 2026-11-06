@@ -371,6 +371,17 @@ so.
 
 ## Armies and recruitment
 
+- **Archers and cavalry cost 240 a regiment, ports 150 / 250 / 450.** Measured in
+  simulated battles, joining an army of 2 spearmen and 2 militia, archers added what
+  spearmen add for 1.8 times the gold, and cavalry 71% of it for twice the gold, which
+  speed and sight didn't seem to justify. So gold per soldier went from 1 / 2 / 3 to
+  1 / 1.5 / 2, with upkeep cut to match. A second port level took 87 turns to pay back.
+  Mines pay back fastest (15 turns) and the player chose to leave them: they don't have
+  to be level with other buildings. Over 8 seeds, without `--garrison`: archers 36 to
+  49 regiments, cavalry 10 to 14, basic tier 85% to 81%, port levels 24 to 45, AI gross
+  income at turn 100 +6%, peacetime gold by turn 100 +2.5%, but median net income per
+  faction -2% (-14% with `--garrison`, a wide range) and treasuries -10%, as the AI
+  spends what it saves on more army: battles +6% / +11%.
 - **Regiment sizes differ by unit** (spearmen 200, archers 160, cavalry 120)
   at the same gold per soldier as before (1/2/3), so the balance between
   units holds. Keeping regiment prices at 100/200/300 was rejected: it would

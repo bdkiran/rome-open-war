@@ -243,7 +243,7 @@ militia until it builds one.
 | Farms    | +20% / +40% / +60% population growth, and +0.25 / +0.5 / +0.75 gold per plains tile in its land | 150 / 300 / 550 gold | 2 / 3 / 4 |
 | Market   | +30% / +60% / +100% gold                                   | 150 / 300 / 500 gold | 2 / 3 / 4 |
 | Mine     | +1 / +2 / +3 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Port     | +30% / +60% / +90% growth, times the city's share of sea, and +0.25 / +0.5 / +0.75 gold per sea tile on its coast (cities whose land touches the sea) | 200 / 400 / 650 gold | 2 / 3 / 4 |
+| Port     | +30% / +60% / +90% growth, times the city's share of sea, and +0.25 / +0.5 / +0.75 gold per sea tile on its coast (cities whose land touches the sea) | 150 / 250 / 450 gold | 2 / 3 / 4 |
 | Roads    | Faster movement across the city's land, for every army (see Movement) | 150 / 300 / 500 gold | 2 / 3 / 4 |
 
 A mine can only be built in a city whose territory has at least 5 hills or
@@ -293,8 +293,8 @@ archers. Militia are big, cheap regiments of poor fighters.
 |----------|----------|--------|-------|--------------------------|--------------|---------------------------|-----------------------------|------------------|
 | Militia  | 12       | 20     | 20    | none                     | 220 soldiers | 110 gold                  | about 2 gold a turn         | any city         |
 | Spearmen | 12       | 30     | 30    | Anti-cavalry +60         | 180 soldiers | 180 gold                  | about 4 gold a turn         | a Spear yard     |
-| Archers  | 12       | 10     | 10    | Ranged 60                | 160 soldiers | 320 gold                  | 5 gold a turn               | an Archery range |
-| Cavalry  | 16       | 60     | 20    | Charge +20, mounted      | 120 soldiers | 360 gold                  | 6 gold a turn               | Stables          |
+| Archers  | 12       | 10     | 10    | Ranged 60                | 160 soldiers | 240 gold                  | about 4 gold a turn         | an Archery range |
+| Cavalry  | 16       | 60     | 20    | Charge +20, mounted      | 120 soldiers | 240 gold                  | 4 gold a turn               | Stables          |
 
 Any city can train militia. Spearmen, archers and cavalry each need their own
 building, which even a level-1 city can build. Each level of that building
