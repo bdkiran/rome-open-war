@@ -1,11 +1,11 @@
 /** How the AI behaves. Tune its aggression and caution here. */
 export const AI = {
   /** Attack only when our expected strength beats the defender's by this factor. */
-  attackMargin: 1.2,
+  attackMargin: 1.1,
   /** Send a field army out only when it's this much stronger than the target's defenders. */
-  launchMargin: 1.4,
+  launchMargin: 1.25,
   /** Smallest field army worth sending, in regiments. */
-  minLaunchRegiments: 3,
+  minLaunchRegiments: 4,
 
   /**
    * A city with fewer people than this trains no regiments unless it's
@@ -43,7 +43,7 @@ export const AI = {
   upkeepHeadroom: 0.25,
 
   /** Below this much gold, a conquered city is exterminated for its plunder (otherwise enslaved or occupied). */
-  plunderWhenBelow: 300,
+  plunderWhenBelow: 100,
   /** Gold wanted in hand before taxes come back down after a debt. */
   recoveredGold: 300,
   /** A city with this share of its capacity is full: it pays high taxes, since it can't grow anyway. */

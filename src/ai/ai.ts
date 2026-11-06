@@ -88,7 +88,7 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
   const seen = fogged(real, factionId, visible);
   const plan = assess(ctx, seen, factionId);
   return (
-    settleAction(seen, factionId) ??
+    settleAction(ctx, seen, factionId) ??
     taxAction(seen, factionId, plan) ??
     mergeAction(seen, factionId) ??
     attackAction(ctx, real, seen, factionId, plan, visible) ??
@@ -107,16 +107,19 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
 // ---- 0. Conquered cities, taxes and merging -------------------------------
 
 /**
- * Decides the fate of a city just taken: exterminate it when short of gold,
- * enslave it when there are other cities to send its people to, otherwise
- * occupy it.
+ * Decides the fate of a city just taken. Exterminating only pays for a few
+ * turns, so it's for a faction that's nearly broke. A city with enemies near may
+ * soon be lost (over a third are, within 25 turns), so it's enslaved: the gold and
+ * people are safe whoever retakes it. A city that looks safe is occupied, which
+ * pays best in the long run. With nowhere to send slaves, it's occupied anyway.
  */
-function settleAction(state: GameState, factionId: FactionId): Action | null {
+function settleAction(ctx: GameContext, state: GameState, factionId: FactionId): Action | null {
   const city = unsettledCities(state, factionId)[0];
   if (!city) return null;
   const gold = getFaction(state, factionId)?.gold ?? 0;
   const others = citiesOf(state, factionId).length - 1;
-  const choice = gold < AI.plunderWhenBelow ? "exterminate" : others > 0 ? "enslave" : "occupy";
+  const atRisk = enemyRegimentsNear(ctx, state, factionId, city.tile) > 0;
+  const choice = gold < AI.plunderWhenBelow ? "exterminate" : atRisk && others > 0 ? "enslave" : "occupy";
   return { type: "settleCity", cityId: city.id, choice };
 }
 

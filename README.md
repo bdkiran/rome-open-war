@@ -352,7 +352,7 @@ Stopping on a friendly army merges into it, if the combined stack has room.
 
 **Experience.** Regiments that survive a battle gain experience: 2 points on
 the winning side, 1 on the losing side, and none if the enemy brought under a
-quarter of your side's soldiers. At 2, 4, 8, 12, 18 and 24 points a regiment
+quarter of your side's soldiers. At 2, 3, 6, 8, 13 and 17 points a regiment
 reaches levels 1 to 6, each adding +5 attack and +5 armor, shown as pips on
 its box. It costs nothing to keep. Arrows ignore armor, so veterans fear archers
 most. Retraining's recruits dilute experience in proportion, and merged regiments
@@ -524,7 +524,7 @@ cities left is eliminated.
 The AI factions play by the same rules and under the same fog as you. What
 to expect from them:
 
-- They attack when the odds are good (about 20% stronger, counting every army
+- They attack when the odds are good (about 10% stronger, counting every army
   that would join in), march up to a city they can't see into before
   storming it, retreat from stronger armies, and march on the enemy
   city that's cheapest to take, whoever owns it. They besiege it and wait for
@@ -542,7 +542,7 @@ to expect from them:
   the best tier of a unit they can afford to keep, and militia only where
   they have no unit building or in an emergency. Armies gather in the nearest
   city with a unit building and the people to train, counting a better building
-  as a shorter march, and any city with 3 regiments to spare sends them out.
+  as a shorter march, and any city with 4 regiments to spare sends them out.
   With gold to spare and upkeep a small part of their income, field regiments
   come before other buildings. Once a border city's
   buildings are seen to, they keep a scout (one more per 5 cities) a few
@@ -555,8 +555,8 @@ to expect from them:
   regiments still retrain, and a besieged city ends the saving.
 - They raise taxes when in debt and lower them once recovered, and tax a
   city high once it's full (it can't grow anyway). When they
-  take a city, they exterminate when short of gold, enslave when they have
-  other cities to fill, and otherwise occupy.
+  take a city, they exterminate only when nearly out of gold, enslave it if enemy
+  armies are near, and otherwise occupy.
 
 ## Roadmap
 
