@@ -274,7 +274,7 @@ export class MapView3D {
       const garrisoned = inSight ? holding !== undefined : true;
       const garrison = inSight && holding ? { label: formatCompact(armySoldiers(holding)), regiments: holding.regiments.length } : null;
       const culture = getFaction(state, city.owner)?.culture ?? "roman";
-      const key = `${color}|${culture}|${city.isCapital}|${besieger}|${city.buildings.government}|${city.buildings.walls}|${garrisoned}|${garrison?.label}|${garrison?.regiments}`;
+      const key = `${color}|${culture}|${city.isCapital}|${besieger}|${city.buildings.government}|${city.buildings.walls}|${Math.floor(city.siegeWorks)}|${garrisoned}|${garrison?.label}|${garrison?.regiments}`;
       const existing = this.cities.get(city.id);
       if (existing?.key === key) continue;
       if (existing) this.scene.remove(existing.object);
@@ -287,7 +287,7 @@ export class MapView3D {
           this.library,
         ),
       );
-      if (besieger) group.add(buildSiegeWorks(besieger, hash(city.id)));
+      if (besieger) group.add(buildSiegeWorks(besieger, hash(city.id), Math.floor(city.siegeWorks)));
       group.position.copy(this.terrain.top(city.tile));
       group.scale.setScalar(CITY_SCALE);
       this.scene.add(group);

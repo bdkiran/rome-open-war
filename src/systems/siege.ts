@@ -14,7 +14,7 @@ import {
 } from "@/core/state.js";
 import { SIEGE } from "@/data/siege.js";
 import type { TileId } from "@/map/topology.js";
-import { besiegedCity, SHUT_IN } from "@/systems/armies.js";
+import { besiegedCity, SHUT_IN, siegeWorksPerTurn } from "@/systems/armies.js";
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
 import { applyLosses } from "@/systems/combat.js";
 
@@ -77,7 +77,7 @@ export function liftSiege(state: GameState, factionId: FactionId, cityId: string
 function endSiege(state: GameState, cityId: string, text: string): GameState {
   const city = state.cities[cityId];
   const besieger = city.besiegedBy;
-  const next = setCity(state, { ...city, besiegedBy: null, besiegedSince: null, supplies: maxSupplies(city) });
+  const next = setCity(state, { ...city, besiegedBy: null, besiegedSince: null, siegeWorks: 0, supplies: maxSupplies(city) });
   return addLog(next, text, { kind: "siege", factions: besieger ? [besieger, city.owner] : [city.owner] });
 }
 
@@ -120,10 +120,16 @@ export function processSieges(ctx: GameContext, state: GameState, besiegerId: Fa
       continue;
     }
 
+    // The works go up from the turn the siege is laid, which costs the city nothing else.
+    if (city.buildings.walls > 0) {
+      const works = Math.min(SIEGE.maxWorks, city.siegeWorks + siegeWorksPerTurn(ctx, next, besiegerId, city));
+      next = setCity(next, { ...city, siegeWorks: works });
+    }
+
     if (city.besiegedSince === next.turn) continue;
 
     const held = armyAt(next, city.tile) !== undefined;
-    next = attrition(next, city);
+    next = attrition(next, next.cities[city.id]);
     if (held && !armyAt(next, city.tile)) {
       next = garrisonFell(ctx, next, besiegerId, next.cities[city.id]);
       continue;

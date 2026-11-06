@@ -452,7 +452,8 @@ shows the city's supplies, its garrison, your forces around it and the odds
 of storming the walls now:
 
 - **Continue the siege** keeps the siege going.
-- **Storm the city** opens the battle panel.
+- **Storm the city** opens the battle panel. A walled city with a garrison
+  can't be stormed until your siege works are ready (below).
 - **Withdraw** lifts the siege, and the city's supplies are refilled.
 
 Clicking a city you're already besieging reopens the screen. A city in sight
@@ -477,6 +478,24 @@ strongest army next to the city marches in at once and takes it, whoever's turn
 it is; a city taken on another's turn has its fate decided on your own. However a siege
 ends, the city's supplies are refilled at once, so another siege starts from
 full stores.
+
+**Siege works.** A garrisoned city with walls can only be stormed by its
+besieger, and only with enough siege works: 1 point for a palisade, 2 for
+stone walls, 3 for great walls. An empty walled city and a city with no walls
+can be taken at once. At the end of each of your turns, starting with the turn
+the siege is laid, your soldiers next to the city build 1 point per 500
+soldiers (horsemen count half), up to 5: ladders, rams, a siege tower, two
+towers, full siege works. Each whole point takes 20% off the walls' bonus, so
+at 5 they add nothing; the city's own +10% and the terrain stay. More works
+mean better odds, and the siege screen shows the odds now and at full works.
+All works are lost when the siege ends for any reason.
+
+| Besiegers | Works a turn | Palisade | Stone walls | Great walls | Full works |
+|---|---|---|---|---|---|
+| 400 soldiers | 0.8 | 2 turns | 3 | 4 | 7 |
+| 750 soldiers | 1.5 | 1 | 2 | 2 | 4 |
+| 1,300 soldiers | 2.6 | 1 | 1 | 2 | 2 |
+| 1,900 soldiers | 3.8 | 1 | 1 | 1 | 2 |
 
 A besieged garrison is shut in: it can't leave the city, and can only attack
 the besiegers next to it and join battles against them. The defenders can break a siege by attacking the
@@ -509,8 +528,8 @@ to expect from them:
   that would join in), march up to a city they can't see into before
   storming it, retreat from stronger armies, and march on the enemy
   city that's cheapest to take, whoever owns it. They besiege it and wait for
-  it to surrender or for good odds to storm it, and once they're camped
-  outside a city they stick with it.
+  it to surrender or for good odds to storm it once their siege works allow,
+  and once they're camped outside a city they stick with it.
 - **They defend their cities hard.** When one is besieged, they raise taxes,
   train a relief force suited to the besiegers, and march every field
   army to it. The garrison sallies at even odds, attacks at poor odds once

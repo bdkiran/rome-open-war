@@ -2,6 +2,7 @@ import { armiesOf, citiesOf, type GameState } from "@/core/state.js";
 import { CONSTRUCTION_QUEUE_SIZE } from "@/data/buildings.js";
 import { MAX_EXPERIENCE } from "@/data/experience.js";
 import { SCOUT } from "@/data/scouts.js";
+import { SIEGE } from "@/data/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, UNITS, regimentSize } from "@/data/units.js";
 
@@ -50,6 +51,8 @@ export function brokenRules(state: GameState): string[] {
     if (!(city.population > 0)) broken.push(`${at}: ${city.name} has ${city.population} people`);
     if (city.recruitQueue.length > ARMY_RULES.recruitQueueSize) broken.push(`${at}: ${city.name}'s recruitment queue overflows`);
     if (city.constructionQueue.length > CONSTRUCTION_QUEUE_SIZE) broken.push(`${at}: ${city.name}'s construction queue overflows`);
+    if (!(city.siegeWorks >= 0 && city.siegeWorks <= SIEGE.maxWorks)) broken.push(`${at}: ${city.name} has ${city.siegeWorks} siege works`);
+    if (city.siegeWorks > 0 && (!city.besiegedBy || city.buildings.walls === 0)) broken.push(`${at}: ${city.name} has siege works with no siege or walls`);
     const level = city.buildings.government;
     if (!(level >= 1 && level <= 3)) broken.push(`${at}: ${city.name} is level ${level}`);
   }

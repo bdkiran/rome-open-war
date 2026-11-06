@@ -39,6 +39,8 @@ export interface City {
   besiegedBy: FactionId | null;
   /** The turn the siege was laid, if any: attrition starts on the next. */
   besiegedSince: number | null;
+  /** How far the besieger's siege works have got (see SIEGE in data/siege.ts). 0 with no siege or no walls. */
+  siegeWorks: number;
   /**
    * Regiments to train and regiments to retrain, in order. The city completes
    * one order at the end of each of its owner's turns.

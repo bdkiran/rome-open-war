@@ -25,7 +25,8 @@ import type { Point, TileId } from "@/map/topology.js";
 import { attachInput } from "@/render/input.js";
 import type { ViewState } from "@/render/mapView.js";
 import { MapView3D } from "@/render/three/mapView3d.js";
-import { armyHolding, attackOptions, marchRoute, marchSchedule, reachableTiles } from "@/systems/armies.js";
+import { SIEGE } from "@/data/siege.js";
+import { armyHolding, attackOptions, marchRoute, marchSchedule, reachableTiles, siegeWorksPerTurn, stormBlocked as wallsBlocking } from "@/systems/armies.js";
 import { reachableScoutTiles, scoutAt } from "@/systems/scouts.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { renderInfoPanel, type CityTab } from "@/ui/infoPanel.js";
@@ -263,7 +264,13 @@ function refreshHighlights(state: GameState): void {
     const ids = [...chosen];
     attackVia = attackOptions(ctx, seen, army, ids);
     view.reachable = new Set(reachableTiles(ctx, seen, army, ids).keys());
-    view.attackable = new Set(attackVia.keys());
+    const attackable = new Set(attackVia.keys());
+    // A walled city that can't be stormed yet can still be besieged, so it stays a red tile.
+    for (const city of Object.values(seen.cities)) {
+      if (!wallsBlocking(ctx, seen, army.owner, city.tile)) continue;
+      if (topology.neighbors(city.tile).some((t) => t === army.tile || view.reachable.has(t))) attackable.add(city.tile);
+    }
+    view.attackable = attackable;
   } else {
     attackVia = new Map();
     view.reachable = new Set();
@@ -467,13 +474,21 @@ function openSiegePanel(cityId: string, regimentIds: RegimentId[]): void {
   let stormBlocked: string | null = null;
   if (!holder || !around.has(holder.tile)) stormBlocked = `Your army isn't next to ${city.name}.`;
   else if (ready.length === 0) stormBlocked = "Your troops have no movement left to storm the walls this turn. You can storm next turn, or let the siege work.";
+  stormBlocked ??= humanId ? wallsBlocking(ctx, seen, humanId, city.tile) : null;
+
+  // The odds once the works are finished, to weigh against storming now.
+  const finished = { ...seen, cities: { ...seen.cities, [city.id]: { ...city, siegeWorks: SIEGE.maxWorks } } };
+  const atFullWorks = holder && ready.length > 0 && city.buildings.walls > 0 && city.besiegedBy === humanId
+    ? previewBattle(ctx, finished, holder.id, ready, city.tile)
+    : null;
+  const worksPerTurn = humanId ? siegeWorksPerTurn(ctx, seen, humanId, city) : 0;
 
   pendingStorm = holder && ready.length > 0
     ? { action: { type: "attack", armyId: holder.id, regimentIds: ready, target: city.tile }, preview, from: holder.tile, regimentIds: ready }
     : null;
 
   siegeCityId = city.id;
-  showSiegePanel(siegePanel, { state: seen, city, besiegers, garrisonKnown, storm: preview, stormBlocked });
+  showSiegePanel(siegePanel, { state: seen, city, besiegers, garrisonKnown, storm: preview, stormBlocked, atFullWorks, worksPerTurn });
 }
 
 function closeSiegePanel(): void {
