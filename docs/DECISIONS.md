@@ -312,6 +312,24 @@ so.
   taken 250 (was 197), level-3 cities 27 (was 2: with less dithering the AI
   spends more on growth), AI income 558 a turn (was 345). `npm test` runs
   in about 45 s instead of 100, with armies no longer marching back and forth.
+- **AI armies now gather where they can train real troops.** Field regiments
+  could only be trained in the city nearest the target, usually a small border
+  town: under 2,000 people that blocked field training on about 20% of AI turns,
+  while income quadrupled and regiments per city stayed flat. Only that city
+  launched armies too, so regiments left behind when the target changed never
+  left. Now the muster is the nearest city with a unit building and the people
+  to train (or the nearest, if none has both), any city with 3 to spare launches,
+  and while upkeep is under 15% of income a field regiment comes before buildings
+  other than government (`AI.armyUpkeepShare`). Mustering in the nearest big city
+  of any kind was tried and rejected: it turned big cities' people into militia
+  (66% of regiments) and cost 33% of AI income. A share of 0.35 cut income 70%,
+  put factions in debt and fell 6 factions a game; 0.2 made 4. Measured over 8
+  seeds, master to now: soldiers +9%, regiments +12%, militia 53% to 39% of
+  regiments, cities not with their first owner 21 to 23, factions fallen 2 to 2,
+  net income -29% (upkeep 11% to 16% of income, and more war), level-3 cities 15
+  to 11 (one more than the 3 we meant to allow), watchtowers 13 to 24 (they stay
+  ahead of the army, and got more gold). Regiments remain 98% basic tier: cities
+  reach level 2-3 late and old regiments never upgrade. That's still open.
 - **An army can't stage an attack from inside one of its own besieged
   cities** (except on the besiegers): marching in shuts it in. This was
   allowed by mistake and only showed once the AI laid sieges.

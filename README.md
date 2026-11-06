@@ -520,7 +520,10 @@ to expect from them:
   trains only when it's empty or threatened), build walls near their
   borders, advance their cities, build markets, then a spear yard, archery
   range and stables, then mines, farms, ports and, last, roads. They train
-  the best tier of a unit they can afford to keep. Once a border city's
+  the best tier of a unit they can afford to keep. Armies gather in the
+  nearest city with a unit building and the people to train, and any city
+  with 3 regiments to spare sends them out. While upkeep is a small part of
+  their income, field regiments come before other buildings. Once a border city's
   buildings are seen to, they keep a scout (one more per 5 cities) a few
   tiles from the city they're after (dismissing scouts when they can't pay
   their upkeep), and put one watchtower in its region, on the

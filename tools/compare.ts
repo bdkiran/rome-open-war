@@ -46,6 +46,12 @@ interface GameMetrics {
   seasoned: number;
   topLevel: number;
   regiments: number;
+  regimentsPerCity: number;
+  upkeepShare: number;
+  fieldArmies: number;
+  fieldArmySize: number;
+  basicShare: number;
+  militiaShare: number;
   scouts: number;
   seconds: number;
 }
@@ -64,6 +70,12 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "watchtowers", label: "Watchtowers" },
   { key: "scouts", label: "Scouts" },
   { key: "regiments", label: "Regiments alive" },
+  { key: "regimentsPerCity", label: "AI regiments per city, median ×10" },
+  { key: "upkeepShare", label: "AI upkeep, % of income (median)" },
+  { key: "fieldArmies", label: "AI field armies" },
+  { key: "fieldArmySize", label: "Regiments per field army, largest" },
+  { key: "basicShare", label: "AI regiments of basic tier, %" },
+  { key: "militiaShare", label: "AI regiments of militia, %" },
   { key: "veterans", label: "Regiments at experience 1-2" },
   { key: "seasoned", label: "Regiments at experience 3-5" },
   { key: "topLevel", label: "Regiments at experience 6" },
@@ -119,6 +131,10 @@ async function runWorker(): Promise<void> {
   const levels = Object.values(state.armies).flatMap((a) =>
     a.regiments.map((r) => experienceLevel((r as { experience?: number }).experience ?? 0)),
   );
+  const aiArmies = Object.values(state.armies).filter((a) => aiIds.has(a.owner));
+  const aiRegiments = aiArmies.flatMap((a) => a.regiments);
+  const fieldArmies = aiArmies.filter((a) => !cities.some((c) => c.tile === a.tile && c.owner === a.owner));
+  const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
   const metrics: GameMetrics = {
     seed,
     invalid: result.invalid.length,
@@ -140,6 +156,16 @@ async function runWorker(): Promise<void> {
     // Versions before scouts have none.
     scouts: Object.keys((state as { scouts?: object }).scouts ?? {}).length,
     regiments: levels.length,
+    regimentsPerCity: median(aliveAi.map((f) => {
+      const held = cities.filter((c) => c.owner === f.id).length;
+      const regiments = aiArmies.filter((a) => a.owner === f.id).reduce((n, a) => n + a.regiments.length, 0);
+      return Math.round((regiments / Math.max(1, held)) * 10);
+    })),
+    upkeepShare: median(aliveAi.map((f) => percent(factionUpkeep(state, f.id), factionIncome(state, f.id)))),
+    fieldArmies: fieldArmies.length,
+    fieldArmySize: Math.max(0, ...fieldArmies.map((a) => a.regiments.length)),
+    basicShare: percent(aiRegiments.filter((r) => r.tier === 1).length, aiRegiments.length),
+    militiaShare: percent(aiRegiments.filter((r) => r.unit === "militia").length, aiRegiments.length),
     veterans: levels.filter((l) => l >= 1 && l <= 2).length,
     seasoned: levels.filter((l) => l >= 3 && l <= 5).length,
     topLevel: levels.filter((l) => l >= 6).length,
