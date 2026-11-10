@@ -61,6 +61,10 @@ export interface City {
    * its land further out. Set once every city has claimed its land.
    */
   coast: number;
+  /** Cities whose land borders this one's: where roads can carry trade. Set once every city has claimed its land. */
+  landNeighbours: CityId[];
+  /** Coastal cities and the steps over the sea to each: where ports can carry trade. Set once every city has claimed its land. */
+  seaDistances: Record<CityId, number>;
 }
 
 /** An order in a city's recruitment queue, paid for when it was queued. */

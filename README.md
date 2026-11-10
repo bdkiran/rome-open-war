@@ -91,8 +91,8 @@ Either way you can close the screen to look at the map, or play again.
 - Tab and Shift+Tab (or the ◀ Cities ▶ buttons) step through your cities
 - The top-right panel lists every faction with its people, soldiers and gold;
   click the income line under your treasury for a breakdown of where your
-  money comes from (each city's base, people, mine, farms and port gold, times its taxes
-  and market) and where it goes (each army's upkeep)
+  money comes from (each city's base, people, mine and farm gold and its trade,
+  times its market and taxes) and where it goes (each army's upkeep)
 - **Reports** (right, under the faction list): at the start of each turn, what happened since
   your last one arrives as notifications: battles, sieges and cities involving
   you, your finished buildings and recruits, and world news (cities changing
@@ -218,9 +218,9 @@ capacity. A city over capacity shrinks. A city drained below 1,000 people
 (by sacking or recruiting) still grows as if it had 1,000, so it recovers.
 
 Each city adds a flat 5 gold per turn, plus 4 gold per 1,000 people (every person counts), plus
-whatever its mine, farms and port bring in (see below). The land itself pays
-nothing until a city builds on it: hills and mountains need a mine, plains
-need farms and the sea a port.
+whatever its mine and farms bring in, plus its **trade** (see below). The land
+itself pays nothing until a city builds on it: hills and mountains need a mine
+and plains need farms.
 
 **City levels and buildings.** Every city has a level from 1 to 3, set by its
 government building. Other buildings can be built up to the city's level;
@@ -244,18 +244,18 @@ militia until it builds one.
 | Stables       | Trains basic / advanced / elite cavalry  | 250 / 400 / 650 gold | 2 / 3 / 4 |
 | Walls    | +15% / +30% / +50% defense, on top of the city's 10%       | 200 / 400 / 700 gold | 2 / 3 / 4 |
 | Farms    | +20% / +40% / +60% population growth, and +0.25 / +0.5 / +0.75 gold per plains tile in its land | 150 / 300 / 550 gold | 2 / 3 / 4 |
-| Market   | +30% / +60% / +100% gold                                   | 150 / 300 / 500 gold | 2 / 3 / 4 |
+| Market   | +25% / +50% / +80% gold, and +50% / +100% / +150% trade gold | 150 / 300 / 500 gold | 2 / 3 / 4 |
 | Mine     | +1 / +2 / +3 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Port     | +30% / +60% / +90% growth, times the city's share of sea, and +0.25 / +0.5 / +0.75 gold per sea tile on its coast (cities whose land touches the sea) | 150 / 250 / 450 gold | 2 / 3 / 4 |
-| Roads    | Faster movement across the city's land, for every army (see Movement) | 150 / 300 / 500 gold | 2 / 3 / 4 |
+| Port     | +30% / +60% / +90% growth, times the city's share of sea, and trade by sea with your other ports (cities whose land touches the sea) | 150 / 250 / 450 gold | 2 / 3 / 4 |
+| Roads    | Faster movement across the city's land, for every army (see Movement), and trade by land with your bordering cities | 150 / 300 / 500 gold | 2 / 3 / 4 |
 
 A mine can only be built in a city whose territory has at least 5 hills or
 mountain tiles, so it's worth a lot in hill country and isn't on offer
 elsewhere; the Construction tab shows how many tiles it can dig and what the next level would earn. Its
 gold counts toward the city's income before taxes and the market, so both
-multiply it. Farms and ports work the same way for their plains and sea,
-on top of their growth: a trickle that pays for them while the growth
-builds up toward the next city level.
+multiply it. Farms work the same way for their plains, on top of their
+growth: a trickle that pays for them while the growth builds up toward the
+next city level.
 
 A **port** can be built by any city with sea on its coast: sea within its
 reach, or touching any tile of its land, however far from the city itself.
@@ -263,6 +263,20 @@ Its growth bonus is scaled by how much of the city's reach is sea (its coast
 against its coast and land together), so Lilybaeum, nearly all sea, gets
 almost the full bonus, and a city with a strip of coast only a little. It
 adds to the farms' bonus.
+
+**Trade** runs between your own cities, never a rival's, and needs the
+building at both ends:
+
+- **By land**: two of your cities whose land borders, both with roads.
+- **By sea**: two of your ports within sailing range: 6 / 16 / 40 steps
+  over the sea for a Jetty / Harbour / Great harbour.
+
+A route runs at the lower of the two cities' levels and pays each end
+0.4 / 0.7 / 1 gold per 1,000 people at the other end, so trading with a big
+city pays more. Two cities joined by land and sea trade both ways. The
+market multiplies trade gold more than the rest (+50% / +100% / +150%), and
+taxes apply as usual. A siege at either end cuts the route. The Construction
+tab shows how many routes roads or a port would open and what they'd pay.
 
 Build from the city screen's Construction tab: click a building to queue its
 next level. The **construction queue** holds up to 5 buildings, built one
@@ -541,7 +555,9 @@ to expect from them:
 - They garrison cities against nearby enemies (a city under 2,000 people
   trains only when it's empty or threatened), build walls near their
   borders, advance their cities, build markets, then a spear yard, archery
-  range and stables, then mines, farms, ports and, last, roads. They train
+  range and stables, then mines, farms and ports, then walls and roads (roads
+come with the port where a city borders one of their own, since they carry
+trade there). They train
   the best tier of a unit they can afford to keep, and militia only where
   they have no unit building or in an emergency. Armies gather in the nearest
   city with a unit building and the people to train, counting a better building

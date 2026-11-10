@@ -622,6 +622,26 @@ in detail, and `npm run levers` covers the economy.
   and still nobody went into debt; cities taken 197 (was 219), factions
   fallen 13 (was 12).
 
+- **Trade between a faction's own cities.** Roads were movement only and last in
+  the AI's order; ports paid a trickle per sea tile. Now a land route joins two own
+  cities whose land borders, both with roads; a sea route two own ports within 6 / 16
+  / 40 sea steps. The player chose own cities only (no diplomacy: every faction is at
+  war) and the building at both ends. A route runs at the lower level and pays each
+  end 0.4 / 0.7 / 1 gold per 1,000 people at the other end; a siege at either end cuts
+  it. Routes are mapped once at setup (`City.landNeighbours`, `City.seaDistances`).
+  The market became trade-focused: +25 / 50 / 80% on other income (was 30 / 60 /
+  100%), +50 / 100 / 150% on trade. Sea trade replaced the port's per-tile gold.
+  Peacetime gold by turn 25 / 50 / 100: 48k / 143k / 573k to 45k / 142k / 675k (the
+  early dip is the weaker market before routes exist). 4 seeds, normal then
+  `--garrison`: AI net income −2% / −1%, treasuries +13% / +2%, city levels and
+  factions fallen about the same, battles −4% / −17%; trade is 13–20% of AI city gold
+  at turn 100 (22–36 routes), and no AI city built level-3 roads or ports. At
+  start-size cities a pair of Tracks pays back in 60 turns, of Jetties 75 (faster as
+  cities grow); a market square in 38 without trade (was 29), 21 with it. Rome
+  gains most: its cities share coasts, so a Roman port has up to 6 partners, against
+  1–3 for most AIs. A coastal city with no port of its own in range earns nothing
+  from a port but its growth.
+
 ## Interface
 
 - **3D campaign map** (three.js), tilted camera, raised terrain. The 2D
