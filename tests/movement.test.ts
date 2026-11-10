@@ -1,4 +1,4 @@
-/** Roads make a city's land cheaper to cross, for every army; and marching up to attack keeps your armies together. */
+/** Roads are faster to march on, for every army; and marching up to attack keeps your armies together. */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { GameContext } from "@/core/context.js";
@@ -7,12 +7,12 @@ import { createGame } from "@/core/setup.js";
 import { armyAt, type City, type GameState } from "@/core/state.js";
 import { COMBAT } from "@/data/combat.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
-import { TERRAIN, type TerrainType } from "@/data/terrain.js";
+import { ROAD_MOVE_COST, TERRAIN, type TerrainType } from "@/data/terrain.js";
 import { regimentSize } from "@/data/units.js";
 import { cityTiles } from "@/systems/cities.js";
 import { attackOptions, reachableTiles } from "@/systems/armies.js";
 import { previewBattle } from "@/systems/combat.js";
-import { costToTarget, enterCost } from "@/systems/pathfinding.js";
+import { costToTarget, enterCost, isRoadTile } from "@/systems/pathfinding.js";
 
 const map = ROMAN_WORLD.mapEngine.createMap();
 const ctx: GameContext = { topology: map.topology };
@@ -30,6 +30,17 @@ function cityWith(state: GameState, terrain: TerrainType): { city: City; tile: s
   throw new Error(`no city has ${terrain}`);
 }
 
+/** A road tile in a city's land with this terrain, and an off-road tile of the same terrain in the same city's land. */
+function roadAndOffRoad(state: GameState, terrain: TerrainType): { city: City; road: string; off: string } | null {
+  for (const city of Object.values(state.cities)) {
+    const tiles = cityTiles(state, city.id).filter((t) => state.tiles[t].terrain === terrain && t !== city.tile);
+    const road = tiles.find((t) => isRoadTile(state, t));
+    const off = tiles.find((t) => !isRoadTile(state, t));
+    if (road && off) return { city, road, off };
+  }
+  return null;
+}
+
 describe("enterCost", () => {
   it("is the terrain's cost without roads", () => {
     const state = newGame();
@@ -39,15 +50,17 @@ describe("enterCost", () => {
     }
   });
 
-  it("eases rough ground with Tracks, mountains with Roads, and everything with Paved roads", () => {
+  it("is the road's cost on a built road, whatever the terrain, and the terrain's off it", () => {
     const state = newGame();
-    const hills = cityWith(state, "hills");
-    const mountains = cityWith(state, "mountains");
-    const plains = cityWith(state, "plains");
-    assert.equal(enterCost(withRoads(state, hills.city, 1), hills.tile), 2);
-    assert.equal(enterCost(withRoads(state, mountains.city, 1), mountains.tile), 4);
-    assert.equal(enterCost(withRoads(state, mountains.city, 2), mountains.tile), 2);
-    for (const { city, tile } of [hills, mountains, plains]) assert.equal(enterCost(withRoads(state, city, 3), tile), 1);
+    for (const terrain of ["plains", "hills", "mountains"] as const) {
+      const found = roadAndOffRoad(state, terrain);
+      if (!found) continue;
+      for (const level of [1, 2, 3]) {
+        const built = withRoads(state, found.city, level);
+        assert.equal(enterCost(built, found.road), Math.min(TERRAIN[terrain].moveCost, ROAD_MOVE_COST[level]), `${terrain} road, level ${level}`);
+        assert.equal(enterCost(built, found.off), TERRAIN[terrain].moveCost, `${terrain} off the road`);
+      }
+    }
   });
 
   it("leaves land outside the territory alone", () => {
@@ -55,6 +68,21 @@ describe("enterCost", () => {
     const { city } = cityWith(state, "hills");
     const outside = map.topology.allTiles().find((t) => state.tiles[t].terrain === "hills" && !state.territory[t])!;
     assert.equal(enterCost(withRoads(state, city, 3), outside), TERRAIN.hills.moveCost);
+  });
+});
+
+describe("the road network", () => {
+  it("joins bordering cities by a path through their own land, from one city to the other", () => {
+    const state = newGame();
+    assert.ok(state.roads.length > 0);
+    for (const road of state.roads) {
+      const [a, b] = road.cities.map((id) => state.cities[id]);
+      assert.equal(road.tiles[0], a.tile);
+      assert.equal(road.tiles[road.tiles.length - 1], b.tile);
+      for (const t of road.tiles) assert.ok([a.id, b.id].includes(state.territory[t]?.cityId), `${a.name}–${b.name} leaves their land`);
+      for (let i = 1; i < road.tiles.length; i++) assert.equal(map.topology.distance(road.tiles[i - 1], road.tiles[i]), 1);
+      assert.ok(a.landNeighbours.includes(b.id) && b.landNeighbours.includes(a.id));
+    }
   });
 });
 

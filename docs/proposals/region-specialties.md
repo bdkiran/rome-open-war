@@ -25,7 +25,7 @@ of the map a character: Numidian horses, Iberian silver, Nile grain.
 | What a resource does | A cheaper building. A cheaper building plus an edge for its units. Stat bonuses. | **A cheaper building plus experience.** That unit, trained there, starts at experience level 1. This reuses the experience system and leaves stats to the culture-traits proposal. |
 | Does the resource need its building | Always on. Only with the building. | **Unit resources work through their building** (it's cheaper, and its recruits start as veterans). Grain, silver and timber work with no building. |
 | Does the AI value resources | No. A discount on the target score. | **A discount:** a resource city counts as 150 fewer defending soldiers. The AI's build order also moves the cheaper building up to just after the market. |
-| Trade or export | Resources supply other cities. Local only. | **Local only.** Trade would need routes, which don't exist. |
+| Trade or export | Resources supply other cities. Local only. | **Local only.** Trade routes exist now, but carry gold, not resources. |
 
 ## Baseline (current code)
 

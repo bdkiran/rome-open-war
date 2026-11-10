@@ -247,7 +247,7 @@ militia until it builds one.
 | Market   | +25% / +50% / +80% gold, and +50% / +100% / +150% trade gold | 150 / 300 / 500 gold | 2 / 3 / 4 |
 | Mine     | +1 / +2 / +3 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
 | Port     | +30% / +60% / +90% growth, times the city's share of sea, and trade by sea with your other ports (cities whose land touches the sea) | 150 / 250 / 450 gold | 2 / 3 / 4 |
-| Roads    | Faster movement across the city's land, for every army (see Movement), and trade by land with your bordering cities | 150 / 300 / 500 gold | 2 / 3 / 4 |
+| Roads    | Builds the city's half of its roads: faster movement on them for every army (see Movement), and trade by land with your cities at the other end | 150 / 300 / 500 gold | 2 / 3 / 4 |
 
 A mine can only be built in a city whose territory has at least 5 hills or
 mountain tiles, so it's worth a lot in hill country and isn't on offer
@@ -267,7 +267,8 @@ adds to the farms' bonus.
 **Trade** runs between your own cities, never a rival's, and needs the
 building at both ends:
 
-- **By land**: two of your cities whose land borders, both with roads.
+- **By land**: two of your cities joined by a road (see Movement), both
+  with roads built.
 - **By sea**: two of your ports within sailing range: 6 / 16 / 40 steps
   over the sea for a Jetty / Harbour / Great harbour.
 
@@ -275,7 +276,10 @@ A route runs at the lower of the two cities' levels and pays each end
 0.4 / 0.7 / 1 gold per 1,000 people at the other end, so trading with a big
 city pays more. Two cities joined by land and sea trade both ways. The
 market multiplies trade gold more than the rest (+50% / +100% / +150%), and
-taxes apply as usual. A siege at either end cuts the route. The Construction
+taxes apply as usual. A siege at either end shuts the route, and **an enemy
+army standing on a road, or next to it, cuts it**: no gold while it stays.
+You're told when one of your roads is cut and when it's open again, and a
+cut road is drawn in red dashes. Scouts don't cut roads. The Construction
 tab shows how many routes roads or a port would open and what they'd pay.
 
 Build from the city screen's Construction tab: click a building to queue its
@@ -386,15 +390,22 @@ ground, 4 of rough ground or 3 of mountains a turn, and cavalry 8, 5 or 4. An
 army may enter a tile only if it has the points, except that it can always
 take one step at the start of its turn.
 
-**Roads** make a city's land cheaper to cross, for every army that marches
-through it, enemies included:
+**Roads** run between every two cities whose land borders: the cheapest way
+from one city to the other through their own land, laid out when the game
+starts. A city's Roads building builds the half that runs through its own
+land, and the map draws it, from a dirt track to a paved road. On a built
+road, every tile costs the same whatever the terrain, for every army that
+marches on it, enemies included; off the road, land costs what its terrain
+does:
 
-| City's roads      | Plains | Forest, hills, desert | Mountains |
-|-------------------|--------|-----------------------|-----------|
-| None              | 2      | 3                     | 4         |
-| Tracks (1)        | 2      | 2                     | 4         |
-| Roads (2)         | 2      | 2                     | 2         |
-| Paved roads (3)   | 1      | 1                     | 1         |
+| City's roads      | A tile of its road |
+|-------------------|--------------------|
+| None              | the terrain's cost |
+| Tracks (1)        | 1.5                |
+| Roads (2)         | 1                  |
+| Paved roads (3)   | 0.5                |
+
+A city whose land borders no other city's has no roads to build.
 
 **Zone of control.** Every army controls the tiles next to it. An enemy army
 that moves into one of those tiles must stop there for the rest of the turn:
@@ -556,8 +567,8 @@ to expect from them:
   trains only when it's empty or threatened), build walls near their
   borders, advance their cities, build markets, then a spear yard, archery
   range and stables, then mines, farms and ports, then walls and roads (roads
-come with the port where a city borders one of their own, since they carry
-trade there). They train
+  come with the port where a city borders one of their own, since they carry
+  trade there). They train
   the best tier of a unit they can afford to keep, and militia only where
   they have no unit building or in an emergency. Armies gather in the nearest
   city with a unit building and the people to train, counting a better building

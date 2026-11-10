@@ -1,6 +1,9 @@
 # Decision: trade routes
 
-- **Status:** Proposed. Not implemented yet.
+- **Status:** Implemented, in a different form (see `docs/DECISIONS.md`: "Trade between a
+  faction's own cities", "Enemy armies cut trading roads" and, under Movement, "Roads are
+  physical"; and `README.md`). What was built, and how it differs, is under "As
+  implemented" at the end.
 - **Decides:** whether cities earn gold by trading with each other, and what cuts that
   trade.
 - **Where it goes once agreed:** a new entry under Cities and economy in
@@ -144,3 +147,33 @@ AIs, about +10% of their income.
   limited by it?
 - Is the zone of control the right width for cutting a route, or only the army's own tile?
 - Should a cut route also show on the map, so the player sees where the enemy is raiding?
+
+## As implemented
+
+The player directed a simpler version, built around the buildings: markets, roads and ports
+all boost trade.
+
+| Question | Proposed here | As built |
+|---|---|---|
+| Who trades | Own cities only | Own cities only (as proposed) |
+| What opens a route | A Market at both ends | **Roads at both ends** (land) or **a Port at both ends** (sea). The Market isn't needed; it multiplies trade instead |
+| Land route | Up to 24 movement points, not through foreign land or near foreign armies | **A fixed road** between cities whose land borders: the cheapest path through their own land, laid out at the start. Roads are faster to march on (1.5 / 1 / 0.5 a tile), and only roads: the rest of the land costs its terrain |
+| Sea route | Ports, coasts up to 20 sea tiles apart | Ports, up to **6 / 16 / 40** sea steps by the route's level |
+| How many routes | One per Market level | **Every** qualifying partner |
+| Gold per route | 2 + 0.5 per 1,000 people of the smaller city | **0.4 / 0.7 / 1 per 1,000 people of the partner**, by the route's level (the lower of the two cities') |
+| The Market | Unchanged, multiplies trade like other gold | **+25 / 50 / 80%** on ordinary income (was +30 / 60 / 100%), **+50 / 100 / 150%** on trade |
+| Port gold | Unchanged | Sea trade **replaces** the per-sea-tile gold |
+| When it's checked | Once a turn, stored on the city | Partners mapped **once at setup** (`City.landNeighbours`, `City.seaDistances`); open routes read in `cityStats` |
+| What cuts a route | Foreign armies on it or next to it, foreign land, sieges | **A foreign army on the road or next to it**, a siege at either end, or losing the city. Sea routes: only a siege |
+
+Built in the second step: the road on the map (each city's half, by level, with your
+own cut roads in red dashes), the cut and reopened reports, and the compare rows (cities
+with roads, land and sea routes, land route-turns cut, trade's share of AI income).
+
+Not built:
+
+- **AI raiding.** Built and measured, then left out: a trading road joins two cities of
+  one faction, so it runs through that faction's interior, and only about 5 exist at a
+  time. A rival's road was in reach 5 times in 121 chances, and cut route-turns stayed
+  at 0–1% against this proposal's target of 10%. Cutting roads is the player's tool.
+- Measured with 4 seeds, not the 8 asked for.

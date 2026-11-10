@@ -121,7 +121,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   roads: {
     name: "Roads",
-    purpose: "Faster movement across the city's land, for every army that marches through it, and trade with your bordering cities that have roads.",
+    purpose: "Builds the city's half of the roads to its bordering cities: faster movement on them for every army, and trade with your cities at the other end that have roads.",
     levels: [
       { name: "Tracks", cost: 150, turns: 2 },
       { name: "Roads", cost: 300, turns: 3 },

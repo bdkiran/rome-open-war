@@ -22,7 +22,7 @@ To apply one:
 | [Naval transport](naval-transport.md) | Proposed | Transports along the coast, and blockades of port cities |
 | [Battles](battles.md) | Proposed | Morale that carries over, frontage by terrain with reserves, and formation, doctrine and orders that decide the tactics (replaces battle stances) |
 | [Siege equipment](siege-equipment.md) | **Implemented** | Walled cities need siege works before a storm; bigger armies build faster, and more works weaken the walls |
-| [Trade routes](trade-routes.md) | Proposed | Gold from connected markets, which wars can cut |
+| [Trade routes](trade-routes.md) | **Implemented** | Roads and ports carry trade between your own cities, boosted by markets; enemy armies on a road cut it |
 | [Events](events.md) | Proposed | Seeded events: plague, harvests, revolts, migrations |
 | [Victory conditions](victory-conditions.md) | Proposed | Win by key cities or by score, not only by being last standing |
 | [Region specialties](region-specialties.md) | Proposed | Resources on the land that make some cities worth more |

@@ -61,6 +61,11 @@ interface GameMetrics {
   stormsAboveMinimum: number;
   surrenders: number;
   scouts: number;
+  citiesWithRoads: number;
+  landRoutes: number;
+  seaRoutes: number;
+  routeTurnsCut: number;
+  tradeShare: number;
   seconds: number;
 }
 
@@ -94,6 +99,11 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "veterans", label: "Regiments at experience 1-2" },
   { key: "seasoned", label: "Regiments at experience 3-5" },
   { key: "topLevel", label: "Regiments at experience 6" },
+  { key: "citiesWithRoads", label: "Cities with roads" },
+  { key: "landRoutes", label: "Trade routes by land, at the end" },
+  { key: "seaRoutes", label: "Trade routes by sea, at the end" },
+  { key: "routeTurnsCut", label: "Land route-turns cut, %" },
+  { key: "tradeShare", label: "Trade, % of AI city gold" },
   { key: "seconds", label: "Seconds per game" },
 ];
 
@@ -117,8 +127,12 @@ async function runWorker(): Promise<void> {
   const root = option("root")!;
   const load = (path: string) => import(pathToFileURL(join(root, "build", path)).href);
   const { simulate } = await load("tools/simulation.js");
-  const { factionIncome } = await load("src/systems/cities.js");
+  const { factionIncome, cityStats } = await load("src/systems/cities.js");
   const { factionUpkeep } = await load("src/systems/armies.js");
+  // Versions before trade have no routes: every trade row shows 0.
+  type Route = { by: string; cut?: boolean };
+  const tradeRoutes: (s: GameState, city: object) => Route[] = (await load("src/systems/cities.js")).tradeRoutes ?? (() => []);
+  const routeTurns = { all: 0, cut: 0 };
 
   const seed = Number(option("seed"));
   let firstOwners: Record<string, string> | null = null;
@@ -132,6 +146,13 @@ async function runWorker(): Promise<void> {
     garrison: flag("garrison"),
     onRound: (s: GameState) => {
       firstOwners ??= Object.fromEntries(Object.values(s.cities).map((c) => [c.id, c.owner]));
+      for (const city of Object.values(s.cities)) {
+        for (const r of tradeRoutes(s, city)) {
+          if (r.by !== "land") continue;
+          routeTurns.all++;
+          if (r.cut) routeTurns.cut++;
+        }
+      }
     },
     // Versions before this option ignore it, and show 0 in the siege rows.
     onAction: (before: GameState, action: Action, factionId: string, after: GameState) => {
@@ -217,6 +238,17 @@ async function runWorker(): Promise<void> {
     veterans: levels.filter((l) => l >= 1 && l <= 2).length,
     seasoned: levels.filter((l) => l >= 3 && l <= 5).length,
     topLevel: levels.filter((l) => l >= 6).length,
+    citiesWithRoads: cities.filter((c) => c.buildings.roads > 0).length,
+    landRoutes: cities.reduce((n, c) => n + tradeRoutes(state, c).filter((r) => r.by === "land").length, 0) / 2,
+    seaRoutes: cities.reduce((n, c) => n + tradeRoutes(state, c).filter((r) => r.by === "sea").length, 0) / 2,
+    routeTurnsCut: percent(routeTurns.cut, routeTurns.all),
+    tradeShare: percent(
+      cities.filter((c) => aiIds.has(c.owner)).reduce((n, c) => {
+        const i = cityStats(state, c).income as { trade?: number; tradeMarket?: number; taxes: number };
+        return n + (i.trade ?? 0) * (i.tradeMarket ?? 1) * i.taxes;
+      }, 0),
+      cities.filter((c) => aiIds.has(c.owner)).reduce((n, c) => n + cityStats(state, c).gold, 0),
+    ),
     seconds: Math.round((performance.now() - started) / 100) / 10,
   };
   process.stdout.write(JSON.stringify(metrics));

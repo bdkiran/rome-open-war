@@ -16,6 +16,8 @@ export interface ViewState {
   route: readonly TileId[];
   /** For each tile of the route, the turn it's reached on (0 = this turn). */
   routeTurns: readonly number[];
+  /** The player's faction: only its own roads show when an enemy cuts them (others' would give away armies in the fog). */
+  player: string | null;
 }
 
 /** Moving the view: what the mouse, keyboard and "go to" buttons need. */

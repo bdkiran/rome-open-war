@@ -24,7 +24,7 @@ import {
 } from "@/data/buildings.js";
 import { buildingAvailable, canBuild, cityLevel, nextLevel, plannedLevel } from "@/systems/buildings.js";
 import { cityDefense, defenseBonusAt } from "@/systems/combat.js";
-import { enterCost } from "@/systems/pathfinding.js";
+import { enterCost, isRoadTile } from "@/systems/pathfinding.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
 import { describeAttackArmor, describeIncome, describeSpecials, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
@@ -417,8 +417,9 @@ function tradeSummary(state: GameState, city: City, building: "roads" | "port", 
   const gold = (routes: TradeRoute[]) => Math.round(routes.reduce((sum, r) => sum + r.gold, 0));
   const now = at(city.buildings[building]);
   const next = nextLevelNumber ? at(nextLevelNumber) : now;
-  if (next.length === 0) return building === "roads" ? "No bordering city of yours has roads to trade with." : "No port of yours in range to trade with.";
-  const routes = `${next.length} trade route${next.length === 1 ? "" : "s"} by ${by}`;
+  if (next.length === 0) return building === "roads" ? "No city of yours at the other end of its roads has roads to trade with." : "No port of yours in range to trade with.";
+  const cut = next.filter((r) => r.cut).length;
+  const routes = `${next.length} trade route${next.length === 1 ? "" : "s"} by ${by}${cut ? ` (${cut} cut by enemies)` : ""}`;
   return nextLevelNumber
     ? `${routes}: +${gold(next)} gold a turn${now.length ? ` (now +${gold(now)})` : ""}.`
     : `${routes}: +${gold(now)} gold a turn.`;
@@ -626,7 +627,7 @@ function terrainSection(state: GameState, tile: TileId, compact: boolean): strin
   const owner = regionCity ? getFaction(state, regionCity.owner) : undefined;
   const ownerDetail = !regionCity ? "" : claim ? regionCity.name : `near ${regionCity.name}, not worked`;
   const cost = terrain.passable ? enterCost(state, tile) : 0;
-  const move = !terrain.passable ? "Impassable" : cost < terrain.moveCost ? `${cost} (roads)` : `${cost}`;
+  const move = !terrain.passable ? "Impassable" : cost < terrain.moveCost ? `${cost} (road)` : isRoadTile(state, tile) ? `${cost} (road, not built)` : `${cost}`;
   return `
     <h2>${terrain.name}</h2>
     ${owner ? ownerLine(owner.name, owner.color, ownerDetail) : ""}

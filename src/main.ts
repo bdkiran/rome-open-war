@@ -137,6 +137,7 @@ const view: ViewState = {
   visible: null,
   route: [],
   routeTurns: [],
+  player: humanId,
 };
 /** The city panel tab the player last chose. */
 let cityTab: CityTab = "construction";

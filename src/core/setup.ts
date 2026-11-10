@@ -25,6 +25,7 @@ export function createGame(ctx: GameContext, map: GameMap, scenario: Scenario): 
     tiles: map.tiles,
     territory: {},
     regions: {},
+    roads: [],
     watchtowers: {},
     cities: {},
     armies: {},
