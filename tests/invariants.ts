@@ -53,6 +53,7 @@ export function brokenRules(state: GameState): string[] {
     if (city.constructionQueue.length > CONSTRUCTION_QUEUE_SIZE) broken.push(`${at}: ${city.name}'s construction queue overflows`);
     if (!(city.siegeWorks >= 0 && city.siegeWorks <= SIEGE.maxWorks)) broken.push(`${at}: ${city.name} has ${city.siegeWorks} siege works`);
     if (city.siegeWorks > 0 && (!city.besiegedBy || city.buildings.walls === 0)) broken.push(`${at}: ${city.name} has siege works with no siege or walls`);
+    if (city.besiegedBy && !state.factions.find((f) => f.id === city.besiegedBy)?.alive) broken.push(`${at}: ${city.name} is besieged by a fallen faction`);
     const level = city.buildings.government;
     if (!(level >= 1 && level <= 3)) broken.push(`${at}: ${city.name} is level ${level}`);
   }

@@ -586,13 +586,27 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
   };
 }
 
-/** A faction with no cities left is out of the game, and its armies disband. */
+/**
+ * A faction with no cities left is out of the game: its armies disband and
+ * its sieges end. A siege is only checked at the end of the besieger's turn,
+ * and a fallen faction has no more turns, so without this a city it was
+ * besieging would stay shut in for ever, with no one there to fight.
+ */
 export function eliminateIfDefeated(state: GameState, factionId: FactionId): GameState {
   const faction = getFaction(state, factionId);
   if (!faction || !faction.alive || citiesOf(state, factionId).length > 0) return state;
 
   const armies = Object.fromEntries(Object.entries(state.armies).filter(([, a]) => a.owner !== factionId));
   const scouts = Object.fromEntries(Object.entries(state.scouts).filter(([, s]) => s.owner !== factionId));
-  const next = updateFaction({ ...state, armies, scouts }, factionId, (f) => ({ ...f, alive: false }));
-  return addLog(next, `${faction.name} has fallen.`, { kind: "war", factions: [factionId], major: true });
+  const cities = { ...state.cities };
+  const freed: City[] = [];
+  for (const city of Object.values(state.cities)) {
+    if (city.besiegedBy !== factionId) continue;
+    cities[city.id] = { ...city, besiegedBy: null, besiegedSince: null, siegeWorks: 0, supplies: maxSupplies(city) };
+    freed.push(city);
+  }
+  let next = updateFaction({ ...state, armies, scouts, cities }, factionId, (f) => ({ ...f, alive: false }));
+  next = addLog(next, `${faction.name} has fallen.`, { kind: "war", factions: [factionId], major: true });
+  for (const city of freed) next = addLog(next, `The siege of ${city.name} is over.`, { kind: "siege", factions: [city.owner] });
+  return next;
 }

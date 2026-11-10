@@ -2,7 +2,8 @@ import type { Scenario } from "@/data/scenarios/types.js";
 import { europeMapEngine } from "@/map/europe/europeMapEngine.js";
 
 /**
- * 218 BC, the outbreak of the Second Punic War. Rome holds Italy and
+ * 218 BC, the outbreak of the Second Punic War. Rome holds central Italy,
+ * the Samnite League the south and Messana, and
  * Carthage the coasts of Africa and Spain and the western islands; the
  * Greek leagues, Macedon, the Seleucids and Egypt divide the east; the
  * Gauls, Germans, Britons and Iberians hold the west and north; Numidia,
@@ -22,12 +23,23 @@ export const ROMAN_WORLD: Scenario = {
         { name: "Roma", lon: 12.5, lat: 41.9, capital: true },
         { name: "Arretium", lon: 11.88, lat: 43.46 },
         { name: "Ariminum", lon: 13.32, lat: 44.56 }, // moved from its real site to give it room
-        // Pinned 1.35° east of its real site (14.25, 41.08), where spacing put it
-        // before Sicily grew: farther south it crowds Tarentum and Croton.
-        { name: "Capua", lon: 15.6, lat: 40.9, keepSite: true },
-        { name: "Tarentum", lon: 17.24, lat: 40.47 },
-        { name: "Croton", lon: 17.13, lat: 39.08 },
-        { name: "Messana", lon: 15.55, lat: 38.19 },
+        // Pinned 0.9° from its real site (14.25, 41.08): farther south it crowds
+        // Tarentum and Croton, which since the split are placed first and win
+        // the land between them.
+        { name: "Capua", lon: 15.09, lat: 41.8, keepSite: true },
+      ],
+    },
+    {
+      // Split from Rome, which started with all seven Italian cities and far
+      // outgrew every rival. Its cities, Syracusae and Bylazora are pinned
+      // where spacing put them before the split: a faction more changes the
+      // order cities are placed in, and the shifted sites crowded Capua out
+      // of room to reach level 3.
+      id: "samnites", name: "Samnite League", shortName: "Samnites", color: "#a3b83a", culture: "roman", controller: "ai",
+      cities: [
+        { name: "Tarentum", lon: 18.37, lat: 40.15, capital: true, keepSite: true },
+        { name: "Croton", lon: 16.73, lat: 38.91, keepSite: true },
+        { name: "Messana", lon: 14.1, lat: 38.91, keepSite: true },
       ],
     },
     {
@@ -46,14 +58,14 @@ export const ROMAN_WORLD: Scenario = {
       id: "macedon", name: "Kingdom of Macedon", shortName: "Macedon", color: "#2e6fd1", culture: "hellenistic", controller: "ai",
       cities: [
         { name: "Pella", lon: 22.52, lat: 40.76, capital: true },
-        { name: "Bylazora", lon: 21.77, lat: 41.72 },
+        { name: "Bylazora", lon: 19.35, lat: 42.22, keepSite: true }, // pinned: see the Samnites
       ],
     },
     {
       id: "greeks", name: "Greek Leagues", shortName: "Greeks", color: "#6fc8e8", culture: "hellenistic", controller: "ai",
       cities: [
         { name: "Corinthus", lon: 22.88, lat: 37.91, capital: true },
-        { name: "Syracusae", lon: 15.29, lat: 37.07 },
+        { name: "Syracusae", lon: 15.41, lat: 37.26, keepSite: true }, // pinned: see the Samnites
         { name: "Pergamum", lon: 27.18, lat: 39.12 },
       ],
     },

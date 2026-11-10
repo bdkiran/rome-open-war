@@ -123,7 +123,7 @@ so.
   23, median AI income 391 a turn. Whole games are slower to simulate
   (`npm test` about 3.5 minutes, was 1).
 - **The city list is the player's**: 15 factions with 2 to 7 cities each (55 cities)
-  (Rome holds 7 in Italy and Sicily). Parthia and Armenia were left out:
+  (Rome held 7 in Italy and Sicily, until it was split: see Factions). Parthia and Armenia were left out:
   their cities are beyond the map's eastern edge; Seleucia sits on the edge.
   The player chose plain historical names for factions and regions.
 - **Crowded cities were moved or dropped** so every city can still reach
@@ -142,8 +142,22 @@ so.
 
 ## Factions
 
-- 14 factions: Rome (the player, 4 cities including Syracusae) and 13 AIs with
-  3 cities each. Colours were chosen against each faction's *neighbours*
+- **Rome was split in two** (the player's call): it started with all seven
+  Italian cities (24,000 people, 3,120 soldiers, +84 gold a turn, against +73
+  for the next biggest) and was too strong. The player keeps Roma, Arretium,
+  Ariminum and Capua (+50, like the Britons); the Samnite League, an AI with
+  Roman soldiers, holds Tarentum, Croton and Messana (+39, like most AIs).
+  A faction more changes the order cities are placed in (capitals first, then
+  one per faction per round), so the Samnite cities, Syracusae and Bylazora
+  are pinned where they stood before; ties for land go to the city placed
+  first, which left Capua short of room for level 3, so Capua moved one tile
+  north-west (0.9° from its real site, closer than before). Measured over 4
+  seeds, 100 turns, against master (normal / `--garrison`): battles +21% /
+  +29% (Italy is a front from turn 1), AI income −1% / −6%, level-3 cities
+  14 / 15 (was 17 / 15), factions fallen 3 / 3 (unchanged), no invalid
+  orders or AI debt. The passive test player now falls in all 4 normal games;
+  the Samnites end with 2 to 7 cities.
+- 16 factions, 2 to 6 cities each. Colours were chosen against each faction's *neighbours*
   (e.g. the Germanic Tribes' first dark green vanished into forest; Thrace
   moved to lavender to stay clear of it).
 - The scoreboard uses short names so the people/soldiers/gold columns fit.
@@ -279,6 +293,13 @@ so.
   laid: the player's call, so a city showing 3 turns holds out for 3 full turns.
   Being shut in, with no gold, growth or training, still starts at once. When
   supplies run out the city surrenders and its garrison is destroyed. The old "starve then lose 25% a turn" model felt too abrupt.
+- **A faction that falls ends its sieges.** Sieges are checked at the end of
+  the besieger's turn, and a fallen faction has none, so a city it was
+  besieging stayed shut in for ever, with no one outside to sally against: no
+  gold, no training, while its armies still drew upkeep. Found when the Rome
+  split put a test game's Thrace in debt (its last city, Porolissum, besieged
+  by a Dacia that had fallen 30 turns before). `tests/invariants.ts` now
+  checks that no city is besieged by a fallen faction.
 - **A besieger marches in the moment the garrison dies**, whoever's turn it is,
   with no choice offered: there's no reason to stay outside. The empty city used
   to wait for the besieger's next turn, and another faction could walk in and
