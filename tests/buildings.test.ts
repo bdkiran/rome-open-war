@@ -103,8 +103,8 @@ describe("ports and roads", () => {
   });
 });
 
-describe("gold from farms and ports", () => {
-  it("adds gold for every plains tile with farms, and every sea tile with a port, before taxes and the market", () => {
+describe("gold from farms", () => {
+  it("adds gold for every plains tile with farms, before taxes and the market", () => {
     let state = newGame();
     const city = Object.values(state.cities).find((c) => c.coast > 0 && plainsTiles(state, c.id) > 0)!;
     const before = cityStats(state, city).income;
@@ -113,19 +113,18 @@ describe("gold from farms and ports", () => {
       state = withCity(state, built);
       const income = cityStats(state, built).income;
       assert.equal(income.farms, Math.round(plainsTiles(state, city.id) * BUILDING_EFFECTS.farmsGoldPerPlainsTile[level]));
-      assert.equal(income.port, Math.round(city.coast * BUILDING_EFFECTS.portGoldPerSeaTile[level]));
-      assert.equal(income.subtotal, before.subtotal + income.farms + income.port);
-      assert.equal(income.total, Math.round(income.subtotal * income.taxes * income.market));
+      assert.equal(income.subtotal, before.subtotal + income.farms);
+      assert.equal(income.total, Math.round((income.subtotal * income.market + income.trade * income.tradeMarket) * income.taxes));
     }
   });
 
-  it("gives no farm gold to a city with no plains, and none from farms or port unbuilt", () => {
+  it("gives no farm gold to a city with no plains, and none from farms or trade unbuilt", () => {
     const state = newGame();
     const noPlains = Object.values(state.cities).find((c) => plainsTiles(state, c.id) === 0)!;
     assert.equal(cityStats(state, { ...noPlains, buildings: { ...noPlains.buildings, farms: 3 } }).income.farms, 0);
     for (const city of Object.values(state.cities)) {
       const income = cityStats(state, city).income;
-      assert.equal(income.farms + income.port, 0, city.name);
+      assert.equal(income.farms + income.trade, 0, city.name);
     }
   });
 });

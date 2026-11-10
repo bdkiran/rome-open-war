@@ -94,7 +94,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   market: {
     name: "Market",
-    purpose: "More gold from the city.",
+    purpose: "More gold from the city, and much more from its trade.",
     levels: [
       { name: "Market square", cost: 150, turns: 2 },
       { name: "Trade hall", cost: 300, turns: 3 },
@@ -112,7 +112,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   port: {
     name: "Port",
-    purpose: "Faster growth, the more of the city's reach is sea, and a little gold from every sea tile on its coast. Needs sea.",
+    purpose: "Faster growth, the more of the city's reach is sea, and trade by sea with your other ports in range. Needs sea.",
     levels: [
       { name: "Jetty", cost: 150, turns: 2 },
       { name: "Harbour", cost: 250, turns: 3 },
@@ -121,7 +121,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   roads: {
     name: "Roads",
-    purpose: "Faster movement across the city's land, for every army that marches through it.",
+    purpose: "Faster movement across the city's land, for every army that marches through it, and trade with your bordering cities that have roads.",
     levels: [
       { name: "Tracks", cost: 150, turns: 2 },
       { name: "Roads", cost: 300, turns: 3 },
@@ -162,8 +162,8 @@ export const BUILDING_EFFECTS = {
   wallsDefense: [0, 0.15, 0.3, 0.5],
   /** Extra population growth. */
   farmsGrowth: [0, 0.2, 0.4, 0.6],
-  /** Extra gold. */
-  marketGold: [0, 0.3, 0.6, 1],
+  /** Extra gold from everything but trade (trade has its own, larger bonus: TRADE.marketTrade). */
+  marketGold: [0, 0.25, 0.5, 0.8],
   /** Gold per hills or mountain tile in the city's territory, before taxes and the market. */
   mineGoldPerTile: [0, 1, 2, 3],
   /** Hills and mountain tiles a city needs to build a mine: with fewer, it would take too long to repay. */
@@ -172,6 +172,4 @@ export const BUILDING_EFFECTS = {
   farmsGoldPerPlainsTile: [0, 0.25, 0.5, 0.75],
   /** Extra population growth from a port, scaled by the share of the city's reach that is sea. */
   portGrowth: [0, 0.3, 0.6, 0.9],
-  /** Gold per sea tile on the city's coast, before taxes and the market. */
-  portGoldPerSeaTile: [0, 0.25, 0.5, 0.75],
 } as const;

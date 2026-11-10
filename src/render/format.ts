@@ -1,5 +1,6 @@
 /** Formatting shared by the map and the UI. */
 import { unitStats, type Tier, type UnitType } from "@/data/units.js";
+import type { IncomeBreakdown } from "@/systems/cities.js";
 
 /** 12345 -> "12,345" */
 export function formatNumber(n: number): string {
@@ -53,4 +54,22 @@ export function describeStatsShort(unit: UnitType, tier: Tier): [string, string]
     : s.antiCavalry > 0 ? `Anti-cav +${n(s.antiCavalry)}`
     : "No specials";
   return [`Atk ${n(s.attack)} · Arm ${n(s.armor)}`, special];
+}
+
+/** A multiplier as shown to the player: ×1.5, ×1.15, ×2. */
+export function formatMultiplier(n: number): string {
+  return `×${Number.isInteger(n) ? n : n.toFixed(2).replace(/0$/, "")}`;
+}
+
+/**
+ * How a city's gold is reached, e.g. "5 base + 20 people = 25 ×1.15 market,
+ * 12 trade ×1.5 market, ×1.5 high taxes = 70". `taxName` names the rate.
+ */
+export function describeIncome(i: IncomeBreakdown, taxName: string): string {
+  const x = formatMultiplier;
+  const sources = [`${i.base} base`, `${i.people} people`, ...(i.mine ? [`${i.mine} mine`] : []), ...(i.farms ? [`${i.farms} farms`] : [])];
+  const parts = [`${sources.join(" + ")}${i.market !== 1 ? ` = ${i.subtotal} ${x(i.market)} market` : ""}`];
+  if (i.trade) parts.push(`${i.trade} trade${i.tradeMarket !== 1 ? ` ${x(i.tradeMarket)} market` : ""}`);
+  if (i.taxes !== 1) parts.push(`${x(i.taxes)} ${taxName}`);
+  return parts.length > 1 || i.market !== 1 ? `${parts.join(", ")} = ${i.total}` : `${parts[0]} = ${i.total}`;
 }

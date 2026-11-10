@@ -53,13 +53,13 @@ src/
                applyAction, the ONLY way state changes), setup.ts (new game),
                context.ts (fixed info: the map topology), rng.ts (seeded)
   data/        every tunable number: terrain, units, economy, buildings,
-               combat, experience, siege, conquest, vision, scouts, watchtowers, ai,
+               combat, experience, siege, conquest, vision, scouts, watchtowers, trade, ai,
                gameSetup,
                cultures (how each faction's soldiers look); scenarios/
                romanWorld.ts (factions, cities, colours, cultures)
   systems/     the rules, as pure functions of state: armies (movement,
                marches, zone of control, merging), combat (battles, battleSides,
-               previews), cities (growth, income, capture), buildings
+               previews), cities (growth, income, trade routes, capture), buildings
                (construction queue), recruitment (training/retraining queue),
                siege, conquest (occupy/enslave/exterminate), vision (fog),
                scouts (moving them), watchtowers (building them, who sees
@@ -84,7 +84,7 @@ tests/         simulation.test.ts (whole games: invalid orders, debt, state
                never mutated, JSON round trip, determinism), invariants.ts
                (what must hold in any state: add to it when adding rules),
                map.test.ts (every starting city can reach level 3),
-               siege.test.ts, buildings.test.ts, recruitment.test.ts,
+               siege.test.ts, buildings.test.ts, trade.test.ts, recruitment.test.ts,
                watchtowers.test.ts, scouts.test.ts, experience.test.ts, combat.test.ts,
                flight.test.ts,
                controller.test.ts, playbackBanner.test.ts, aiGovernment.test.ts,

@@ -27,13 +27,13 @@ import { cityDefense, defenseBonusAt } from "@/systems/combat.js";
 import { enterCost } from "@/systems/pathfinding.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
-import { describeAttackArmor, describeSpecials, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
+import { describeAttackArmor, describeIncome, describeSpecials, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg, scoutSvg } from "@/render/figures.js";
 import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
 import { canRetrain, canTrain, canTrainScout, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
-import { cityStats, mineableTiles, plainsTiles, type CityStats } from "@/systems/cities.js";
+import { cityStats, mineableTiles, plainsTiles, tradeRoutes, type CityStats, type TradeRoute } from "@/systems/cities.js";
 import { canBuildWatchtower, towerOwner, towerSighter } from "@/systems/watchtowers.js";
 import { SCOUT } from "@/data/scouts.js";
 import { VISION } from "@/data/vision.js";
@@ -269,13 +269,9 @@ function cityDetails(input: InfoPanelInput, city: City): string {
       ${siegeStatus(state, city)}`;
 }
 
-/** How the city's income is reached: its base, people, mine, farms and port, then taxes and the market. */
+/** How the city's income is reached: its base, people, mine and farms, then the market, its trade, and taxes. */
 function incomeLine(stats: CityStats, besieged: boolean): string {
-  const i = stats.income;
-  const x = (n: number) => `×${Number.isInteger(n) ? n : n.toFixed(2).replace(/0$/, "")}`;
-  const parts = [`${i.base} base`, `${i.people} people`, ...(i.mine ? [`${i.mine} mine`] : []), ...(i.farms ? [`${i.farms} farms`] : []), ...(i.port ? [`${i.port} port`] : [])].join(" + ");
-  const multipliers = [...(i.taxes !== 1 ? [`${x(i.taxes)} taxes`] : []), ...(i.market !== 1 ? [`${x(i.market)} market`] : [])];
-  const text = multipliers.length ? `${parts} = ${i.subtotal}, ${multipliers.join(", ")} = ${i.total}` : `${parts} = ${i.total}`;
+  const text = describeIncome(stats.income, "taxes");
   return `<p class="income-line">${besieged ? `Normally ${text} gold. Besieged: nothing this turn.` : `${text} gold a turn`}</p>`;
 }
 
@@ -392,16 +388,18 @@ function constructionTab(input: InfoPanelInput, city: City): string {
 }
 
 /**
- * For a mine, farms or port: the tiles it earns from and the gold the next
- * level would bring, before taxes and the market. Empty for other buildings.
+ * For a mine or farms: the tiles it earns from and the gold the next level
+ * would bring. For roads or a port: its trade routes and the trade gold the
+ * next level would bring. Before taxes and the market; empty for other
+ * buildings.
  */
 function landGoldSummary(state: GameState, city: City, building: BuildingType, nextLevelNumber: number | null): string {
+  if (building === "roads" || building === "port") return tradeSummary(state, city, building, nextLevelNumber);
   const kinds = {
     mine: { tiles: mineableTiles(state, city.id), perTile: BUILDING_EFFECTS.mineGoldPerTile as readonly number[], what: "to dig", none: "No hills or mountains to mine." },
     farms: { tiles: plainsTiles(state, city.id), perTile: BUILDING_EFFECTS.farmsGoldPerPlainsTile as readonly number[], what: "of plains", none: "No plains to farm for gold." },
-    port: { tiles: city.coast, perTile: BUILDING_EFFECTS.portGoldPerSeaTile as readonly number[], what: "of sea", none: "" },
   };
-  if (building !== "mine" && building !== "farms" && building !== "port") return "";
+  if (building !== "mine" && building !== "farms") return "";
   const { tiles, perTile, what, none } = kinds[building];
   if (tiles === 0) return none;
   const gold = (level: number) => Math.round(tiles * perTile[level]);
@@ -410,6 +408,20 @@ function landGoldSummary(state: GameState, city: City, building: BuildingType, n
   return nextLevelNumber
     ? `${count}: +${gold(nextLevelNumber)} gold a turn${now ? ` (now +${now})` : ""}.`
     : `${count}: +${now} gold a turn.`;
+}
+
+/** Roads' or a port's trade: its routes now, or at the next level, and their gold before taxes and the market. */
+function tradeSummary(state: GameState, city: City, building: "roads" | "port", nextLevelNumber: number | null): string {
+  const by = building === "roads" ? "land" : "sea";
+  const at = (level: number) => tradeRoutes(state, { ...city, buildings: { ...city.buildings, [building]: level } }).filter((r) => r.by === by);
+  const gold = (routes: TradeRoute[]) => Math.round(routes.reduce((sum, r) => sum + r.gold, 0));
+  const now = at(city.buildings[building]);
+  const next = nextLevelNumber ? at(nextLevelNumber) : now;
+  if (next.length === 0) return building === "roads" ? "No bordering city of yours has roads to trade with." : "No port of yours in range to trade with.";
+  const routes = `${next.length} trade route${next.length === 1 ? "" : "s"} by ${by}`;
+  return nextLevelNumber
+    ? `${routes}: +${gold(next)} gold a turn${now.length ? ` (now +${gold(now)})` : ""}.`
+    : `${routes}: +${gold(now)} gold a turn.`;
 }
 
 /**

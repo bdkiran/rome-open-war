@@ -12,6 +12,7 @@ import {
 import { BUILDING_EFFECTS, LEVEL_POPULATION_LIMIT } from "@/data/buildings.js";
 import { ECONOMY, TAX_RATES } from "@/data/economy.js";
 import { GAME_SETUP } from "@/data/gameSetup.js";
+import { TRADE } from "@/data/trade.js";
 import { maxSupplies } from "@/systems/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
 import type { MapTopology, TileId } from "@/map/topology.js";
@@ -60,8 +61,10 @@ export function createCity(
     fishingGrounds: tilesWithin(ctx.topology, tile, GAME_SETUP.territoryRadius).filter(
       (t) => state.tiles[t].terrain === "water",
     ).length,
-    // Worked out by measureCoasts once every city has claimed its land.
+    // Worked out by measureCoasts and mapTradeRoutes once every city has claimed its land.
     coast: 0,
+    landNeighbours: [],
+    seaDistances: {},
   };
   const next: GameState = {
     ...state,
@@ -225,15 +228,17 @@ export interface IncomeBreakdown {
   mine: number;
   /** From its farms, for each plains tile it farms. */
   farms: number;
-  /** From its port, for each sea tile on its coast. */
-  port: number;
-  /** base + people + mine + farms + port. */
+  /** base + people + mine + farms. */
   subtotal: number;
+  /** From its trade routes, by land and sea. */
+  trade: number;
   /** The tax rate's multiplier, e.g. 1.5 on high taxes. */
   taxes: number;
-  /** The market's multiplier, e.g. 1.3 with a market square. */
+  /** The market's multiplier on the subtotal, e.g. 1.15 with a market square. */
   market: number;
-  /** subtotal × taxes × market, rounded. */
+  /** The market's multiplier on trade, e.g. 1.5 with a market square. */
+  tradeMarket: number;
+  /** (subtotal × market + trade × tradeMarket) × taxes, rounded. */
   total: number;
 }
 
@@ -263,10 +268,11 @@ export function cityStats(state: GameState, city: City): CityStats {
   const people = Math.round((city.population / 1000) * ECONOMY.goldPer1000People);
   const mine = mineable * BUILDING_EFFECTS.mineGoldPerTile[city.buildings.mine];
   const farmGold = Math.round(plains * BUILDING_EFFECTS.farmsGoldPerPlainsTile[city.buildings.farms]);
-  const portGold = Math.round(city.coast * BUILDING_EFFECTS.portGoldPerSeaTile[city.buildings.port]);
-  const subtotal = base + people + mine + farmGold + portGold;
+  const subtotal = base + people + mine + farmGold;
+  const trade = Math.round(tradeRoutes(state, city).reduce((sum, r) => sum + r.gold, 0));
   const market = 1 + BUILDING_EFFECTS.marketGold[city.buildings.market];
-  const total = Math.round(subtotal * tax.gold * market);
+  const tradeMarket = 1 + TRADE.marketTrade[city.buildings.market];
+  const total = Math.round((subtotal * market + trade * tradeMarket) * tax.gold);
 
   return {
     capacity: fedCapacity,
@@ -276,7 +282,7 @@ export function cityStats(state: GameState, city: City): CityStats {
     growthRate,
     growth: populationGrowth(city.population, fedCapacity, growthRate),
     gold: total,
-    income: { base, people, mine, farms: farmGold, port: portGold, subtotal, taxes: tax.gold, market, total },
+    income: { base, people, mine, farms: farmGold, subtotal, trade, taxes: tax.gold, market, tradeMarket, total },
   };
 }
 
@@ -288,16 +294,121 @@ export function cityStats(state: GameState, city: City): CityStats {
  */
 export function measureCoasts(ctx: GameContext, state: GameState): GameState {
   const cities = { ...state.cities };
-  for (const city of Object.values(state.cities)) {
-    const sea = new Set(
-      tilesWithin(ctx.topology, city.tile, GAME_SETUP.territoryRadius).filter((t) => state.tiles[t].terrain === "water"),
-    );
-    for (const tile of cityTiles(state, city.id)) {
-      for (const n of ctx.topology.neighbors(tile)) if (state.tiles[n].terrain === "water") sea.add(n);
+  for (const city of Object.values(state.cities)) cities[city.id] = { ...city, coast: coastTiles(ctx, state, city).size };
+  return { ...state, cities };
+}
+
+/** The sea a city can build a port on: within its reach, or touching any of its land. */
+function coastTiles(ctx: GameContext, state: GameState, city: City): Set<TileId> {
+  const sea = new Set(
+    tilesWithin(ctx.topology, city.tile, GAME_SETUP.territoryRadius).filter((t) => state.tiles[t].terrain === "water"),
+  );
+  for (const tile of cityTiles(state, city.id)) {
+    for (const n of ctx.topology.neighbors(tile)) if (state.tiles[n].terrain === "water") sea.add(n);
+  }
+  return sea;
+}
+
+/**
+ * Finds where trade can run, whoever owns the cities: each city's land
+ * neighbours (cities with claimed land next to its own) and, for coastal
+ * cities, the steps over the sea to every other coastal city. Territory
+ * never changes, so this runs once, after every city has claimed its land.
+ * Who owns a city and what it has built decide which routes are open
+ * (`tradeRoutes`).
+ */
+export function mapTradeRoutes(ctx: GameContext, state: GameState): GameState {
+  const neighbours = new Map<CityId, Set<CityId>>();
+  for (const [tile, claim] of Object.entries(state.territory)) {
+    for (const n of ctx.topology.neighbors(tile)) {
+      const other = state.territory[n];
+      if (!other || other.cityId === claim.cityId || ctx.topology.distance(tile, n) !== 1) continue;
+      if (!neighbours.has(claim.cityId)) neighbours.set(claim.cityId, new Set());
+      neighbours.get(claim.cityId)!.add(other.cityId);
     }
-    cities[city.id] = { ...city, coast: sea.size };
+  }
+
+  // Which coastal city each coast tile serves (a tile can serve several).
+  const coasts = new Map<CityId, Set<TileId>>();
+  const servedBy = new Map<TileId, CityId[]>();
+  for (const city of Object.values(state.cities)) {
+    const tiles = coastTiles(ctx, state, city);
+    if (tiles.size === 0) continue;
+    coasts.set(city.id, tiles);
+    for (const t of tiles) servedBy.set(t, [...(servedBy.get(t) ?? []), city.id]);
+  }
+
+  const cities = { ...state.cities };
+  for (const city of Object.values(state.cities)) {
+    const seaDistances: Record<CityId, number> = {};
+    const start = coasts.get(city.id);
+    if (start) {
+      // Breadth-first over the sea from the city's whole coast.
+      const steps = new Map<TileId, number>();
+      let frontier = [...start];
+      for (const t of frontier) steps.set(t, 0);
+      for (let step = 0; frontier.length > 0; step++) {
+        const next: TileId[] = [];
+        for (const tile of frontier) {
+          for (const other of servedBy.get(tile) ?? []) {
+            if (other !== city.id && !(other in seaDistances)) seaDistances[other] = step;
+          }
+          for (const n of ctx.topology.neighbors(tile)) {
+            if (steps.has(n) || state.tiles[n].terrain !== "water" || ctx.topology.distance(tile, n) !== 1) continue;
+            steps.set(n, step + 1);
+            next.push(n);
+          }
+        }
+        frontier = next;
+      }
+    }
+    cities[city.id] = { ...city, landNeighbours: [...(neighbours.get(city.id) ?? [])].sort(), seaDistances };
   }
   return { ...state, cities };
+}
+
+/** One open trade route, seen from one end. */
+export interface TradeRoute {
+  partner: CityId;
+  by: "land" | "sea";
+  /** The lower of the two cities' road (land) or port (sea) levels. */
+  level: number;
+  /** Gold it pays this end each turn, before taxes and the market. */
+  gold: number;
+}
+
+/**
+ * A city's open trade routes: to each city of the same owner whose land
+ * borders its own, if both have roads, and to each port of the same owner
+ * within sailing range, if both have ports. A siege at either end cuts the
+ * route. A pair joined by land and sea trades both ways.
+ */
+export function tradeRoutes(state: GameState, city: City): TradeRoute[] {
+  if (city.besiegedBy) return [];
+  const routes: TradeRoute[] = [];
+  const open = (id: CityId): City | null => {
+    const other = state.cities[id];
+    return other && other.owner === city.owner && !other.besiegedBy ? other : null;
+  };
+  if (city.buildings.roads > 0) {
+    for (const id of city.landNeighbours) {
+      const other = open(id);
+      const level = other ? Math.min(city.buildings.roads, other.buildings.roads) : 0;
+      if (other && level > 0) {
+        routes.push({ partner: id, by: "land", level, gold: (other.population / 1000) * TRADE.roadGoldPer1000[level] });
+      }
+    }
+  }
+  if (city.buildings.port > 0) {
+    for (const [id, steps] of Object.entries(city.seaDistances)) {
+      const other = open(id);
+      const level = other ? Math.min(city.buildings.port, other.buildings.port) : 0;
+      if (other && level > 0 && steps <= TRADE.seaRange[level]) {
+        routes.push({ partner: id, by: "sea", level, gold: (other.population / 1000) * TRADE.seaGoldPer1000[level] });
+      }
+    }
+  }
+  return routes;
 }
 
 /**
