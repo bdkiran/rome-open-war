@@ -28,7 +28,8 @@ it("shows every AI action to the playback hook, in order, then plays on", async 
   const final = await playRound({ aiTurnDelayMs: 0, showAiAction: async (step) => void steps.push(step) });
   assert.ok(steps.length > 13, `${steps.length} AI actions`);
   for (let i = 1; i < steps.length; i++) assert.equal(steps[i].before, steps[i - 1].after, `step ${i} starts where ${i - 1} ended`);
-  assert.equal(steps.filter((s) => s.action.type === "endTurn").length, 14, "every AI ends its turn once");
+  const ais = final.factions.filter((f) => f.controller === "ai").length;
+  assert.equal(steps.filter((s) => s.action.type === "endTurn").length, ais, "every AI ends its turn once");
   assert.equal(steps[steps.length - 1].after, final);
 });
 

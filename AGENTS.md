@@ -1,7 +1,7 @@
 # Unlimited War
 
 A browser-based, turn-based grand strategy game set in the Mediterranean world
-of 218 BC. The player is Rome; 13 AI factions share a hex map from Iberia to
+of 218 BC. The player is Rome; 15 AI factions share a hex map from Iberia to
 Syria and from Egypt to Britain. 3D map (three.js), turn-based rules engine,
 AI opponents. TypeScript, no bundler, no framework.
 

@@ -25,12 +25,13 @@ instead, see `models/README.md`.
 
 ## The scenario
 
-You play the **Roman Republic** on the eve of the Second Punic War. Fourteen
+You play the **Roman Republic** on the eve of the Second Punic War. Fifteen
 AI powers share the map with you, some with many cities and some with few:
 
 | Faction                | Cities (capital first)                  |
 |------------------------|-----------------------------------------|
-| Roman Republic (you) | Roma, Arretium, Ariminum, Capua, Tarentum, Croton, Messana |
+| Roman Republic (you) | Roma, Arretium, Ariminum, Capua |
+| Samnite League | Tarentum, Croton, Messana |
 | Carthage | Carthago, Lilybaeum, Thapsus, Carales, Corduba |
 | Kingdom of Macedon | Pella, Bylazora |
 | Greek Leagues | Corinthus, Syracusae, Pergamum |
@@ -52,7 +53,7 @@ little way from their real sites, so each has land enough to grow. Dashed lines 
 crossings** that armies can step across like any other move: the Pillars of
 Hercules, the Strait of Messina (Sicily to Italy), Sicily to Africa, the
 Channel, Corsica to Sardinia, Corsica to Italy, Sardinia to Africa, the
-Bosporus and the Hellespont. Sicily is a round island shared by Rome
+Bosporus and the Hellespont. Sicily is a round island shared by the Samnites
 (Messana, in the north-east), the Greeks (Syracusae, south-east) and
 Carthage (Lilybaeum, west). A narrow sea from the Hellespont to the
 Bosporus divides Europe from Asia, with Byzantion on the European shore.
@@ -500,7 +501,8 @@ uses one, and **when they run out the city surrenders**: its garrison is destroy
 next to it marches in. The siege holds as long as the besieger ends its turn
 with an army next to the city; otherwise it's lifted. It's also **broken at
 once if the besiegers lose a battle** at the city or next to it: a failed
-storm, a successful sally or a relief force beating them. If the **garrison
+storm, a successful sally or a relief force beating them. A faction that
+falls ends all its sieges. If the **garrison
 dies**, in a failed sally, beside a relief force or to attrition, the besieger's
 strongest army next to the city marches in at once and takes it, whoever's turn
 it is; a city taken on another's turn has its fate decided on your own. However a siege

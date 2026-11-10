@@ -10,6 +10,7 @@ import { regimentSize } from "@/data/units.js";
 import { attackOptions, reachableTiles, SHUT_IN, siegeWorksPerTurn, stormBlocked } from "@/systems/armies.js";
 import { nextAction } from "@/ai/ai.js";
 import { assess } from "@/ai/assess.js";
+import { eliminateIfDefeated } from "@/systems/cities.js";
 import { cityDefense } from "@/systems/combat.js";
 import { besiege, liftSiege, maxSupplies, processSieges } from "@/systems/siege.js";
 
@@ -184,6 +185,15 @@ describe("the end of a siege", () => {
     const lifted = applyAction(ctx, { ...state, currentFactionIndex: carthage }, "carthage", { type: "liftSiege", cityId: roma.id });
     assert.ok(lifted.ok);
     assert.equal(lifted.state.cities[roma.id].supplies, maxSupplies(roma));
+  });
+
+  it("comes when the besieger falls, though it never has another turn to lift it", () => {
+    const { state, roma } = lastTurn();
+    const carthaginian = Object.fromEntries(Object.entries(state.cities).map(([id, c]) => [id, c.owner === "carthage" ? { ...c, owner: "greeks" } : c]));
+    const fallen = eliminateIfDefeated({ ...state, cities: carthaginian }, "carthage");
+    assert.equal(fallen.factions.find((f) => f.id === "carthage")!.alive, false);
+    assert.equal(fallen.cities[roma.id].besiegedBy, null);
+    assert.equal(fallen.cities[roma.id].supplies, maxSupplies(roma));
   });
 });
 
