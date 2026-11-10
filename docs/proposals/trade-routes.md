@@ -1,6 +1,8 @@
 # Decision: trade routes
 
-- **Status:** Proposed. Not implemented yet.
+- **Status:** Implemented in a different form (see `docs/DECISIONS.md`, "Trade between a
+  faction's own cities", and `README.md`, Cities and economy). What was built, and what of
+  this proposal wasn't, is under "As implemented" at the end.
 - **Decides:** whether cities earn gold by trading with each other, and what cuts that
   trade.
 - **Where it goes once agreed:** a new entry under Cities and economy in
@@ -144,3 +146,29 @@ AIs, about +10% of their income.
   limited by it?
 - Is the zone of control the right width for cutting a route, or only the army's own tile?
 - Should a cut route also show on the map, so the player sees where the enemy is raiding?
+
+## As implemented
+
+The player directed a simpler version, built around the buildings: markets, roads and ports
+all boost trade.
+
+| Question | Proposed here | As built |
+|---|---|---|
+| Who trades | Own cities only | Own cities only (as proposed) |
+| What opens a route | A Market at both ends | **Roads at both ends** (land) or **a Port at both ends** (sea). The Market isn't needed; it multiplies trade instead |
+| Land route | Up to 24 movement points, not through foreign land or near foreign armies | **Cities whose claimed land borders** |
+| Sea route | Ports, coasts up to 20 sea tiles apart | Ports, up to **6 / 16 / 40** sea steps by the route's level |
+| How many routes | One per Market level | **Every** qualifying partner |
+| Gold per route | 2 + 0.5 per 1,000 people of the smaller city | **0.4 / 0.7 / 1 per 1,000 people of the partner**, by the route's level (the lower of the two cities') |
+| The Market | Unchanged, multiplies trade like other gold | **+25 / 50 / 80%** on ordinary income (was +30 / 60 / 100%), **+50 / 100 / 150%** on trade |
+| Port gold | Unchanged | Sea trade **replaces** the per-sea-tile gold |
+| When it's checked | Once a turn, stored on the city | Partners mapped **once at setup** (`City.landNeighbours`, `City.seaDistances`); open routes read in `cityStats` |
+| What cuts a route | Foreign armies on it or next to it, foreign land, sieges | **Only a siege at either end**, or losing the city |
+
+Not built, and still open as follow-ups:
+
+- Armies cutting land routes (the raiding this proposal was mainly for), and the
+  "The road from Capua to Roma is cut." report.
+- The selected city's routes drawn on the map.
+- The "Trade routes" and "Route-turns cut" rows in `tools/compare.ts`.
+- Measured with 4 seeds, not the 8 this proposal asked for.
