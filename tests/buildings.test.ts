@@ -138,7 +138,7 @@ describe("population growth", () => {
   });
 
   it("leaves larger cities alone, and never grows a city past its capacity", () => {
-    assert.equal(populationGrowth(5000, 20000, 0.05), Math.round(0.05 * 5000 * 0.75));
+    assert.equal(populationGrowth(5000, 20000, 0.05), Math.round(0.05 * 5000 * (1 - 0.25 ** ECONOMY.growthCurve)));
     assert.equal(populationGrowth(990, 1000, 2), 10, "stops at capacity");
     assert.ok(populationGrowth(9000, 8000, 0.05) < 0, "over capacity still shrinks");
   });

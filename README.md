@@ -197,7 +197,7 @@ does. Islands with no city belong to no one.
 Population grows every turn using a carrying capacity:
 
 ```
-growth = baseGrowthRate × population × (1 − population / capacity)
+growth = baseGrowthRate × population × (1 − (population / capacity)^1.25)
 ```
 
 - **Capacity** is the total number of people the city's land supports. Each
@@ -214,8 +214,9 @@ growth = baseGrowthRate × population × (1 − population / capacity)
   city's land and fishing grounds, e.g. plains 5%, forest and sea 3.5%, hills
   2.5%, mountains and desert 1%.
 
-Cities grow close to their base rate while small and slow down as they near
-capacity. A city over capacity shrinks. A city drained below 1,000 people
+Cities grow close to their base rate while small and slow down only as they
+near capacity: at half full they still grow at 58% of their rate, at three
+quarters full 30%. A city over capacity shrinks. A city drained below 1,000 people
 (by sacking or recruiting) still grows as if it had 1,000, so it recovers.
 
 Each city adds a flat 5 gold per turn, plus 4 gold per 1,000 people (every person counts), plus
