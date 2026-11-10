@@ -7,10 +7,11 @@ import type { City, CityId, GameState } from "@/core/state.js";
 import { BUILDING_EFFECTS, type BuildingType } from "@/data/buildings.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { TRADE } from "@/data/trade.js";
-import { cityStats, tradeRoutes } from "@/systems/cities.js";
+import { cityStats, processCities, roadsOf, tradeRoutes } from "@/systems/cities.js";
+
+const map = ROMAN_WORLD.mapEngine.createMap();
 
 function newGame(): GameState {
-  const map = ROMAN_WORLD.mapEngine.createMap();
   const ctx: GameContext = { topology: map.topology };
   return createGame(ctx, map, ROMAN_WORLD);
 }
@@ -96,6 +97,51 @@ describe("tradeRoutes", () => {
     const besieged = { ...state, cities: { ...state.cities, [b.id]: { ...state.cities[b.id], besiegedBy: rival } } };
     assert.equal(tradeRoutes(besieged, besieged.cities[a.id]).some((r) => r.partner === b.id), false);
     assert.deepEqual(tradeRoutes(besieged, besieged.cities[b.id]), []);
+  });
+});
+
+describe("cutting a road", () => {
+  /** A land pair with roads at both ends, the road between them, and a rival faction. */
+  function setUp() {
+    let state = newGame();
+    const [a, b] = landPair(state);
+    state = build(state, [a.id, b.id], { roads: 1 });
+    const road = roadsOf(state, a.id).find((r) => r.cities.includes(b.id))!;
+    const rival = Object.values(state.cities).find((c) => c.owner !== a.owner)!.owner;
+    const middle = road.tiles[Math.floor(road.tiles.length / 2)];
+    const armyHere = (tile: string, owner: string): GameState => {
+      const army = Object.values(state.armies)[0];
+      return { ...state, armies: { ...state.armies, raider: { ...army, id: "raider", owner, tile } } };
+    };
+    const route = (s: GameState) => tradeRoutes(s, s.cities[a.id]).find((r) => r.partner === b.id && r.by === "land")!;
+    return { state, a, b, road, rival, middle, armyHere, route };
+  }
+
+  it("stops a land route's gold while an enemy army stands on the road", () => {
+    const { state, rival, middle, armyHere, route } = setUp();
+    assert.equal(route(state).cut, false);
+    const raided = armyHere(middle, rival);
+    assert.equal(route(raided).cut, true);
+    assert.equal(route(raided).gold, 0);
+  });
+
+  it("is also done from a tile next to the road, but not by the owner's own army", () => {
+    const { state, a, road, rival, armyHere, route } = setUp();
+    const beside = road.watch.find((t) => !road.tiles.includes(t) && state.tiles[t].terrain !== "water");
+    if (beside) assert.equal(route(armyHere(beside, rival)).cut, true);
+    assert.equal(route(armyHere(road.tiles[1], a.owner)).cut, false);
+  });
+
+  it("reports the cut once, and the reopening once, to the owner", () => {
+    const { state, a, rival, middle, armyHere } = setUp();
+    const raided = armyHere(middle, rival);
+    const cut = processCities({ topology: map.topology }, raided, a.owner);
+    const cutReports = (s: GameState) => s.log.filter((e) => e.text.includes("is cut")).length;
+    assert.equal(cutReports(cut), 1);
+    assert.equal(cutReports(processCities({ topology: map.topology }, cut, a.owner)), 1, "not reported again");
+    const { raider: _, ...armies } = cut.armies;
+    const clear = processCities({ topology: map.topology }, { ...cut, armies }, a.owner);
+    assert.equal(clear.log.filter((e) => e.text.includes("open again")).length, 1);
   });
 });
 

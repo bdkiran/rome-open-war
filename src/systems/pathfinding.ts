@@ -4,15 +4,66 @@ import { ROAD_MOVE_COST, TERRAIN } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
 import type { TileId } from "@/map/topology.js";
 
+/** The tiles of every road, remembered for as long as the road list lasts (it never changes after setup). */
+const roadTileCache = new WeakMap<GameState["roads"], Set<TileId>>();
+
+/** Whether a road runs through a tile. */
+export function isRoadTile(state: GameState, tile: TileId): boolean {
+  let tiles = roadTileCache.get(state.roads);
+  if (!tiles) {
+    tiles = new Set(state.roads.flatMap((road) => road.tiles));
+    roadTileCache.set(state.roads, tiles);
+  }
+  return tiles.has(tile);
+}
+
 /**
- * Movement points to enter a tile: its terrain's cost, or less on the land of
- * a city with roads. Roads serve every army, whoever owns them.
+ * Movement points to enter a tile: its terrain's cost, or less on a road in
+ * the land of a city that has built its roads. Roads serve every army,
+ * whoever owns them.
  */
 export function enterCost(state: GameState, tile: TileId): number {
-  const terrain = state.tiles[tile].terrain;
+  const terrain = TERRAIN[state.tiles[tile].terrain].moveCost;
+  if (!isRoadTile(state, tile)) return terrain;
   const claim = state.territory[tile];
   const roads = claim ? (state.cities[claim.cityId]?.buildings.roads ?? 0) : 0;
-  return ROAD_MOVE_COST[roads]?.[terrain] ?? TERRAIN[terrain].moveCost;
+  return Math.min(terrain, ROAD_MOVE_COST[roads] ?? Infinity);
+}
+
+/**
+ * The cheapest walk from one tile to another by terrain cost alone, over
+ * adjacent tiles that `allowed` accepts (both ends included), or null if
+ * there's none. Ties go the same way every time. Used to lay out roads.
+ */
+export function cheapestPath(
+  ctx: GameContext,
+  state: GameState,
+  from: TileId,
+  to: TileId,
+  allowed: (tile: TileId) => boolean,
+): TileId[] | null {
+  const dist = new Map<TileId, number>([[from, 0]]);
+  const previous = new Map<TileId, TileId>();
+  const heap = new MinHeap<TileId>();
+  heap.push(from, 0);
+  while (heap.size > 0) {
+    const { key, value: tile } = heap.pop()!;
+    if (key > dist.get(tile)!) continue;
+    if (tile === to) break;
+    for (const n of ctx.topology.neighbors(tile)) {
+      if (ctx.topology.distance(tile, n) !== 1 || !allowed(n)) continue;
+      const cost = key + TERRAIN[state.tiles[n].terrain].moveCost;
+      if (cost < (dist.get(n) ?? Infinity)) {
+        dist.set(n, cost);
+        previous.set(n, tile);
+        heap.push(n, cost);
+      }
+    }
+  }
+  if (!dist.has(to)) return null;
+  const path = [to];
+  while (path[path.length - 1] !== from) path.push(previous.get(path[path.length - 1])!);
+  return path.reverse();
 }
 
 /** A small binary min-heap for Dijkstra. */

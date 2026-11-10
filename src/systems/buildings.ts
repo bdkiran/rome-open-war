@@ -50,7 +50,7 @@ export function nextLevel(city: City, building: BuildingType): { level: number; 
  * Why a building's next level isn't open to a city at all, or null if it is.
  * Buildings go up to the city's level, which only a finished government
  * raises; the government building itself needs enough people first; a mine
- * needs enough hills or mountains to be worth digging. Gold, a full queue and a siege only hold a
+ * needs enough hills or mountains to be worth digging, roads a bordering city. Gold, a full queue and a siege only hold a
  * building up for now, so they don't count here.
  */
 function unavailableReason(state: GameState, city: City, building: BuildingType): string | null {
@@ -66,6 +66,9 @@ function unavailableReason(state: GameState, city: City, building: BuildingType)
   }
   if (building === "port" && city.coast === 0) {
     return `${city.name} has no sea to fish.`;
+  }
+  if (building === "roads" && city.landNeighbours.length === 0) {
+    return `${city.name} borders no city to build a road to.`;
   }
   if (building === "government") {
     const needed = LEVEL_POPULATION[next.level];

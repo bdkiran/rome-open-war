@@ -7,7 +7,7 @@ import { cityPlate } from "@/render/cityPlate.js";
 import { formatCompact } from "@/render/format.js";
 import type { ViewState } from "@/render/mapView.js";
 import { isSpent } from "@/systems/armies.js";
-import { regionOwner } from "@/systems/cities.js";
+import { regionOwner, roadCut } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
 import { buildArmy, buildCity, buildScout, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
@@ -104,8 +104,8 @@ export class MapView3D {
   /** The state and player the plates were last filled in for. */
   private platesFor: GameState | null = null;
   private platesFaction: string | null = null;
-  private readonly layers = { borders: null as THREE.Object3D | null, selection: null as THREE.Object3D | null, route: null as THREE.Object3D | null };
-  private seen = { territory: null as unknown, selected: null as unknown, route: "", overlay: [] as unknown[] };
+  private readonly layers = { roads: null as THREE.Object3D | null, borders: null as THREE.Object3D | null, selection: null as THREE.Object3D | null, route: null as THREE.Object3D | null };
+  private seen = { roads: [] as unknown[], territory: null as unknown, selected: null as unknown, route: "", overlay: [] as unknown[] };
   private lastTime = 0;
 
   constructor(
@@ -159,6 +159,7 @@ export class MapView3D {
 
     this.syncOverlay(state, view);
     this.syncBorders(state);
+    this.syncRoads(state, view);
     this.syncSelection(view);
     this.syncRoute(view);
     this.syncClearings(state);
@@ -220,6 +221,42 @@ export class MapView3D {
       }
     }
     this.replace("borders", ribbons.mesh());
+  }
+
+  /**
+   * Built roads: each city's half of a road (the tiles in its land) once it
+   * has roads, from a dirt track to a pale paved road. The player's own roads
+   * are drawn dashed red while an enemy army cuts them. Dimmed in the fog.
+   */
+  private syncRoads(state: GameState, view: ViewState): void {
+    const key = [state.cities, state.armies, view.visible, view.player];
+    if (key.every((k, i) => k === this.seen.roads[i])) return;
+    this.seen.roads = key;
+    const ribbons = new Ribbons();
+    for (const road of state.roads) {
+      const owners = road.cities.map((id) => state.cities[id].owner);
+      const cut = !!view.player && owners.every((o) => o === view.player) && roadCut(state, road, view.player);
+      for (let i = 0; i < road.tiles.length; i++) {
+        const tile = road.tiles[i];
+        const city = state.cities[state.territory[tile]?.cityId ?? ""];
+        const level = city?.buildings.roads ?? 0;
+        if (level === 0) continue;
+        const fogged = !!view.visible && !view.visible.has(tile);
+        const style = ROAD_STYLES[level];
+        const color = fogged ? style.fogged : style.color;
+        const center = this.topology.tileCenter(tile);
+        // Half way to the tiles before and after: each city draws only its own half of the road.
+        for (const n of [road.tiles[i - 1], road.tiles[i + 1]]) {
+          if (!n) continue;
+          const other = this.topology.tileCenter(n);
+          const mid = { x: (center.x + other.x) / 2, y: (center.y + other.y) / 2 };
+          const h = Math.max(this.terrain.heightOf(tile), this.terrain.heightOf(n)) + 0.6;
+          if (cut) ribbons.dashed(center, mid, h, style.width, fogged ? CUT_ROAD_FOGGED : CUT_ROAD);
+          else ribbons.strip(center, mid, h, style.width, color);
+        }
+      }
+    }
+    this.replace("roads", ribbons.mesh());
   }
 
   /** A gold outline around the selected tile. */
@@ -780,6 +817,18 @@ export class MapView3D {
 }
 
 /** The colours of a march route's legs, one per turn. */
+/** How each level of roads looks (index = level): a dirt track, a gravel road, a pale paved road. */
+const ROAD_STYLES = [
+  { color: "#000000", fogged: "#000000", width: 0 },
+  { color: "#9c7b52", fogged: "#5e4c38", width: 2.2 },
+  { color: "#b7a585", fogged: "#6d6352", width: 2.8 },
+  { color: "#e3dccb", fogged: "#86827a", width: 3.4 },
+];
+
+/** A cut road: dashed, in red, so it doesn't read as a sea crossing. */
+const CUT_ROAD = "#c4473a";
+const CUT_ROAD_FOGGED = "#6e3a33";
+
 const ROUTE_COLORS = ["#e0b54f", "#e8864a", "#d9534f", "#b565c9", "#5b8fd9", "#4fb88a"];
 
 /** Flat coloured strips laid on the terrain, collected into one mesh. */
@@ -811,6 +860,15 @@ class Ribbons {
       const q = { x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e };
       this.quad({ x: p.x + nx, y: p.y + ny }, { x: q.x + nx, y: q.y + ny }, { x: q.x - nx, y: q.y - ny }, { x: p.x - nx, y: p.y - ny }, height, color);
     }
+  }
+
+  /** A solid strip from one point to another, with round ends so joined strips meet cleanly. */
+  strip(from: Point, to: Point, height: number, width: number, color: string): void {
+    const length = Math.hypot(to.x - from.x, to.y - from.y) || 1;
+    const nx = (-(to.y - from.y) / length) * (width / 2);
+    const ny = ((to.x - from.x) / length) * (width / 2);
+    this.quad({ x: from.x + nx, y: from.y + ny }, { x: to.x + nx, y: to.y + ny }, { x: to.x - nx, y: to.y - ny }, { x: from.x - nx, y: from.y - ny }, height, color);
+    this.dot(from, height, width / 2, color);
   }
 
   /** A flat, round marker: a hexagon-ish disc of the given radius. */

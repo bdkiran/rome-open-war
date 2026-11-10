@@ -49,14 +49,11 @@ export const TERRAIN: Record<TerrainType, TerrainDef> = {
 };
 
 /**
- * Movement points to enter a tile of a city's land, by the level of its
- * roads (index = level; 0 means no roads, so the terrain's own moveCost).
- * Roads help every army, enemies included. Tracks ease rough ground, Roads
- * the mountains too, and Paved roads halve even the plains.
+ * Movement points to enter a road tile, whatever its terrain, by the level of
+ * the roads of the city whose land it's in (index = level; 0 means no roads
+ * built, so the terrain's own moveCost). Only the roads themselves are
+ * faster (`GameState.roads`); the rest of a city's land costs what its
+ * terrain does. Roads serve every army, enemies included. Halves and
+ * quarters only, so sums stay exact.
  */
-export const ROAD_MOVE_COST: readonly (Partial<Record<TerrainType, number>> | null)[] = [
-  null,
-  { plains: 2, forest: 2, hills: 2, desert: 2, mountains: 4 },
-  { plains: 2, forest: 2, hills: 2, desert: 2, mountains: 2 },
-  { plains: 1, forest: 1, hills: 1, desert: 1, mountains: 1 },
-];
+export const ROAD_MOVE_COST: readonly number[] = [Infinity, 1.5, 1, 0.5];

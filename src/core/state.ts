@@ -61,10 +61,22 @@ export interface City {
    * its land further out. Set once every city has claimed its land.
    */
   coast: number;
-  /** Cities whose land borders this one's: where roads can carry trade. Set once every city has claimed its land. */
+  /** Cities a road joins this one to (see `GameState.roads`): where roads can carry trade. Set once every city has claimed its land. */
   landNeighbours: CityId[];
+  /** Its own cities whose road to this one an enemy army was cutting when its owner's turn last ended: for the reports. */
+  cutRoads: CityId[];
   /** Coastal cities and the steps over the sea to each: where ports can carry trade. Set once every city has claimed its land. */
   seaDistances: Record<CityId, number>;
+}
+
+/** A road between two bordering cities. */
+export interface Road {
+  /** The cities at its ends, in the order its tiles run. */
+  cities: [CityId, CityId];
+  /** From the first city's tile to the second's. */
+  tiles: TileId[];
+  /** Its tiles and every tile next to them: an enemy army on any of these cuts the road. */
+  watch: TileId[];
 }
 
 /** An order in a city's recruitment queue, paid for when it was queued. */
@@ -197,6 +209,15 @@ export interface GameState {
    * all other land that can be walked to from one. Never changes.
    */
   regions: Record<TileId, CityId>;
+  /**
+   * A road between every pair of cities whose land borders: the cheapest path
+   * from one city to the other through their own land, laid out at the
+   * start and never changed. Each city's roads building paves the part in its
+   * own land (faster movement there, for everyone); with roads at both ends
+   * and one owner, the road carries trade, unless an enemy army stands on it
+   * or next to it.
+   */
+  roads: Road[];
   /**
    * Watchtowers, by tile. Each belongs to whoever owns the city whose region
    * it stands in (never stored), so taking the city takes its towers.

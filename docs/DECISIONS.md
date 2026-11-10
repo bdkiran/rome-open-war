@@ -156,12 +156,17 @@ so.
   Making mountains cost the same as hills was tried and rejected: it barely
   shortened real routes (armies take the passes) and erased the difference.
   Cavalry was cut from 18 to 16 so they couldn't strike from anywhere.
-- **Roads** (any city, three levels) cut the cost of entering the city's
-  tiles: Tracks make rough ground cost like plains, Roads the mountains too,
-  Paved roads make every tile cost 1. They help every army, enemies
-  included: roads are for whoever marches on them, so building them near a
-  border is a real risk. Costs stay whole numbers so movement reads the same.
-  All tile costs go through `enterCost` (systems/pathfinding.ts).
+- **Roads are physical: a road between every two bordering cities.** They used to
+  speed a city's whole land (Tracks: rough ground like plains; Roads: mountains too;
+  Paved: every tile 1). Now each pair of cities whose land borders gets a road, the
+  cheapest path between them through their own land, laid out at the start
+  (`GameState.roads`, 46 roads of 5–9 tiles). A city's Roads building opens the half in
+  its own land: every tile of it costs 1.5 / 1 / 0.5, whatever the terrain; off the
+  road, terrain costs as usual. The player chose movement on roads only, over keeping
+  the whole-land bonus or having both. Halves stay exact, so costs needn't be whole
+  any more. Roads still help every army, enemies included. Six cities border no other
+  city's land and can't build Roads (Seleucia, Lemonum, Tingis, Cyrene, Marcomannia,
+  Carales). All tile costs go through `enterCost` (systems/pathfinding.ts).
 - **Zone of control:** entering a tile next to an enemy army ends the move;
   the army can still attack. Armies can't slip past each other.
 - **Marches** (right-click a distant tile) move at the *end* of the owner's
@@ -641,6 +646,21 @@ in detail, and `npm run levers` covers the economy.
   gains most: its cities share coasts, so a Roman port has up to 6 partners, against
   1–3 for most AIs. A coastal city with no port of its own in range earns nothing
   from a port but its growth.
+- **Enemy armies cut trading roads.** A land route runs along its road; a foreign army
+  on the road or next to it (its zone of control) cuts it, paying nothing while it
+  stays. The owner is told once when it's cut and once when it's open again
+  (`City.cutRoads`); the map draws built roads by level and the player's own cut roads
+  in red dashes. Cut status isn't shown for other factions' roads: it would give away
+  armies in the fog. With the movement change above, 4 seeds against master (normal,
+  then `--garrison`): AI net income +10% / +10%, battles +27% / +21% (armies move fast
+  along roads), land trade routes at the end 10 to 12 / 10 to 14, trade 17% to 18% /
+  15% to 22% of AI city gold, factions fallen 3 to 3 / 2 to 3, level-1 cities 9 to 12 /
+  8 to 10; no invalid orders or debt. **The AI almost never cuts a road**: 0–1% of land
+  route-turns. A trading road joins two cities of one faction, so it runs through that
+  faction's interior, and only about 5 exist at a time. AI raiding was built and
+  measured (spare regiments sent to sit on a rival's trading road): even with a 12-tile
+  reach, a rival road was in range 5 times in 121 chances, and none was ever occupied.
+  The player chose to ship without it, so cutting roads is a tool for the player.
 
 ## Interface
 

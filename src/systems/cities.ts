@@ -8,6 +8,7 @@ import {
   type CityId,
   type FactionId,
   type GameState,
+  type Road,
 } from "@/core/state.js";
 import { BUILDING_EFFECTS, LEVEL_POPULATION_LIMIT } from "@/data/buildings.js";
 import { ECONOMY, TAX_RATES } from "@/data/economy.js";
@@ -15,6 +16,7 @@ import { GAME_SETUP } from "@/data/gameSetup.js";
 import { TRADE } from "@/data/trade.js";
 import { maxSupplies } from "@/systems/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
+import { cheapestPath } from "@/systems/pathfinding.js";
 import type { MapTopology, TileId } from "@/map/topology.js";
 
 // ---- Creation -----------------------------------------------------------
@@ -64,6 +66,7 @@ export function createCity(
     // Worked out by measureCoasts and mapTradeRoutes once every city has claimed its land.
     coast: 0,
     landNeighbours: [],
+    cutRoads: [],
     seaDistances: {},
   };
   const next: GameState = {
@@ -310,21 +313,42 @@ function coastTiles(ctx: GameContext, state: GameState, city: City): Set<TileId>
 }
 
 /**
- * Finds where trade can run, whoever owns the cities: each city's land
- * neighbours (cities with claimed land next to its own) and, for coastal
+ * Lays out where roads and trade can run, whoever owns the cities: a road
+ * between every pair of cities with claimed land next to each other (the
+ * cheapest path between them through their own land), and, for coastal
  * cities, the steps over the sea to every other coastal city. Territory
  * never changes, so this runs once, after every city has claimed its land.
  * Who owns a city and what it has built decide which routes are open
  * (`tradeRoutes`).
  */
 export function mapTradeRoutes(ctx: GameContext, state: GameState): GameState {
-  const neighbours = new Map<CityId, Set<CityId>>();
+  const bordering = new Map<CityId, Set<CityId>>();
   for (const [tile, claim] of Object.entries(state.territory)) {
     for (const n of ctx.topology.neighbors(tile)) {
       const other = state.territory[n];
       if (!other || other.cityId === claim.cityId || ctx.topology.distance(tile, n) !== 1) continue;
-      if (!neighbours.has(claim.cityId)) neighbours.set(claim.cityId, new Set());
-      neighbours.get(claim.cityId)!.add(other.cityId);
+      if (!bordering.has(claim.cityId)) bordering.set(claim.cityId, new Set());
+      bordering.get(claim.cityId)!.add(other.cityId);
+    }
+  }
+
+  const roads: Road[] = [];
+  const neighbours = new Map<CityId, CityId[]>();
+  const byFounding = Object.values(state.cities).sort((a, b) => a.foundedTurn - b.foundedTurn || cityNumber(a.id) - cityNumber(b.id));
+  for (const a of byFounding) {
+    for (const bId of [...(bordering.get(a.id) ?? [])].sort((x, y) => cityNumber(x) - cityNumber(y))) {
+      const b = state.cities[bId];
+      if (cityNumber(b.id) < cityNumber(a.id)) continue; // each pair once
+      const tiles = cheapestPath(ctx, state, a.tile, b.tile, (t) => {
+        const claim = state.territory[t];
+        return !!claim && (claim.cityId === a.id || claim.cityId === b.id) && TERRAIN[state.tiles[t].terrain].passable;
+      });
+      if (!tiles) continue;
+      const watch = new Set(tiles);
+      for (const t of tiles) for (const n of ctx.topology.neighbors(t)) watch.add(n);
+      roads.push({ cities: [a.id, b.id], tiles, watch: [...watch] });
+      neighbours.set(a.id, [...(neighbours.get(a.id) ?? []), b.id]);
+      neighbours.set(b.id, [...(neighbours.get(b.id) ?? []), a.id]);
     }
   }
 
@@ -364,24 +388,58 @@ export function mapTradeRoutes(ctx: GameContext, state: GameState): GameState {
     }
     cities[city.id] = { ...city, landNeighbours: [...(neighbours.get(city.id) ?? [])].sort(), seaDistances };
   }
-  return { ...state, cities };
+  return { ...state, cities, roads };
 }
 
-/** One open trade route, seen from one end. */
+/** The number in a city id ("city12" → 12), for a fixed order. */
+function cityNumber(id: CityId): number {
+  return Number(id.replace(/\D/g, "")) || 0;
+}
+
+/** One trade route, seen from one end. */
 export interface TradeRoute {
   partner: CityId;
   by: "land" | "sea";
   /** The lower of the two cities' road (land) or port (sea) levels. */
   level: number;
-  /** Gold it pays this end each turn, before taxes and the market. */
+  /** An enemy army stands on the road or next to it: it pays nothing until the road is clear. */
+  cut: boolean;
+  /** Gold it pays this end each turn, before taxes and the market (0 while cut). */
   gold: number;
 }
 
+const roadsByCity = new WeakMap<GameState["roads"], Map<CityId, Road[]>>();
+
+/** The roads that end at a city. Don't modify the list: it's shared. */
+export function roadsOf(state: GameState, cityId: CityId): readonly Road[] {
+  let byCity = roadsByCity.get(state.roads);
+  if (!byCity) {
+    byCity = new Map();
+    for (const road of state.roads) for (const id of road.cities) byCity.set(id, [...(byCity.get(id) ?? []), road]);
+    roadsByCity.set(state.roads, byCity);
+  }
+  return byCity.get(cityId) ?? [];
+}
+
+const armyOwnersByTile = new WeakMap<GameState["armies"], Map<TileId, FactionId[]>>();
+
+/** Whether an army of anyone but `owner` stands on or next to a road, cutting it. Scouts don't count. */
+export function roadCut(state: GameState, road: Road, owner: FactionId): boolean {
+  let byTile = armyOwnersByTile.get(state.armies);
+  if (!byTile) {
+    byTile = new Map();
+    for (const army of Object.values(state.armies)) byTile.set(army.tile, [...(byTile.get(army.tile) ?? []), army.owner]);
+    armyOwnersByTile.set(state.armies, byTile);
+  }
+  return road.watch.some((t) => byTile!.get(t)?.some((o) => o !== owner));
+}
+
 /**
- * A city's open trade routes: to each city of the same owner whose land
- * borders its own, if both have roads, and to each port of the same owner
- * within sailing range, if both have ports. A siege at either end cuts the
- * route. A pair joined by land and sea trades both ways.
+ * A city's trade routes: by road to each city of the same owner it's joined
+ * to, if both have roads, and to each port of the same owner within sailing
+ * range, if both have ports. A siege at either end shuts a route; an enemy
+ * army on a road or next to it cuts it (it's listed, paying nothing). A pair
+ * joined by land and sea trades both ways.
  */
 export function tradeRoutes(state: GameState, city: City): TradeRoute[] {
   if (city.besiegedBy) return [];
@@ -391,12 +449,13 @@ export function tradeRoutes(state: GameState, city: City): TradeRoute[] {
     return other && other.owner === city.owner && !other.besiegedBy ? other : null;
   };
   if (city.buildings.roads > 0) {
-    for (const id of city.landNeighbours) {
+    for (const road of roadsOf(state, city.id)) {
+      const id = road.cities[0] === city.id ? road.cities[1] : road.cities[0];
       const other = open(id);
       const level = other ? Math.min(city.buildings.roads, other.buildings.roads) : 0;
-      if (other && level > 0) {
-        routes.push({ partner: id, by: "land", level, gold: (other.population / 1000) * TRADE.roadGoldPer1000[level] });
-      }
+      if (!other || level === 0) continue;
+      const cut = roadCut(state, road, city.owner);
+      routes.push({ partner: id, by: "land", level, cut, gold: cut ? 0 : (other.population / 1000) * TRADE.roadGoldPer1000[level] });
     }
   }
   if (city.buildings.port > 0) {
@@ -404,7 +463,7 @@ export function tradeRoutes(state: GameState, city: City): TradeRoute[] {
       const other = open(id);
       const level = other ? Math.min(city.buildings.port, other.buildings.port) : 0;
       if (other && level > 0 && steps <= TRADE.seaRange[level]) {
-        routes.push({ partner: id, by: "sea", level, gold: (other.population / 1000) * TRADE.seaGoldPer1000[level] });
+        routes.push({ partner: id, by: "sea", level, cut: false, gold: (other.population / 1000) * TRADE.seaGoldPer1000[level] });
       }
     }
   }
@@ -462,7 +521,34 @@ export function processCities(_ctx: GameContext, state: GameState, factionId: Fa
     cities = { ...cities, [city.id]: { ...city, population: Math.max(1, city.population + stats.growth) } };
   }
 
-  return updateFaction({ ...state, cities }, factionId, (f) => ({ ...f, gold: f.gold + income }));
+  return reportCutRoads(updateFaction({ ...state, cities }, factionId, (f) => ({ ...f, gold: f.gold + income })), factionId);
+}
+
+/**
+ * Tells a faction when an enemy army cuts one of its trading roads, and when
+ * it's clear again: once each, not every turn. Each city remembers which of
+ * its roads were cut (`City.cutRoads`); a pair is reported once.
+ */
+function reportCutRoads(state: GameState, factionId: FactionId): GameState {
+  let next = state;
+  for (const city of citiesOf(state, factionId)) {
+    const routes = tradeRoutes(state, city).filter((r) => r.by === "land");
+    const cut = routes.filter((r) => r.cut).map((r) => r.partner);
+    for (const id of cut) {
+      if (!city.cutRoads.includes(id) && cityNumber(city.id) < cityNumber(id)) {
+        next = addLog(next, `The road from ${city.name} to ${state.cities[id].name} is cut.`, { kind: "city", factions: [factionId] });
+      }
+    }
+    for (const id of city.cutRoads) {
+      if (routes.some((r) => r.partner === id && !r.cut) && cityNumber(city.id) < cityNumber(id)) {
+        next = addLog(next, `The road from ${city.name} to ${state.cities[id].name} is open again.`, { kind: "city", factions: [factionId] });
+      }
+    }
+    if (cut.length !== city.cutRoads.length || cut.some((id) => !city.cutRoads.includes(id))) {
+      next = { ...next, cities: { ...next.cities, [city.id]: { ...next.cities[city.id], cutRoads: cut } } };
+    }
+  }
+  return next;
 }
 
 // ---- Conquest -----------------------------------------------------------
@@ -494,6 +580,7 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
         recruitQueue: [],
         // The conqueror decides what becomes of it.
         unsettled: true,
+        cutRoads: [],
       },
     },
   };
