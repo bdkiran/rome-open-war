@@ -557,6 +557,26 @@ so.
   390 (was 304), median AI income 450 a turn (was 391), factions fallen 15
   (unchanged); peacetime numbers unchanged, since no city starts that small.
 
+- **Growth slows only near the limit** (`ECONOMY.growthCurve` 1.5): a city grows at
+  its rate × (1 − (people / limit)^1.5), was ^1. In the first 30 turns no city but the 16
+  starting capitals reached level 2, in any seed: a non-capital needed 48 turns of peace to
+  grow from 3,000 to the Forum's 6,000, since at 6,000 of its 8,000 limit it grew at a
+  quarter of its rate, and drafting halved even that. A higher growth floor (3,000, or 40%
+  of the limit) was modelled and barely helped (0–1 turns): a sacked city sits at half its
+  limit, already on the fast part of the curve. Modelled at the median 3.4%, 3,000 → 6,000
+  now takes 36 turns, a level-2 city sacked to half gets back in 30 (was 37). A curve of 2
+  (31 turns) was measured first and rejected: exterminating became the best 100-turn choice
+  for 11 of 55 cities (the balance test allows 1 in 10) and level-3 cities more than
+  doubled. At 1.5, by turn 50 (4 seeds, `--garrison`): non-capitals at 6,000 people 7 to
+  15–19, Forums built 3–6 to 7–10. Turn 100, 4 seeds, normal then `--garrison`: AI net
+  income +44% / +21%, treasuries +41% / +12%, level 1 / 2 / 3 cities 11 / 31 / 14 to
+  6 / 24 / 24 and 13 / 28 / 15 to 4 / 29 / 24, basic-tier regiments 84% to 67% / 78% to
+  69%, land and sea trade routes −31% / −24% and −14% / −25% (the AI saves for its
+  governments instead of roads and ports), factions fallen 3 to 4 / 3 to 4, no invalid
+  orders or debt. Levers: exterminating best after 100 turns 2 to 5 of 55 cities, "grow,
+  then tax" overtakes normal at turn 37 (was 52), normal overtakes high at 88 (was 87).
+  Regrowth for sacked cities was held back as a proposal (`docs/proposals/regrowth.md`).
+
 - **The AI saves for its government buildings.** It had about 1 level 3 city a
   game, and we blamed watchtowers competing with the Senate, wrongly: removing
   them only took level 3 from 0 to 1 (scouts: 0 to 3). Tracing its gold showed 3%
@@ -748,3 +768,5 @@ in detail, and `npm run levers` covers the economy.
 - The test suite plays whole games and checks invariants; there are no unit
   tests of single rules yet, and no automated browser checks.
 - Public order / unrest was discussed, not built.
+- Regrowth (a city below its old size grows faster until it's back) is proposed, not
+  built: `docs/proposals/regrowth.md`.

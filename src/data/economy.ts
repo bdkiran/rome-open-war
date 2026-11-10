@@ -12,6 +12,15 @@ export const ECONOMY = {
    * (growth is otherwise a share of the people already there).
    */
   growthFloorPopulation: 1000,
+  /**
+   * How late growth slows as a city nears its limit: it grows at its rate ×
+   * (1 − (people / limit) ^ growthCurve). 1 slows evenly all the way up;
+   * higher keeps more of the rate until close to the limit (at 1.5, a city 3/4
+   * full grows at 35% of its rate instead of 25%), so cities reach their next
+   * level sooner. 2 was tried: it made exterminating the best long-run choice
+   * for 1 city in 5 (tests/balance.test.ts allows 1 in 10).
+   */
+  growthCurve: 1.5,
 } as const;
 
 export type TaxRate = "low" | "normal" | "high";
