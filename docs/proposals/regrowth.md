@@ -2,7 +2,7 @@
 
 - **Status:** Proposed (held back: the growth curve shipped alone first; see
   `docs/DECISIONS.md`, "Growth slows only near the limit"). The numbers below were
-  modelled with a curve of 2; the curve shipped at 1.5, so regrowth would be a little
+  modelled with a curve of 2; the curve shipped at 1.25, so regrowth would be
   slower than shown.
 - **Decides:** whether a city that lost people (sacked, enslaved, drafted) grows faster
   until it's back to its old size.
@@ -12,8 +12,8 @@
 ## Context
 
 A sack halves a city or takes a quarter of its people, and recruiting drains it too. With
-the growth curve at 1.5, a level-1 city sacked from 6,000 to 3,000 takes about 36 turns to get
-back, a level-2 city from 12,000 to 6,000 about 30 (modelled). Regrowth would make that faster
+the growth curve at 1.25, a level-1 city sacked from 6,000 to 3,000 takes about 41 turns to get
+back, a level-2 city from 12,000 to 6,000 about 33 (modelled). Regrowth would make that faster
 without speeding up cities that have never lost anyone.
 
 ## Choices to make
@@ -25,7 +25,7 @@ without speeding up cities that have never lost anyone.
 
 ## Modelled turns to get back
 
-Median growth rate of 3.4%, growth curve 2, no buildings. The 1.5 curve alone gives 36 / 30 / 32:
+Median growth rate of 3.4%, growth curve 2, no buildings. The 1.25 curve alone gives 41 / 33 / 36:
 
 | | Curve 2 alone | ×1.25 | ×1.5 | ×2 |
 |---|---|---|---|---|
@@ -44,8 +44,8 @@ Median growth rate of 3.4%, growth curve 2, no buildings. The 1.5 curve alone gi
 
 ## Risks to measure
 
-- Exterminating gets better, since the halved city regrows faster. With the curve at 1.5,
-  it's already best after 100 turns for 5 of 55 cities in `npm run levers` (the test allows
-  1 in 10), so there's little room. Check `tests/balance.test.ts` first.
+- Exterminating gets better, since the halved city regrows faster. With the curve at 1.25,
+  it's best after 100 turns for 4 of 55 cities in `npm run levers` (the test allows
+  1 in 10, 5 cities), so there's little room. Check `tests/balance.test.ts` first.
 - Drafting costs less, since drafted people come back faster. Check the militia share and
   the number of soldiers in `npm run compare`.
