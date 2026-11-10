@@ -136,18 +136,18 @@ html, body {
   max-height: calc(100vh - 76px - var(--bar-space));
   overflow-y: auto;
 }
-#tile-info hr {
+:is(#tile-info, #city-screen) hr {
   border: none;
   border-top: 1px solid rgba(224, 181, 79, 0.25);
   margin: 14px 0;
 }
-#tile-info h3 {
+:is(#tile-info, #city-screen) h3 {
   margin: 16px 0 8px;
   font-size: 15px;
   font-weight: 600;
 }
-#tile-info .terrain-line { margin: 0; color: var(--bone-dim); }
-#tile-info .action {
+:is(#tile-info, #city-screen) .terrain-line { margin: 0; color: var(--bone-dim); }
+:is(#tile-info, #city-screen) .action {
   width: 100%;
   margin-top: 10px;
 }
@@ -157,8 +157,8 @@ button.secondary {
   border: 1px solid rgba(224, 181, 79, 0.6);
 }
 button.secondary:hover:not(:disabled) { background: rgba(224, 181, 79, 0.18); }
-#tile-info .siege-note { margin: 10px 0 0; color: var(--brass); }
-#tile-info .siege-warning {
+:is(#tile-info, #city-screen) .siege-note { margin: 10px 0 0; color: var(--brass); }
+:is(#tile-info, #city-screen) .siege-warning {
   margin: 12px 0 0;
   padding: 8px 10px;
   border-left: 3px solid #e2412f;
@@ -219,23 +219,23 @@ button.report-dismiss { width: 26px; height: 30px; padding: 0; font-size: 16px; 
 .report-recruitment { --kind: #8fb8d8; }
 .report-war { --kind: #d98cd9; }
 
-#tile-info h2 {
+:is(#tile-info, #city-screen) h2 {
   margin: 0 0 10px;
   font-family: var(--serif);
   font-size: 22px;
   font-weight: 600;
 }
-#tile-info dl {
+:is(#tile-info, #city-screen) dl {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 4px 16px;
   margin: 0;
 }
-#tile-info dt { color: var(--bone-dim); }
-#tile-info dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-#tile-info .hint { margin: 12px 0 0; color: var(--bone-dim); }
-#tile-info .hint:first-child { margin-top: 0; }
-#tile-info .owner {
+:is(#tile-info, #city-screen) dt { color: var(--bone-dim); }
+:is(#tile-info, #city-screen) dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+:is(#tile-info, #city-screen) .hint { margin: 12px 0 0; color: var(--bone-dim); }
+:is(#tile-info, #city-screen) .hint:first-child { margin-top: 0; }
+:is(#tile-info, #city-screen) .owner {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -418,20 +418,21 @@ button:focus-visible {
   align-items: baseline;
   gap: 10px;
 }
-.settlement .rank {
+.city-screen-header h2 { display: flex; align-items: baseline; gap: 12px; }
+:is(.settlement, .city-screen-header) .rank {
   font-family: var(--sans);
   font-size: 13px;
   font-weight: 600;
   color: var(--brass);
 }
-#tile-info .settlement-details {
+:is(#tile-info, #city-screen) .settlement-details {
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 4px 8px;
 }
-#tile-info .settlement-details dd { text-align: left; white-space: nowrap; }
+:is(#tile-info, #city-screen) .settlement-details dd { text-align: left; white-space: nowrap; }
 .muted { color: var(--bone-dim); }
 .income-line { margin: 8px 0 0; font-size: 12.5px; color: var(--bone-dim); }
-#tile-info .settlement-details dd.limited { color: #f0c36f; cursor: help; }
+:is(#tile-info, #city-screen) .settlement-details dd.limited { color: #f0c36f; cursor: help; }
 
 .tax-toggle {
   display: grid;
@@ -495,7 +496,7 @@ button.city-tab[aria-selected="true"] {
   margin: 2px 0 0;
 }
 .box-grid.units { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-#tile-info .box-grid + .terrain-line { margin-top: 8px; }
+:is(#tile-info, #city-screen) .box-grid + .terrain-line { margin-top: 8px; }
 .reg-box,
 .unit-box {
   position: relative;
@@ -664,6 +665,97 @@ button.queue-cancel {
 }
 button.queue-cancel:hover { color: #fff; background: #b8432f; }
 .queue-actions .action { margin-top: 10px; }
+
+/* The side panel's way into the city screen, and what's under way meanwhile */
+#tile-info .under-way { margin: 10px 0 0; font-size: 13px; }
+#tile-info .under-way + .under-way { margin-top: 2px; }
+.city-open { display: flex; gap: 6px; margin-top: 14px; }
+.city-open button { flex: 1; padding: 8px 4px; font-size: 13px; }
+
+/* The city screen: one of the player's cities, over most of the screen */
+.city-screen { place-items: stretch center; padding: 28px; }
+.city-screen-card {
+  display: flex;
+  flex-direction: column;
+  width: min(1360px, 100%);
+  height: min(880px, 100%);
+  align-self: center;
+  padding: 20px 26px 22px;
+  background: rgb(25, 38, 46); /* solid: nothing of the map shows through */
+  border: 1px solid rgba(224, 181, 79, 0.5);
+  border-radius: 3px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: modal-in 160ms ease-out;
+}
+.city-screen-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(224, 181, 79, 0.35);
+}
+.city-screen-header h2 { margin: 0 !important; font-size: 30px !important; }
+.city-screen-header .rank { font-size: 15px; }
+.city-screen-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+button.city-screen-close {
+  width: 38px;
+  height: 38px;
+  margin-left: 10px;
+  padding: 0;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--bone);
+  background: rgba(236, 228, 208, 0.08);
+  border: 1px solid rgba(224, 181, 79, 0.6);
+}
+button.city-screen-close:hover { background: rgba(224, 181, 79, 0.25); }
+.city-screen-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 28px;
+  min-height: 0;
+  padding-top: 16px;
+}
+.city-screen-facts, .city-screen-main { min-height: 0; overflow-y: auto; }
+.city-screen-facts { font-size: 15px; }
+#city-screen .city-screen-facts .settlement-details { grid-template-columns: auto 1fr; gap: 6px 16px; }
+#city-screen .city-screen-facts .income-line { font-size: 13.5px; }
+.city-screen-main .city-tabs { margin-top: 0; }
+.city-screen-main button.city-tab { padding: 10px 18px; font-size: 15px; }
+.city-screen-main .city-tab-panel { padding-top: 16px; }
+
+/* Bigger boxes, as many to a row as fit */
+.city-screen .box-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.city-screen .box-grid.units { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.city-screen .box-grid.buildings { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.city-screen .unit-box { padding: 12px 6px; gap: 3px; }
+.city-screen .unit-box .figure { width: 92px; }
+.city-screen .unit-name { font-size: 16px; }
+.city-screen .unit-stat { font-size: 13px; }
+.city-screen .reg-box { padding: 8px 4px; }
+.city-screen .reg-box .figure { max-width: 72px; }
+.city-screen .reg-count { font-size: 14px; }
+.city-screen .reg-status { font-size: 12px; }
+.city-screen .building-box { grid-template-columns: 72px 1fr; column-gap: 14px; padding: 12px 14px; }
+.city-screen .building-art { width: 72px; height: 72px; }
+.city-screen .building-box .unit-name { font-size: 16px; }
+.city-screen .building-next { font-size: 13.5px; }
+.city-screen .building-note, .city-screen .building-lock { font-size: 13px; }
+.city-screen .level-pips .pip { width: 9px; height: 9px; }
+.city-screen .queue-title { margin: 22px 0 8px !important; font-size: 15px !important; }
+.city-screen .queue-row { gap: 8px; min-height: 104px; padding: 8px; }
+.city-screen .queue-entry { padding: 8px 4px; gap: 3px; }
+.city-screen .queue-entry .figure { max-width: 56px; }
+.city-screen .queue-entry .building-art { width: 52px; height: 52px; }
+.city-screen .queue-entry-name { font-size: 13px; }
+#city-screen .queue-actions .action { width: auto; padding: 9px 18px; }
+@media (max-width: 760px) {
+  .city-screen { padding: 8px; }
+  .city-screen-card { padding: 14px; }
+  .city-screen-body { grid-template-columns: 1fr; overflow-y: auto; }
+  .city-screen-facts, .city-screen-main { overflow: visible; }
+}
 
 /* A short message near the bottom of the screen, e.g. why an order couldn't be carried out */
 .notice {

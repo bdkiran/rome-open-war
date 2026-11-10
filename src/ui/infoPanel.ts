@@ -161,11 +161,88 @@ function orderHint(state: GameState, army: Army, chosen: ReadonlySet<RegimentId>
 }
 
 /**
- * The settlement panel: its details, and for your own cities the tax rate
- * and two tabs, Recruitment and Retraining.
+ * The settlement panel: its details, and for your own cities the tax rate,
+ * what's under way, and buttons that open the city screen on a tab.
  */
 function citySection(input: InfoPanelInput, city: City): string {
-  const { state, humanId, playerTurn } = input;
+  const mine = city.owner === input.humanId;
+  let html = `
+    <div class="settlement">
+      ${cityHeading(city)}
+      ${cityDetails(input, city)}`;
+  if (mine) {
+    html += taxToggle(city, input.playerTurn);
+    html += underWay(city);
+    if (input.playerTurn) html += cityScreenButtons();
+  }
+  return html + `</div>`;
+}
+
+/**
+ * The city screen: a large window over the map for one of the player's own
+ * cities, with its details on the left and the Construction, Recruitment and
+ * Retraining tabs filling the rest. Empty unless it's the player's turn and
+ * the selected tile is one of their cities.
+ */
+export function renderCityScreen(input: InfoPanelInput): string {
+  const city = input.tile ? cityAt(input.state, input.tile) : undefined;
+  if (!city || city.owner !== input.humanId || !input.playerTurn) return "";
+  return `
+    <div class="city-screen-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(city.name)}">
+      <header class="city-screen-header">
+        ${cityHeading(city)}
+        <div class="city-screen-nav">
+          <button type="button" class="tax-arrow" data-city-step="-1" aria-label="Previous city" title="Previous city (Shift+Tab)">&#9664;</button>
+          <button type="button" class="tax-arrow" data-city-step="1" aria-label="Next city" title="Next city (Tab)">&#9654;</button>
+          <button type="button" class="city-screen-close" data-close-city-screen aria-label="Back to the map" title="Back to the map (Esc)">&times;</button>
+        </div>
+      </header>
+      <div class="city-screen-body">
+        <aside class="city-screen-facts settlement">
+          ${cityDetails(input, city)}
+          ${taxToggle(city, input.playerTurn)}
+        </aside>
+        <section class="city-screen-main">${cityTabs(input, city)}</section>
+      </div>
+    </div>`;
+}
+
+/** The city's name, level and whether it's a capital. */
+function cityHeading(city: City): string {
+  return `<h2>${escapeHtml(city.name)}<span class="rank">Level ${cityLevel(city)}${city.isCapital ? ", capital" : ""}</span></h2>`;
+}
+
+/** Buttons that open the city screen on each of its tabs. */
+function cityScreenButtons(): string {
+  const button = (id: CityTab, label: string) => `<button type="button" class="secondary" data-city-tab="${id}">${label}</button>`;
+  return `
+    <div class="city-open">
+      ${button("construction", "Construction")}
+      ${button("recruitment", "Recruitment")}
+      ${button("retraining", "Retraining")}
+    </div>`;
+}
+
+/** One line each for the building and the regiment that come next, so the side panel still shows them. */
+function underWay(city: City): string {
+  const lines: string[] = [];
+  const work = city.constructionQueue[0];
+  if (work) {
+    const more = city.constructionQueue.length - 1;
+    lines.push(`Building ${escapeHtml(BUILDINGS[work.building].levels[work.level - 1].name)}: ${work.turnsLeft} turn${work.turnsLeft === 1 ? "" : "s"}${more ? `, ${more} more queued` : ""}.`);
+  }
+  const order = city.recruitQueue[0];
+  if (order) {
+    const name = order.kind === "scout" ? "a scout" : order.kind === "train" ? unitName(order.unit, order.tier) : `+${order.soldiers} ${UNITS[order.unit].name}`;
+    const more = city.recruitQueue.length - 1;
+    lines.push(`${order.kind === "retrain" ? "Retraining" : "Training"} ${escapeHtml(name)}${more ? `, ${more} more queued` : ""}.`);
+  }
+  return lines.map((line) => `<p class="hint under-way">${line}</p>`).join("");
+}
+
+/** The city's owner and figures: income, people, growth, supplies, defence, and any siege. */
+function cityDetails(input: InfoPanelInput, city: City): string {
+  const { state, humanId } = input;
   const owner = getFaction(state, city.owner);
   const stats = cityStats(state, city);
   const mine = city.owner === humanId;
@@ -175,9 +252,7 @@ function citySection(input: InfoPanelInput, city: City): string {
     ? "None while besieged"
     : `${formatPercent(stats.growthRate)} <span class="muted">(${signed(stats.growth)})</span>`;
 
-  let html = `
-    <div class="settlement">
-      <h2>${escapeHtml(city.name)}<span class="rank">Level ${cityLevel(city)}${city.isCapital ? ", capital" : ""}</span></h2>
+  return `
       ${ownerLine(owner?.name ?? "Unknown", owner?.color ?? "#000")}
       <dl class="settlement-details">
         <dt>Income</dt><dd>${besieged ? "None" : `+${stats.gold}`}</dd>
@@ -192,12 +267,6 @@ function citySection(input: InfoPanelInput, city: City): string {
       ${mine ? incomeLine(stats, besieged) : ""}
       ${!mine && input.visible && !input.visible.has(city.tile) ? `<p class="hint">Garrison out of sight.</p>` : ""}
       ${siegeStatus(state, city)}`;
-
-  if (mine) {
-    html += taxToggle(city, playerTurn);
-    if (playerTurn) html += cityTabs(input, city);
-  }
-  return html + `</div>`;
 }
 
 /** How the city's income is reached: its base, people, mine, farms and port, then taxes and the market. */
@@ -229,7 +298,7 @@ function taxToggle(city: City, enabled: boolean): string {
     </div>`;
 }
 
-/** The Recruitment and Retraining tabs. */
+/** The Construction, Recruitment and Retraining tabs of the city screen. */
 function cityTabs(input: InfoPanelInput, city: City): string {
   const tab = input.cityTab;
   const tabButton = (id: CityTab, label: string) =>

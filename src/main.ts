@@ -29,7 +29,7 @@ import { SIEGE } from "@/data/siege.js";
 import { armyHolding, attackOptions, marchRoute, marchSchedule, reachableTiles, siegeWorksPerTurn, stormBlocked as wallsBlocking } from "@/systems/armies.js";
 import { reachableScoutTiles, scoutAt } from "@/systems/scouts.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
-import { renderInfoPanel, type CityTab } from "@/ui/infoPanel.js";
+import { renderCityScreen, renderInfoPanel, type CityTab } from "@/ui/infoPanel.js";
 import { renderSelectionBar, type BarTab } from "@/ui/selectionBar.js";
 import { hideBattlePanel, showBattlePanel } from "@/ui/battlePanel.js";
 import { hideSiegePanel, showSiegePanel } from "@/ui/siegePanel.js";
@@ -72,6 +72,7 @@ function byId<T extends HTMLElement>(id: string): T {
 
 const canvas = byId<HTMLCanvasElement>("map");
 const infoPanel = byId<HTMLElement>("tile-info");
+const cityScreen = byId<HTMLElement>("city-screen");
 const selectionBar = byId<HTMLElement>("selection-bar");
 const turnPanel = byId<HTMLElement>("turn-panel");
 const reportElements = {
@@ -139,6 +140,8 @@ const view: ViewState = {
 };
 /** The city panel tab the player last chose. */
 let cityTab: CityTab = "construction";
+/** Whether the city screen is open over the map, for the selected city. */
+let cityScreenOpen = false;
 /** The selection bar's tab, and the tile it was chosen for: a new selection starts on Army. */
 let barTab: BarTab = "army";
 let barTabFor: TileId | null = null;
@@ -235,6 +238,12 @@ function syncChosen(state: GameState): void {
     chosen = new Set(garrison ? [] : orderable);
   }
   chosenFor = army.id;
+}
+
+/** Closes the city screen, back to the map with the city still selected. */
+function closeCityScreen(): void {
+  cityScreenOpen = false;
+  renderInfo(controller.getState());
 }
 
 /** Clears the selected tile and ticked regiments. */
@@ -585,7 +594,8 @@ function selectCity(step: 1 | -1): void {
 turnElements.prevCityButton.addEventListener("click", () => selectCity(-1));
 turnElements.nextCityButton.addEventListener("click", () => selectCity(1));
 window.addEventListener("keydown", (e) => {
-  if (e.key !== "Tab" || e.target instanceof HTMLInputElement || dialogOpen()) return;
+  // Tab steps through the cities on the map, and in the city screen.
+  if (e.key !== "Tab" || e.target instanceof HTMLInputElement || modalOpen()) return;
   e.preventDefault();
   selectCity(e.shiftKey ? -1 : 1);
 });
@@ -678,14 +688,20 @@ window.addEventListener(
     if (!battlePanel.root.hidden) closeBattlePanel();
     else if (!siegePanel.root.hidden) closeSiegePanel();
     else if (!battleResult.root.hidden) closeBattleResult();
+    else if (cityScreenOpen) closeCityScreen();
     else return;
     e.stopImmediatePropagation();
   },
   { capture: true },
 );
 
-/** Whether a dialog is open, so map shortcuts like Enter and Tab should wait. */
+/** Whether a dialog or the city screen is open, so map shortcuts like Enter should wait. */
 function dialogOpen(): boolean {
+  return cityScreenOpen || modalOpen();
+}
+
+/** Whether a dialog is open over everything: a battle, siege, result, settlement or game over. */
+function modalOpen(): boolean {
   return (
     !battlePanel.root.hidden ||
     !siegePanel.root.hidden ||
@@ -734,7 +750,12 @@ function handlePanelClick(e: MouseEvent): void {
     dispatch({ type: "dismissScout", scoutId: target.dataset.dismissScout });
   } else if (target.dataset.cityTab) {
     cityTab = target.dataset.cityTab as CityTab;
+    cityScreenOpen = true;
     renderInfo(state);
+  } else if (target.dataset.closeCityScreen !== undefined) {
+    closeCityScreen();
+  } else if (target.dataset.cityStep) {
+    selectCity(Number(target.dataset.cityStep) as 1 | -1);
   } else if (target.dataset.build && city) {
     dispatch({ type: "build", cityId: city.id, building: target.dataset.build as BuildingType });
   } else if (target.dataset.cancelConstruction !== undefined && city) {
@@ -790,6 +811,11 @@ function handlePanelClick(e: MouseEvent): void {
   }
 }
 infoPanel.addEventListener("click", handlePanelClick);
+cityScreen.addEventListener("click", (e) => {
+  // A click on the dimmed map around the card goes back to the map.
+  if (e.target === cityScreen) closeCityScreen();
+  else handlePanelClick(e);
+});
 selectionBar.addEventListener("click", handlePanelClick);
 
 // ---- UI updates ---------------------------------------------------------
@@ -820,6 +846,14 @@ function renderInfo(state: GameState): void {
   syncBarTab();
   const input = infoInput(state);
   infoPanel.innerHTML = renderInfoPanel(input);
+  // The city screen stays open only while there's one of the player's cities to show.
+  const screen = cityScreenOpen ? renderCityScreen(input) : "";
+  if (!screen) cityScreenOpen = false;
+  if (screen !== cityScreen.dataset.html) {
+    cityScreen.innerHTML = screen;
+    cityScreen.dataset.html = screen;
+  }
+  cityScreen.hidden = !cityScreenOpen;
   const bar = renderSelectionBar(input, barTab);
   selectionBar.innerHTML = bar;
   selectionBar.hidden = bar === "";
