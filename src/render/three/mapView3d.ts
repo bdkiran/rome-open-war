@@ -28,6 +28,8 @@ const CLASH_SECONDS = 0.8;
 const LUNGE_SECONDS = 0.45;
 /** How far a lunge goes toward the target tile, as a share of the way. */
 const LUNGE_REACH = 0.35;
+/** A released battle strikes after this long even if an attacker is still walking (seconds). */
+const MAX_BATTLE_WAIT = 3;
 /** Models are drawn a little larger than life so they read at campaign zoom. */
 const ARMY_SCALE = 1.4;
 const CITY_SCALE = 1.2;
@@ -53,6 +55,22 @@ interface Walk {
 }
 
 /**
+ * A battle being played on the map. Its attackers walk up beside the tile and
+ * hold there; once it's released and they've arrived, they strike and the
+ * clash plays. Until the blow lands, the armies on the tile stay where they
+ * stood (even ones the battle destroyed) and its city keeps its old colours.
+ */
+interface MapBattle {
+  tile: TileId;
+  color: string;
+  attackers: ReadonlySet<string>;
+  /** When it was released to strike, or null while held (an enemy's step waits for the camera). */
+  released: number | null;
+  /** When the blow was struck, or null before. */
+  struck: number | null;
+}
+
+/**
  * The map in 3D: terrain, cities and armies as models, and overlays for
  * territory, fog, move and attack highlights, the selected tile, march routes
  * and sea crossings. City name plates are HTML, placed over the canvas each
@@ -69,8 +87,8 @@ export class MapView3D {
     string,
     { key: string; figure: Figure; tile: TileId; position: THREE.Vector3; walk: Walk | null; besieging: CityId | null; facing: { y: number; until: number } | null }
   >();
-  /** Armies due to strike at a tile, as soon as they're drawn and standing beside it. */
-  private readonly pendingBlows = new Map<string, TileId>();
+  /** Battles waiting for their blow, or whose clash is still playing. */
+  private readonly battles: MapBattle[] = [];
   /** Armies that merged into another, walking to it before they disappear. */
   private readonly ghosts: { figure: Figure; position: THREE.Vector3; walk: Walk; id: string }[] = [];
   /** Where each regiment was last shown, so an army split off from another walks out from it. */
@@ -265,6 +283,8 @@ export class MapView3D {
 
   private syncCities(state: GameState, view: ViewState): void {
     for (const city of Object.values(state.cities)) {
+      // A city being fought over keeps its old look until the blow lands.
+      if (this.battleBefore(city.tile, LUNGE_SECONDS) && this.cities.has(city.id)) continue;
       const color = getFaction(state, city.owner)?.color ?? "#888888";
       const besieger = city.besiegedBy ? getFaction(state, city.besiegedBy)?.color ?? null : null;
       // Whether the banner flies: a garrison is there. A city the player can't
@@ -419,25 +439,18 @@ export class MapView3D {
         this.scene.add(entry.figure.object);
       }
 
-      const blowAt = this.pendingBlows.get(army.id);
-      if (blowAt !== undefined && !entry.walk) {
-        const distance = this.topology.distance(entry.tile, blowAt);
-        if (distance === 1) {
-          const reach = entry.position.clone().lerp(this.terrain.top(blowAt), LUNGE_REACH);
-          const facing = Math.atan2(reach.x - entry.position.x, reach.z - entry.position.z);
-          entry.walk = { points: [entry.position.clone(), reach, entry.position.clone()], start: time, duration: LUNGE_SECONDS, lungeFacing: facing };
-          entry.facing = { y: facing, until: time + (entry.figure.strike?.() ?? 0) };
-          this.pendingBlows.delete(army.id);
-        } else if (distance === 0 || entry.tile === army.tile) {
-          this.pendingBlows.delete(army.id); // nowhere to strike from
+      // An attacker walks up beside its battle and holds; it strikes first, then walks in (or flees).
+      // An army standing on a battlefield stays put until the blow lands.
+      const attacking = this.battles.find((b) => b.struck === null && b.attackers.has(army.id));
+      const holding = this.battleBefore(entry.tile, LUNGE_SECONDS);
+      if (entry.tile !== army.tile && entry.walk?.lungeFacing === undefined && !holding) {
+        const to = attacking ? this.besideBattle(entry.tile, army.tile, attacking.tile) : army.tile;
+        if (to !== entry.tile) {
+          const at = to === army.tile ? target : this.standingPoint(to, cityTiles);
+          entry.walk = this.walkBetween(entry.position, entry.tile, to, at, time, !mine);
+          entry.tile = to;
+          justPlaced.add(army.id);
         }
-      }
-
-      // An army that won its way onto the tile strikes first, then walks in.
-      if (entry.tile !== army.tile && entry.walk?.lungeFacing === undefined) {
-        entry.walk = this.walkBetween(entry.position, entry.tile, army.tile, target, time, !mine);
-        entry.tile = army.tile;
-        justPlaced.add(army.id);
       }
 
       const object = entry.figure.object;
@@ -478,11 +491,17 @@ export class MapView3D {
       object.visible = !(cityHere?.owner === army.owner && !entry.walk);
     }
 
-    // A blow for an army that's gone, or out of sight, is never struck.
-    for (const id of this.pendingBlows.keys()) if (!shown.has(id)) this.pendingBlows.delete(id);
+    this.strikeBattles(time);
 
     for (const [id, entry] of this.armies) {
       if (shown.has(id)) continue;
+      // Destroyed in a battle still being played: it stands until the clash is over.
+      if (this.battleBefore(entry.tile, CLASH_SECONDS) || this.battles.some((b) => b.attackers.has(id) && b.struck === null)) {
+        if (entry.walk && this.stepWalk(entry, time)) entry.walk = null;
+        entry.figure.object.position.copy(entry.position);
+        animating = true;
+        continue;
+      }
       this.armies.delete(id);
       // Merged into another army on another tile: walk there first, then disappear.
       // (Its regiments are the ones last seen on its tile; only one army stands on a tile.)
@@ -595,24 +614,77 @@ export class MapView3D {
     for (const walk of [...[...this.armies.values(), ...this.scouts.values()].map((e) => e.walk), ...this.ghosts.map((g) => g.walk)]) {
       if (walk) left = Math.max(left, walk.start + walk.duration - this.lastTime);
     }
-    if (this.pendingBlows.size > 0) left = Math.max(left, LUNGE_SECONDS);
+    for (const battle of this.battles) if (battle.struck === null && battle.released !== null) left = Math.max(left, LUNGE_SECONDS + CLASH_SECONDS);
     for (const clash of this.clashes) left = Math.max(left, clash.start + CLASH_SECONDS - this.lastTime);
     return left;
   }
 
+  /**
+   * Plays a battle on a tile: the attacking armies walk up beside it, strike,
+   * and the clash plays in the attacker's colour; only then do the armies on
+   * the tile fall or flee and the winner walk in. A held battle waits for
+   * releaseBattles before striking.
+   */
+  battle(tile: TileId, color: string, attackers: readonly string[], held = false): void {
+    this.battles.push({ tile, color, attackers: new Set(attackers), released: held ? null : this.lastTime, struck: null });
+  }
+
+  /** Lets every held battle strike. */
+  releaseBattles(): void {
+    for (const battle of this.battles) battle.released ??= this.lastTime;
+  }
+
+  /** Whether a battle on this tile hasn't yet struck, or struck less than `after` seconds ago. */
+  private battleBefore(tile: TileId, after: number): boolean {
+    return this.battles.some((b) => b.tile === tile && (b.struck === null || this.lastTime < b.struck + after));
+  }
+
+  /**
+   * Where an attacker stops on its way: a tile beside the battle. Its new
+   * tile if that's beside it, else the last tile of the land route before it.
+   */
+  private besideBattle(from: TileId, to: TileId, battle: TileId): TileId {
+    if (this.topology.distance(from, battle) === 1) return from;
+    if (this.topology.distance(to, battle) === 1) return to;
+    const route = this.landRoute(from, battle);
+    return route.length >= 2 ? route[route.length - 2] : from;
+  }
+
+  /**
+   * Strikes each released battle once its attackers have arrived: those
+   * beside it lunge and the clash plays. Drops battles whose clash is over.
+   */
+  private strikeBattles(time: number): void {
+    for (let i = this.battles.length - 1; i >= 0; i--) {
+      const battle = this.battles[i];
+      if (battle.struck !== null) {
+        if (time >= battle.struck + CLASH_SECONDS) this.battles.splice(i, 1);
+        continue;
+      }
+      if (battle.released === null) continue;
+      const attackers = [...battle.attackers].map((id) => this.armies.get(id)).filter((e) => e !== undefined);
+      const arrived = attackers.every((e) => !e.walk || e.walk.lungeFacing !== undefined);
+      if (!arrived && time < battle.released + MAX_BATTLE_WAIT) continue;
+      for (const entry of attackers) {
+        if (entry.walk || this.topology.distance(entry.tile, battle.tile) !== 1) continue;
+        const reach = entry.position.clone().lerp(this.terrain.top(battle.tile), LUNGE_REACH);
+        const facing = Math.atan2(reach.x - entry.position.x, reach.z - entry.position.z);
+        entry.walk = { points: [entry.position.clone(), reach, entry.position.clone()], start: time, duration: LUNGE_SECONDS, lungeFacing: facing };
+        entry.facing = { y: facing, until: time + (entry.figure.strike?.() ?? 0) };
+      }
+      this.clash(battle.tile, battle.color);
+      battle.struck = time;
+    }
+  }
+
   /** Plays a battle's clash on a tile, in the attacker's colour. */
-  clash(tile: TileId, color: string): void {
+  private clash(tile: TileId, color: string): void {
     const burst = clashBurst(color);
     burst.object.position.copy(this.terrain.top(tile));
     burst.object.scale.setScalar(CITY_SCALE);
     burst.update(0);
     this.scene.add(burst.object);
     this.clashes.push({ ...burst, start: this.lastTime });
-  }
-
-  /** An army strikes at a tile, lunging toward it and back, once it's drawn and standing beside it. */
-  lunge(armyId: string, toward: TileId): void {
-    this.pendingBlows.set(armyId, toward);
   }
 
   /** A figure for every scout in sight, walking to where it now stands. */

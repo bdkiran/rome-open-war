@@ -879,9 +879,7 @@ function queueNewBattles(state: GameState): void {
     if (report.id <= lastBattleSeen) continue;
     if (report.attacker === humanId || report.defender === humanId) resultQueue.push(report);
     if (report.attacker === humanId) {
-      // A clash always plays: an army that lost and fled is in no place to strike.
-      mapView.clash(report.tile, getFaction(state, report.attacker)?.color ?? "#888888");
-      strikeAt(state, report);
+      playBattle(state, report, false);
       holdResultsForBlow();
     } else if (report.defender === humanId && !skipPlayback) {
       resultsHeld = true; // Until the enemy's step has played: see showAiStep.
@@ -1072,8 +1070,11 @@ const pause = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
  */
 async function showAiStep(step: AiStep): Promise<void> {
   try {
+    // Set up before the step's state is first drawn, so the attackers stop beside the battlefield.
+    if (!skipPlayback) queueClashes(step);
     await playAiStep(step);
   } finally {
+    mapView.releaseBattles();
     resultsHeld = false;
   }
   showNextResult();
@@ -1097,7 +1098,8 @@ async function playAiStep(step: AiStep): Promise<void> {
 
   const banner = focus.dramatic ? describeStep(step.before, step.after) : null;
   if (banner?.during) {
-    playClash(step);
+    mapView.releaseBattles();
+    requestRedraw();
     showBanner(banner.during);
     await pause(BANNER_SWITCH);
     if (!skipPlayback) showBanner(banner.outcome);
@@ -1110,24 +1112,26 @@ async function playAiStep(step: AiStep): Promise<void> {
 }
 
 /**
- * The step's new battles, played on the map: a clash on each battlefield the
- * player can see, and the attacker's armies still beside it lunge at it.
+ * The step's new battles the player can see, held on the map until the
+ * camera is there: then the attackers strike and the clash plays.
  */
-function playClash(step: AiStep): void {
+function queueClashes(step: AiStep): void {
   const seen = seenDuring(step);
   for (const battle of step.after.battles) {
-    if (battle.id < step.before.nextBattleNumber || !seen(battle.tile)) continue;
-    mapView.clash(battle.tile, getFaction(step.after, battle.attacker)?.color ?? "#888888");
-    strikeAt(step.after, battle);
+    if (battle.id >= step.before.nextBattleNumber && seen(battle.tile)) playBattle(step.after, battle, true);
   }
-  requestRedraw();
 }
 
-/** The attacker's armies beside a battle, or just moved onto it, strike at it. */
-function strikeAt(state: GameState, battle: BattleReport): void {
-  for (const army of Object.values(state.armies)) {
-    if (army.owner === battle.attacker && topology.distance(army.tile, battle.tile) <= 1) mapView.lunge(army.id, battle.tile);
-  }
+/**
+ * Plays a battle on the map: the attacker's armies beside it, or just moved
+ * onto it, walk up, strike, and the clash plays; held until released.
+ */
+function playBattle(state: GameState, battle: BattleReport, held: boolean): void {
+  const attackers = Object.values(state.armies)
+    .filter((army) => army.owner === battle.attacker && topology.distance(army.tile, battle.tile) <= 1)
+    .map((army) => army.id);
+  mapView.battle(battle.tile, getFaction(state, battle.attacker)?.color ?? "#888888", attackers, held);
+  requestRedraw();
 }
 
 const playbackBanner = document.createElement("div");
