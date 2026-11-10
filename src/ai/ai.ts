@@ -538,15 +538,21 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
  * (spear yard, archery range, stables), a mine (only with enough hills or
  * mountains to dig), farms, a port (only with sea), walls, then roads. With
  * enemies near, walls come first. The market comes before the military
- * buildings so the economy isn't starved early.
+ * buildings so the economy isn't starved early. Roads move up beside the
+ * port when the city borders one of its owner's other cities, since then
+ * they carry trade.
  */
 export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boolean): BuildingType[] {
+  const city = state.cities[cityId];
   const mine: BuildingType[] = mineableTiles(state, cityId) >= BUILDING_EFFECTS.mineMinTiles ? ["mine"] : [];
-  const port: BuildingType[] = state.cities[cityId].coast > 0 ? ["port"] : [];
+  const trades = city.landNeighbours.some((id) => state.cities[id]?.owner === city.owner);
+  const port: BuildingType[] = city.coast > 0 ? ["port"] : [];
+  const trade: BuildingType[] = trades ? [...port, "roads"] : port;
+  const late: BuildingType[] = trades ? [] : ["roads"];
   const military: BuildingType[] = ["spearYard", "archeryRange", "stables"];
   return threatened
-    ? ["walls", "government", "market", ...military, ...mine, "farms", ...port, "roads"]
-    : ["government", "market", ...military, ...mine, "farms", ...port, "walls", "roads"];
+    ? ["walls", "government", "market", ...military, ...mine, "farms", ...trade, ...late]
+    : ["government", "market", ...military, ...mine, "farms", ...trade, "walls", ...late];
 }
 
 /**

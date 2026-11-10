@@ -8,7 +8,7 @@ import {
   type FactionId,
   type GameState,
 } from "@/core/state.js";
-import { formatCompact, formatNumber } from "@/render/format.js";
+import { describeIncome, formatCompact, formatNumber } from "@/render/format.js";
 import { factionUpkeep, upkeepFor } from "@/systems/armies.js";
 import { cityStats, factionIncome, factionPopulation } from "@/systems/cities.js";
 import { placeName } from "@/systems/combat.js";
@@ -98,22 +98,17 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
 
 /**
  * Where the player's money comes from and goes, turn by turn: each city's
- * gold (its base, people and mine, times its taxes and market), each army's
+ * gold (its base, people, mine, farms and trade, times its market and taxes), each army's
  * upkeep, and what's left.
  */
 function moneyBreakdown(state: GameState, factionId: FactionId): string {
-  const x = (n: number) => `×${Number.isInteger(n) ? n : n.toFixed(2).replace(/0$/, "")}`;
   const cities = citiesOf(state, factionId).map((city) => {
     const { income } = cityStats(state, city);
-    const parts = [`${income.base} base`, `${income.people} people`, ...(income.mine ? [`${income.mine} mine`] : []), ...(income.farms ? [`${income.farms} farms`] : []), ...(income.port ? [`${income.port} port`] : [])].join(" + ");
-    const multipliers = [
-      ...(income.taxes !== 1 ? [`${x(income.taxes)} ${TAX_RATES[city.taxRate].name.toLowerCase()} taxes`] : []),
-      ...(income.market !== 1 ? [`${x(income.market)} market`] : []),
-    ].join(", ");
+    const how = describeIncome(income, `${TAX_RATES[city.taxRate].name.toLowerCase()} taxes`);
     return `
       <tr${city.besiegedBy ? ' class="lost"' : ""}>
         <th scope="row">${escapeHtml(city.name)}</th>
-        <td class="how">${city.besiegedBy ? "Besieged: nothing this turn" : `${parts}${multipliers ? `, ${multipliers}` : ""}`}</td>
+        <td class="how">${city.besiegedBy ? "Besieged: nothing this turn" : how}</td>
         <td class="amount">${city.besiegedBy ? "0" : `+${income.total}`}</td>
       </tr>`;
   }).join("");
