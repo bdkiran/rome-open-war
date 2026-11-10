@@ -72,8 +72,11 @@ Either way you can close the screen to look at the map, or play again.
   shows its cards: **Army** for an army's regiments (a city's garrison, or a
   field army) and **Town** for the buildings a city has built
 - Select one of your cities to open its panel: its details, the tax rate
-  (the arrows lower or raise it), and the Construction (what it can build
-  next), Recruitment and Retraining tabs
+  (the arrows lower or raise it), what it's building and training, and
+  buttons for the **city screen**: a large window over the map with the
+  Construction (what it can build next), Recruitment and Retraining tabs.
+  Tab, Shift+Tab or its ◀ ▶ buttons step through your cities without
+  closing it; Escape, × or a click outside it goes back to the map
 - **Left click selects; right click gives orders.** Left-click one of your
   armies (its regiment cards in the bottom bar choose which regiments to
   order), then
@@ -261,7 +264,7 @@ against its coast and land together), so Lilybaeum, nearly all sea, gets
 almost the full bonus, and a city with a strip of coast only a little. It
 adds to the farms' bonus.
 
-Build from the city panel's Construction tab: click a building to queue its
+Build from the city screen's Construction tab: click a building to queue its
 next level. The **construction queue** holds up to 5 buildings, built one
 after another and paid for when queued; work goes on at the end of each of
 your turns and stops while the city is besieged. You can queue several levels
@@ -320,7 +323,7 @@ and Cavalry in its capital, and a regiment each of Militia and Spearmen
 garrisoning each of its other cities, ready to move on turn 1.
 
 **Training.** Soldiers are trained as **regiments** of one unit type from the
-Recruitment tab of a city's panel: click a unit's card to queue it. Each city
+Recruitment tab of a city's screen: click a unit's card to queue it. Each city
 has a **recruitment queue** of up to 6 orders, shared by training and
 retraining. Orders are paid for in gold when queued, and each soldier takes
 one person from the city when completed (a city can't go below 1,000 people).
@@ -333,7 +336,7 @@ the city is besieged.
 
 **Retraining.** Damaged regiments in an army standing in one of your cities
 can be brought back to full strength there, if that city could train them
-(the unit's building at the regiment's tier; militia anywhere): in the city panel's Retraining
+(the unit's building at the regiment's tier; militia anywhere): in the city screen's Retraining
 tab, choose them and queue them. They don't wait their turn: everything
 queued for retraining is back to full strength next turn, however much
 training is queued ahead of it. It costs what training the missing soldiers
