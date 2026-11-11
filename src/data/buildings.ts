@@ -51,7 +51,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Spear yard",
     purpose: "Trains spearmen: basic, then advanced, then elite.",
     levels: [
-      { name: "Spear yard", cost: 150, turns: 2 },
+      { name: "Spear yard", cost: 135, turns: 2 },
       { name: "Phalanx school", cost: 300, turns: 3 },
       { name: "Veterans' hall", cost: 500, turns: 4 },
     ],
@@ -60,7 +60,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Archery range",
     purpose: "Trains archers: basic, then advanced, then elite.",
     levels: [
-      { name: "Archery range", cost: 200, turns: 2 },
+      { name: "Archery range", cost: 180, turns: 2 },
       { name: "Bowyers' yard", cost: 350, turns: 3 },
       { name: "Marksmen's school", cost: 550, turns: 4 },
     ],
@@ -69,7 +69,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Stables",
     purpose: "Trains cavalry: basic, then advanced, then elite.",
     levels: [
-      { name: "Stables", cost: 250, turns: 2 },
+      { name: "Stables", cost: 225, turns: 2 },
       { name: "Horse farm", cost: 400, turns: 3 },
       { name: "Riding school", cost: 650, turns: 4 },
     ],
@@ -78,7 +78,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Walls",
     purpose: "Strengthen the garrison when the city is attacked.",
     levels: [
-      { name: "Palisade", cost: 200, turns: 2 },
+      { name: "Palisade", cost: 180, turns: 2 },
       { name: "Stone walls", cost: 400, turns: 3 },
       { name: "Great walls", cost: 700, turns: 4 },
     ],
@@ -87,7 +87,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Farms",
     purpose: "Faster population growth, and a little gold from every plains tile in the city's land.",
     levels: [
-      { name: "Fields", cost: 150, turns: 2 },
+      { name: "Fields", cost: 130, turns: 2 },
       { name: "Farmsteads", cost: 300, turns: 3 },
       { name: "Estates", cost: 550, turns: 4 },
     ],
@@ -96,7 +96,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Market",
     purpose: "More gold from the city, and much more from its trade.",
     levels: [
-      { name: "Market square", cost: 150, turns: 2 },
+      { name: "Market square", cost: 130, turns: 2 },
       { name: "Trade hall", cost: 300, turns: 3 },
       { name: "Great market", cost: 500, turns: 4 },
     ],
@@ -105,7 +105,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Mine",
     purpose: "Gold from every hills and mountain tile in the city's land. Needs hills or mountains to dig.",
     levels: [
-      { name: "Quarry", cost: 200, turns: 2 },
+      { name: "Quarry", cost: 170, turns: 2 },
       { name: "Mine", cost: 400, turns: 3 },
       { name: "Deep mines", cost: 700, turns: 4 },
     ],
@@ -114,7 +114,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Port",
     purpose: "Faster growth, the more of the city's reach is sea, and trade by sea with your other ports in range. Needs sea.",
     levels: [
-      { name: "Jetty", cost: 150, turns: 2 },
+      { name: "Jetty", cost: 130, turns: 2 },
       { name: "Harbour", cost: 250, turns: 3 },
       { name: "Great harbour", cost: 450, turns: 4 },
     ],
@@ -123,7 +123,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
     name: "Roads",
     purpose: "Builds the city's half of the roads to its bordering cities: faster movement on them for every army, and trade with your cities at the other end that have roads.",
     levels: [
-      { name: "Tracks", cost: 150, turns: 2 },
+      { name: "Tracks", cost: 130, turns: 2 },
       { name: "Roads", cost: 300, turns: 3 },
       { name: "Paved roads", cost: 500, turns: 4 },
     ],

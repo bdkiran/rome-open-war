@@ -66,7 +66,7 @@ describe("recruitment", () => {
       assert.equal(cost.population, regimentSize("spearmen"));
       assert.equal(upkeepFor("spearmen", 180, tier), 180 * UNITS.spearmen.upkeep * TIERS[tier].cost);
     }
-    assert.equal(regimentCost("spearmen", 3).gold, 378);
+    assert.equal(regimentCost("spearmen", 3).gold, 341);
   });
 
   it("retrains a regiment at its own tier, only where its building is at that level", () => {

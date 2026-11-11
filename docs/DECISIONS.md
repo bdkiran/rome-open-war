@@ -173,6 +173,10 @@ so.
   Making mountains cost the same as hills was tried and rejected: it barely
   shortened real routes (armies take the passes) and erased the difference.
   Cavalry was cut from 18 to 16 so they couldn't strike from anywhere.
+- **No supply or attrition for field armies.** Losing soldiers away from friendly
+  land (in enemy land, desert or mountains) was proposed to make where an army marches
+  matter and slow big empires. The player doesn't like it; it won't be built. Only a
+  besieged garrison loses soldiers each turn (Sieges).
 - **Roads are physical: a road between every two bordering cities.** They used to
   speed a city's whole land (Tracks: rough ground like plains; Roads: mountains too;
   Paved: every tile 1). Now each pair of cities whose land borders gets a road, the
@@ -623,6 +627,27 @@ so.
   hands by turn 50 fell from 18 to 12. Both overshot: the richest AI doubled its
   gold. Upkeep cuts and more starting gold did little. Those were measured with the
   old rounding.
+
+- **Cheaper start: level-1 buildings, training and upkeep.** The early game still
+  felt slow: Rome netted ~50 gold a turn, and a Market square took 35 turns to pay
+  back in a 3,000-people town. The player chose a split package over the earlier
+  third-off-everything test (which slowed conquest): economic level-1 buildings −15%
+  (Market square, Fields, Jetty, Tracks 150 → 130, Quarry 200 → 170), military −10%
+  (Spear yard 135, Archery range 180, Stables 225, Palisade 180), training gold −10%
+  and upkeep −15% for every unit (per soldier, so every tier keeps its trade-off).
+  Levels 2 and 3 are unchanged. Upkeep was first cut by 25%: AI net income rose +41%
+  at turn 50 but +47% / +69% at turn 100 (treasuries 602 → 1,011 with `--garrison`),
+  since upkeep saves every turn, all game; the player trimmed it to 15%. At −15%,
+  8 seeds, 50 turns (normal, then `--garrison`): AI net income +13% / +0%, treasuries
+  +14% / +1%, upkeep 22% → 18% / 24% → 18% of income, cities not with first owner
+  17 → 16 / 15 → 14, battles +17% / +16%, sieges of walled cities 2 → 8 / 3 → 7, sea
+  trade routes 3 → 6 / 3 → 6. 4 seeds, 100 turns: AI net income −1% / +4%, treasuries
+  +3% / +4%, regiments alive 226 → 246 / 224 → 271 (the AI spends the saving on
+  armies), cities not with first owner 24 → 32 / 24 → 26, factions fallen 3 → 5 / 3 → 2,
+  level-3 cities 19 → 20 / 20 → 21, basic-tier regiments 75% → 65% / 71% → 60%, sieges
+  of walled cities about double and storms 2 → 7 / 1 → 8; no invalid orders or debt.
+  Levers: "grow, then tax" overtakes normal at turn 44 (was 43); exterminating is best
+  after 100 turns in 4 of 55 cities.
 
 ## Economy tuning history
 

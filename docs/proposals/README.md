@@ -10,21 +10,21 @@ To apply one:
 2. Implement it from the doc.
 3. Move the outcome into `docs/DECISIONS.md` (the why and the measured numbers) and
    `README.md` (the rules).
-4. Mark the doc **Implemented**, or delete it.
+4. Delete the doc and its row here. `docs/DECISIONS.md` and git history keep the record.
+
+A rejected idea also becomes a line in `docs/DECISIONS.md` (so it isn't proposed again),
+and its doc is deleted. This folder only holds open proposals.
 
 | Proposal | Status | In short |
 |---|---|---|
-| [Culture traits](culture-traits.md) | Proposed (chosen to go first) | Each culture gets a unit edge, an economic edge and a drawback |
+| [Culture traits](culture-traits.md) | Proposed | Each culture gets a unit edge, an economic edge and a drawback |
 | [Public order](public-order.md) | Proposed | Unrest from taxes, conquest and sieges; revolts; a brake on snowballing |
 | [Generals](generals.md) | Proposed | Characters who lead armies, gain traits, and can die |
 | [Diplomacy](diplomacy.md) | Proposed | Peace, truces and tribute, or deliberately none |
 | [Mercenaries](mercenaries.md) | Proposed | Hire regiments at once for gold, without using people |
 | [Naval transport](naval-transport.md) | Proposed | Transports along the coast, and blockades of port cities |
 | [Battles](battles.md) | Proposed | Morale that carries over, frontage by terrain with reserves, and formation, doctrine and orders that decide the tactics (replaces battle stances) |
-| [Siege equipment](siege-equipment.md) | **Implemented** | Walled cities need siege works before a storm; bigger armies build faster, and more works weaken the walls |
-| [Trade routes](trade-routes.md) | **Implemented** | Roads and ports carry trade between your own cities, boosted by markets; enemy armies on a road cut it |
 | [Events](events.md) | Proposed | Seeded events: plague, harvests, revolts, migrations |
 | [Victory conditions](victory-conditions.md) | Proposed | Win by key cities or by score, not only by being last standing |
 | [Region specialties](region-specialties.md) | Proposed | Resources on the land that make some cities worth more |
 | [Regrowth](regrowth.md) | Proposed | A city below its old size grows ×1.25 until it's back, so sacks are recovered sooner |
-| [Supply and attrition](supply-and-attrition.md) | **Rejected** | Field armies losing soldiers away from friendly land |

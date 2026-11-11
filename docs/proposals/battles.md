@@ -9,8 +9,8 @@
 - **Where it goes once agreed:** new entries under Combat in `docs/DECISIONS.md` with the
   measured numbers, and the Battles section of `README.md`.
 - **Related:** [Generals](generals.md) (a general's traits feed the choice of tactics),
-  [Culture traits](culture-traits.md) (a culture's default doctrine), and
-  [Supply and attrition](supply-and-attrition.md) (rejected, so nothing here depends on supply).
+  [Culture traits](culture-traits.md) (a culture's default doctrine). Supply and
+  attrition was rejected (`docs/DECISIONS.md`, Movement), so nothing here depends on supply.
 
 ## Context
 
