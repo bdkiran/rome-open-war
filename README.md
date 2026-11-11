@@ -82,9 +82,9 @@ Either way you can close the screen to look at the map, or play again.
   armies (its regiment cards in the bottom bar choose which regiments to
   order), then
   right-click a highlighted tile to move there or a red tile to attack it. Red
-  tiles include enemies the army can march up to this turn; it moves next to
-  them and attacks in one go. Attacking an army opens the battle panel with
-  the odds: Fight or Withdraw (Escape also withdraws). Right-clicking an enemy
+  tiles include enemies the army can march up to this turn; it marches up
+  first, and the battle panel opens once it's there, with the odds as seen
+  from there: Fight or Withdraw (Escape also withdraws). Right-clicking an enemy
   city lays siege to it (marching up first if needed) and opens the siege
   screen
 - Right-click a distant tile to send the selected army marching there over
@@ -145,11 +145,13 @@ out that regiment), and in a city's Recruitment and Retraining tabs.
 
 **Fog of war.** You see the land around your cities (3 tiles), around your
 armies (2 tiles, or 3 if they include cavalry), and all of your own
-territory. Everywhere else is dimmed and enemy armies are hidden, including
+territory. Sight spreads over land, but whoever sees one shore of a sea
+crossing sees the other. Everywhere else is dimmed and enemy armies are hidden, including
 the garrisons of cities you can't see. The map and the cities on it are
 always known. The AI plays under the same fog. Because orders are planned on
-what you can see, a move can run into an army hidden in the fog; the game
-tells you when that happens.
+what you can see, a move can run into an army hidden in the fog: your army
+goes as far as it can and halts where that army blocks it (in its zone of
+control, or just short of it), which brings it into sight.
 
 **Watching enemy turns.** Whatever the other factions do within your
 sight plays out on the map, one move at a time: the camera glides to it,
@@ -272,7 +274,9 @@ building at both ends:
 - **By land**: two of your cities joined by a road (see Movement), both
   with roads built.
 - **By sea**: two of your ports within sailing range: 6 / 16 / 40 steps
-  over the sea for a Jetty / Harbour / Great harbour.
+  over the sea for a Jetty / Harbour / Great harbour. A port stands on the
+  shore by its city, with a boat for each level, and your open sea routes
+  are drawn as pale blue dashes from port to port.
 
 A route runs at the lower of the two cities' levels and pays each end
 0.4 / 0.7 / 1 gold per 1,000 people at the other end, so trading with a big
@@ -425,7 +429,7 @@ way is blocked, or when an enemy army is next to it.
 
 Armies attack an enemy army, or an enemy city with no army in it, which
 captures the city. The target can be anywhere the army can reach this turn:
-it marches up and attacks, as long as it has movement left when it arrives.
+it marches up, then attacks if it has movement left when it arrives.
 
 A battle is fought in **rounds**:
 
@@ -457,8 +461,9 @@ They're all added, so a hill city with stone walls defends at
 15% + 10% + 30% = +55%. The defenders deal that much more and take that much
 less, so +50% makes a garrison fight like one half as big again.
 
-**Joint battles.** Every army within one tile of either the attacker or the
-defender joins the battle on its own side: the attacker's other armies bring
+**Joint battles.** Every army on a tile next to the attacker or the
+defender joins the battle on its own side (two armies can fight across a sea
+crossing, but no one joins them from across one): the attacker's other armies bring
 their regiments that can still move, the defender's bring all of theirs. A
 beaten side's armies each flee (or fight to the death). **Attacking costs 6
 movement** for every regiment that attacks, so a winner can move on or attack

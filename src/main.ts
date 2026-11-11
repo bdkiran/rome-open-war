@@ -31,6 +31,7 @@ import { reachableScoutTiles, scoutAt } from "@/systems/scouts.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { renderCityScreen, renderInfoPanel, type CityTab } from "@/ui/infoPanel.js";
 import { renderSelectionBar, type BarTab } from "@/ui/selectionBar.js";
+import { patchHtml } from "@/ui/patchHtml.js";
 import { hideBattlePanel, showBattlePanel } from "@/ui/battlePanel.js";
 import { hideSiegePanel, showSiegePanel } from "@/ui/siegePanel.js";
 import { hideBattleResult, showBattleResult } from "@/ui/battleResult.js";
@@ -401,6 +402,31 @@ function handleTileClick(tile: TileId | null): void {
 function openAttack(state: GameState, army: Army, regimentIds: RegimentId[], tile: TileId): void {
   const seen = playerView(state);
   const via = attackVia.get(tile);
+
+  // Out of reach from here: march up first, and decide on what can be seen from there.
+  // An army or an empty city in sight is attacked from `via`; any other enemy city is
+  // besieged from beside it, unless it's already under siege (then the siege screen opens).
+  let staging = via;
+  const target = cityAt(seen, tile);
+  if (target && target.owner !== humanId) {
+    const emptyInSight = (!view.visible || view.visible.has(tile)) && !armyAt(seen, tile);
+    if (!emptyInSight) staging = target.besiegedBy === null ? siegeStaging(seen, army, regimentIds, tile) ?? undefined : undefined;
+  }
+  if (staging && staging !== army.tile) {
+    const holder = moveFirst(army, regimentIds, staging);
+    if (!holder) return;
+    const after = controller.getState();
+    // Marching into one of their own armies brings its regiments that can still move.
+    const ids = holder.regiments.filter((r) => regimentIds.includes(r.id) || r.movementLeft > 0).map((r) => r.id);
+    chosen = new Set(ids);
+    refreshHighlights(after);
+    if (!view.attackable.has(tile)) {
+      showNotice("Your army can't attack from there.");
+      return;
+    }
+    openAttack(after, holder, ids, tile);
+    return;
+  }
   const attack: Action = { type: "attack", armyId: army.id, regimentIds, target: tile, via };
   const city = cityAt(seen, tile);
 
@@ -431,6 +457,22 @@ function openAttack(state: GameState, army: Army, regimentIds: RegimentId[], til
   pendingAttack = { action: attack, from: army.tile, regimentIds };
   showBattlePanel(battlePanel, state, preview, { marchesFirst: Boolean(via && via !== army.tile) });
 }
+
+/**
+ * Moves the chosen regiments to `to` before an attack. Returns the army now
+ * holding them, or null if they didn't get there: a hidden enemy army
+ * stopped them on the way (now in sight), or the order failed.
+ */
+function moveFirst(army: Army, regimentIds: RegimentId[], to: TileId): Army | null {
+  if (!order({ type: "moveArmy", armyId: army.id, regimentIds, to }, army.tile, regimentIds)) return null;
+  const holder = armyHolding(controller.getState(), regimentIds[0]);
+  if (holder?.tile === to) return holder;
+  showNotice(HALTED);
+  return null;
+}
+
+/** Shown when a move runs into an enemy army that was out of sight. */
+const HALTED = "Halted: an enemy army blocks the way.";
 
 /**
  * Where the regiments would stand to besiege a city: where they are if it's
@@ -535,15 +577,17 @@ siegePanel.withdraw.addEventListener("click", () => {
 /**
  * Sends a move or attack, then keeps following the regiments that were
  * ordered: select the army they're now in, with its whole stack ticked.
+ * Returns whether the order went through.
  */
-function order(action: Action, from: TileId, regimentIds: RegimentId[]): void {
-  dispatch(action);
+function order(action: Action, from: TileId, regimentIds: RegimentId[]): boolean {
+  const ok = dispatch(action);
   const after = controller.getState();
   const holder = Object.values(after.armies).find((a) => a.regiments.some((r) => regimentIds.includes(r.id)));
   view.selected = holder?.tile ?? from;
   chosen = new Set(holder?.regiments.map((r) => r.id) ?? []);
   chosenFor = holder?.id ?? null;
   refreshAll(after);
+  return ok;
 }
 
 /**
@@ -567,7 +611,8 @@ function handleRightClick(tile: TileId | null): void {
   if (!tile || !army || !isPlayerTurn() || chosen.size === 0 || tile === army.tile) return;
   const regimentIds = [...chosen];
   if (view.reachable.has(tile)) {
-    order({ type: "moveArmy", armyId: army.id, regimentIds, to: tile }, army.tile, regimentIds);
+    const moved = order({ type: "moveArmy", armyId: army.id, regimentIds, to: tile }, army.tile, regimentIds);
+    if (moved && armyHolding(controller.getState(), regimentIds[0])?.tile !== tile) showNotice(HALTED);
   } else if (view.attackable.has(tile)) {
     openAttack(state, army, regimentIds, tile);
   } else {
@@ -750,9 +795,13 @@ function handlePanelClick(e: MouseEvent): void {
   } else if (target.dataset.dismissScout) {
     dispatch({ type: "dismissScout", scoutId: target.dataset.dismissScout });
   } else if (target.dataset.cityTab) {
-    cityTab = target.dataset.cityTab as CityTab;
+    const tab = target.dataset.cityTab as CityTab;
+    const switched = tab !== cityTab;
+    cityTab = tab;
     cityScreenOpen = true;
     renderInfo(state);
+    // A different tab starts at its top; the same tab keeps its place.
+    if (switched) cityScreen.querySelector(".city-screen-main")?.scrollTo(0, 0);
   } else if (target.dataset.closeCityScreen !== undefined) {
     closeCityScreen();
   } else if (target.dataset.cityStep) {
@@ -846,17 +895,18 @@ function syncBarTab(): void {
 function renderInfo(state: GameState): void {
   syncBarTab();
   const input = infoInput(state);
-  infoPanel.innerHTML = renderInfoPanel(input);
+  // Patched rather than rebuilt, so a click doesn't replay the card's animation or lose a list's scroll.
+  patchHtml(infoPanel, renderInfoPanel(input));
   // The city screen stays open only while there's one of the player's cities to show.
   const screen = cityScreenOpen ? renderCityScreen(input) : "";
   if (!screen) cityScreenOpen = false;
   if (screen !== cityScreen.dataset.html) {
-    cityScreen.innerHTML = screen;
+    patchHtml(cityScreen, screen);
     cityScreen.dataset.html = screen;
   }
   cityScreen.hidden = !cityScreenOpen;
   const bar = renderSelectionBar(input, barTab);
-  selectionBar.innerHTML = bar;
+  patchHtml(selectionBar, bar);
   selectionBar.hidden = bar === "";
 }
 

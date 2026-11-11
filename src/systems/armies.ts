@@ -22,6 +22,7 @@ import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, TIERS, UNITS, regimentSize, type Tier, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import { costToTarget, enterCost } from "@/systems/pathfinding.js";
+import { fogged, visibleTiles } from "@/systems/vision.js";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
@@ -156,8 +157,23 @@ export function reachableTiles(
   army: Army,
   regimentIds: readonly RegimentId[],
 ): Map<TileId, number> {
+  return explore(ctx, state, army, regimentIds).left;
+}
+
+/**
+ * The search behind reachableTiles: the movement left on every tile the
+ * regiments can reach, and the tile each is best reached from (so a path can
+ * be traced back). Their own tile is left out of `left`.
+ */
+function explore(
+  ctx: GameContext,
+  state: GameState,
+  army: Army,
+  regimentIds: readonly RegimentId[],
+): { left: Map<TileId, number>; from: Map<TileId, TileId> } {
+  const from = new Map<TileId, TileId>();
   const moving = pickRegiments(army, regimentIds);
-  if (!moving || moving.some((r) => r.pinned) || besiegedCity(state, army)) return new Map();
+  if (!moving || moving.some((r) => r.pinned) || besiegedCity(state, army)) return { left: new Map(), from };
 
   const budget = Math.min(...moving.map((r) => r.movementLeft));
   const freshTurn = moving.every((r) => r.movementLeft === UNITS[r.unit].movement);
@@ -195,6 +211,7 @@ export function reachableTiles(
 
       if (after > (best.get(n) ?? -1)) {
         best.set(n, after);
+        from.set(n, tile);
         queue.push(n);
       }
     }
@@ -204,7 +221,52 @@ export function reachableTiles(
   for (const [tile, room] of friendlyRoom) {
     if (room < moving.length) best.delete(tile);
   }
-  return best;
+  return { left: best, from };
+}
+
+/**
+ * Where a move ordered on what the faction can see actually ends. If `to` is
+ * in reach, that's where. If it only looked in reach because an enemy army
+ * was out of sight, the regiments follow the way they'd planned and stop
+ * where that army blocks them: on entering its zone of control, or before
+ * its tile. They end on a tile where they may stop (not a friendly army with
+ * no room for them), so they may stop a step or two short. Null if the move
+ * wasn't in reach even as they saw it.
+ */
+export function moveEnd(
+  ctx: GameContext,
+  state: GameState,
+  army: Army,
+  regimentIds: readonly RegimentId[],
+  to: TileId,
+): { tile: TileId; left: number; pinned: boolean } | null {
+  const zoc = zoneOfControl(ctx, state, army.owner);
+  const real = reachableTiles(ctx, state, army, regimentIds);
+  if (real.has(to)) return { tile: to, left: real.get(to)!, pinned: zoc.has(to) };
+
+  const seen = explore(ctx, sightOf(ctx, state, army.owner), army, regimentIds);
+  if (!seen.left.has(to)) return null;
+  const path: TileId[] = [];
+  for (let t: TileId | undefined = to; t !== undefined && t !== army.tile; t = seen.from.get(t)) path.unshift(t);
+
+  // Walk the planned way until something unseen is in it.
+  const blocked = new Set<TileId>();
+  for (const other of Object.values(state.armies)) if (other.owner !== army.owner) blocked.add(other.tile);
+  const walked: TileId[] = [];
+  for (const tile of path) {
+    if (blocked.has(tile)) break;
+    walked.push(tile);
+    if (zoc.has(tile)) break;
+  }
+  // Back up to a tile they may stop on: one in reach for real (which leaves out full friendly armies).
+  while (walked.length > 0 && !real.has(walked[walked.length - 1])) walked.pop();
+  const tile = walked[walked.length - 1] ?? army.tile;
+  return { tile, left: real.get(tile) ?? 0, pinned: zoc.has(tile) };
+}
+
+/** The game as a faction sees it: moves are planned on this (see moveEnd). */
+function sightOf(ctx: GameContext, state: GameState, owner: FactionId): GameState {
+  return fogged(state, owner, visibleTiles(ctx, state, owner));
 }
 
 export function canMove(
@@ -221,7 +283,7 @@ export function canMove(
   if (!moving) return { ok: false, reason: "Choose which regiments to move." };
   if (besiegedCity(state, army)) return { ok: false, reason: SHUT_IN };
   if (moving.some((r) => r.movementLeft <= 0)) return { ok: false, reason: "Some chosen regiments have no movement left." };
-  if (!reachableTiles(ctx, state, army, regimentIds).has(to)) {
+  if (!moveEnd(ctx, state, army, regimentIds, to)) {
     return { ok: false, reason: "Those regiments can't reach that tile this turn." };
   }
   return { ok: true };
@@ -230,7 +292,9 @@ export function canMove(
 /**
  * Moves the chosen regiments. Call canMove first. Moving only some regiments
  * splits the army; stopping on a friendly army merges into it. A move given
- * by hand cancels any march order the army was following.
+ * by hand cancels any march order the army was following. A move that runs
+ * into an enemy army it couldn't see stops there (moveEnd), which may be
+ * where it started.
  */
 export function moveRegiments(
   ctx: GameContext,
@@ -241,12 +305,13 @@ export function moveRegiments(
 ): GameState {
   const army = state.armies[armyId];
   const moving = pickRegiments(army, regimentIds)!;
+  const end = moveEnd(ctx, state, army, regimentIds, to)!;
+  if (end.tile === army.tile) return state;
   const budget = Math.min(...moving.map((r) => r.movementLeft));
-  const spent = budget - (reachableTiles(ctx, state, army, regimentIds).get(to) ?? 0);
-  const pinned = zoneOfControl(ctx, state, army.owner).has(to);
-  const moved = moving.map((r) => ({ ...r, movementLeft: Math.max(0, r.movementLeft - spent), pinned: r.pinned || pinned }));
+  const spent = budget - end.left;
+  const moved = moving.map((r) => ({ ...r, movementLeft: Math.max(0, r.movementLeft - spent), pinned: r.pinned || end.pinned }));
 
-  const next = relocate(state, army, moved, to);
+  const next = relocate(state, army, moved, end.tile);
   const holder = armyHolding(next, moved[0].id);
   return holder && holder.destination !== null
     ? { ...next, armies: { ...next.armies, [holder.id]: { ...holder, destination: null } } }

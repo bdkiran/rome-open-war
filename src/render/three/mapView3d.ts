@@ -7,10 +7,10 @@ import { cityPlate } from "@/render/cityPlate.js";
 import { formatCompact } from "@/render/format.js";
 import type { ViewState } from "@/render/mapView.js";
 import { isSpent } from "@/systems/armies.js";
-import { regionOwner, roadCut } from "@/systems/cities.js";
+import { portTile, regionOwner, roadCut, tradeRoutes } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, buildScout, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, buildPort, buildScout, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
 import { buildSiegeWorks } from "@/render/three/town.js";
 
@@ -37,6 +37,12 @@ const CITY_SCALE = 1.2;
 const SCOUT_SCALE = 1.1;
 /** Watchtowers are slim, so they're drawn larger to read at campaign zoom. */
 const TOWER_SCALE = 1.9;
+/** Ports are drawn larger than life, like watchtowers, so they read at campaign zoom. */
+const PORT_SCALE = 2.2;
+/** Where a pier starts, from the shore's land tile (0) to the port tile's centre (1). */
+const PORT_OFFSHORE = 0.7;
+/** A sea trade route: a dashed lane over the water, pale blue to tell it from a crossing. */
+const SEA_LANE = { color: "#a9d8e8", width: 2.4, lift: 0.9 };
 /** The fog over tiles out of sight: a dark blue-grey wash, [r, g, b, opacity]. */
 const FOG: Rgba = [0.02, 0.05, 0.07, 0.6];
 /** City name plates are hidden when zoomed out further than this. */
@@ -100,12 +106,16 @@ export class MapView3D {
   private readonly clashes: { object: THREE.Object3D; update(progress: number): void; start: number }[] = [];
   /** Watchtowers by tile, keyed by their owner's colour. */
   private readonly towers = new Map<TileId, { key: string; object: THREE.Object3D }>();
+  /** Ports by city, keyed by their owner's colour and level. */
+  private readonly ports = new Map<CityId, { key: string; object: THREE.Object3D }>();
+  /** The way over the water between two ports, by the pair of port tiles: found once each. */
+  private readonly lanes = new Map<string, TileId[]>();
   private readonly cityLabels = new Map<string, { el: HTMLElement; text: string }>();
   /** The state and player the plates were last filled in for. */
   private platesFor: GameState | null = null;
   private platesFaction: string | null = null;
-  private readonly layers = { roads: null as THREE.Object3D | null, borders: null as THREE.Object3D | null, selection: null as THREE.Object3D | null, route: null as THREE.Object3D | null };
-  private seen = { roads: [] as unknown[], territory: null as unknown, selected: null as unknown, route: "", overlay: [] as unknown[] };
+  private readonly layers = { roads: null as THREE.Object3D | null, borders: null as THREE.Object3D | null, selection: null as THREE.Object3D | null, route: null as THREE.Object3D | null, seaRoutes: null as THREE.Object3D | null };
+  private seen = { roads: [] as unknown[], territory: null as unknown, selected: null as unknown, route: "", overlay: [] as unknown[], seaRoutes: [] as unknown[] };
   private lastTime = 0;
 
   constructor(
@@ -160,11 +170,13 @@ export class MapView3D {
     this.syncOverlay(state, view);
     this.syncBorders(state);
     this.syncRoads(state, view);
+    this.syncSeaRoutes(state, view);
     this.syncSelection(view);
     this.syncRoute(view);
     this.syncClearings(state);
     this.syncCities(state, view);
     this.syncWatchtowers(state);
+    this.syncPorts(state);
     this.syncArmies(state, view, time, delta);
     this.syncScouts(state, view, time, delta);
     this.syncClashes(time);
@@ -257,6 +269,63 @@ export class MapView3D {
       }
     }
     this.replace("roads", ribbons.mesh());
+  }
+
+  /**
+   * The player's open sea trade routes: a dashed lane over the water from
+   * port to port. Like roads, they're always drawn; a route whose port is
+   * lost or besieged disappears with it.
+   */
+  private syncSeaRoutes(state: GameState, view: ViewState): void {
+    const key = [state.cities, view.player];
+    if (key.every((k, i) => k === this.seen.seaRoutes[i])) return;
+    this.seen.seaRoutes = key;
+    if (!view.player) return this.replace("seaRoutes", null);
+    const ctx = { topology: this.topology };
+    const ribbons = new Ribbons();
+    for (const city of Object.values(state.cities)) {
+      if (city.owner !== view.player) continue;
+      for (const route of tradeRoutes(state, city)) {
+        // Each pair once, from the city with the lower id.
+        if (route.by !== "sea" || route.partner < city.id) continue;
+        const from = portTile(ctx, state, city);
+        const to = portTile(ctx, state, state.cities[route.partner]);
+        if (!from || !to) continue;
+        const lane = this.lane(state, from, to);
+        for (let i = 1; i < lane.length; i++) {
+          const h = Math.max(this.terrain.heightOf(lane[i - 1]), this.terrain.heightOf(lane[i])) + SEA_LANE.lift;
+          ribbons.dashed(this.topology.tileCenter(lane[i - 1]), this.topology.tileCenter(lane[i]), h, SEA_LANE.width, SEA_LANE.color);
+        }
+      }
+    }
+    this.replace("seaRoutes", ribbons.mesh());
+  }
+
+  /** The shortest way over the water from one sea tile to another (both included), or just the two if there's none. */
+  private lane(state: GameState, from: TileId, to: TileId): TileId[] {
+    const key = from < to ? `${from}|${to}` : `${to}|${from}`;
+    const known = this.lanes.get(key);
+    if (known) return known[0] === from ? known : [...known].reverse();
+    const cameFrom = new Map<TileId, TileId | null>([[from, null]]);
+    let frontier = [from];
+    while (frontier.length > 0 && !cameFrom.has(to)) {
+      const next: TileId[] = [];
+      for (const tile of frontier) {
+        for (const n of this.topology.neighbors(tile)) {
+          if (cameFrom.has(n) || state.tiles[n].terrain !== "water" || this.topology.distance(tile, n) !== 1) continue;
+          cameFrom.set(n, tile);
+          next.push(n);
+        }
+      }
+      frontier = next;
+    }
+    let lane: TileId[] = [from, to];
+    if (cameFrom.has(to)) {
+      lane = [];
+      for (let t: TileId | null = to; t !== null; t = cameFrom.get(t) ?? null) lane.unshift(t);
+    }
+    this.lanes.set(key, lane);
+    return lane;
   }
 
   /** A gold outline around the selected tile. */
@@ -380,6 +449,44 @@ export class MapView3D {
       group.scale.setScalar(TOWER_SCALE);
       this.scene.add(group);
       this.towers.set(tile, { key, object: group });
+    }
+  }
+
+  /**
+   * A port model for every city with a port, at the shore of its port tile
+   * (a little out from the land nearest the city), its pier running out
+   * to sea. Sails in the owner's colour; one boat per level.
+   */
+  private syncPorts(state: GameState): void {
+    const ctx = { topology: this.topology };
+    for (const city of Object.values(state.cities)) {
+      const level = city.buildings.port;
+      const color = getFaction(state, city.owner)?.color ?? "#888888";
+      const key = `${color}|${level}`;
+      const existing = this.ports.get(city.id);
+      if (existing?.key === key) continue;
+      if (existing) {
+        this.scene.remove(existing.object);
+        this.ports.delete(city.id);
+      }
+      const sea = level > 0 ? portTile(ctx, state, city) : null;
+      if (!sea) continue;
+      // The land beside the port tile nearest the city: the pier starts on that shore.
+      const shore = this.topology
+        .neighbors(sea)
+        .filter((n) => this.topology.distance(sea, n) === 1 && state.tiles[n].terrain !== "water")
+        .sort((a, b) => this.topology.distance(city.tile, a) - this.topology.distance(city.tile, b) || (a < b ? -1 : 1))[0];
+      const at = this.topology.tileCenter(sea);
+      const land = shore ? this.topology.tileCenter(shore) : this.topology.tileCenter(city.tile);
+      const group = new THREE.Group();
+      group.add(buildPort(color, level));
+      // A little out from the shore, so the pier stands clear of a city on it.
+      const out = PORT_OFFSHORE;
+      group.position.set(land.x + (at.x - land.x) * out, this.terrain.heightOf(sea), land.y + (at.y - land.y) * out);
+      group.rotation.y = Math.atan2(-(at.y - land.y), at.x - land.x);
+      group.scale.setScalar(PORT_SCALE);
+      this.scene.add(group);
+      this.ports.set(city.id, { key, object: group });
     }
   }
 

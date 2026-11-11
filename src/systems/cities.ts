@@ -313,6 +313,24 @@ function coastTiles(ctx: GameContext, state: GameState, city: City): Set<TileId>
 }
 
 /**
+ * Where a city's port stands on the map: the sea tile of its coast nearest
+ * the city (ties go the same way every game), or null for a city with no
+ * coast. Only the map uses it.
+ */
+export function portTile(ctx: GameContext, state: GameState, city: City): TileId | null {
+  let best: TileId | null = null;
+  let bestDistance = Infinity;
+  for (const tile of coastTiles(ctx, state, city)) {
+    const d = ctx.topology.distance(city.tile, tile);
+    if (d < bestDistance || (d === bestDistance && best !== null && tile < best)) {
+      best = tile;
+      bestDistance = d;
+    }
+  }
+  return best;
+}
+
+/**
  * Lays out where roads and trade can run, whoever owns the cities: a road
  * between every pair of cities with claimed land next to each other (the
  * cheapest path between them through their own land), and, for coastal

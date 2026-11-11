@@ -27,7 +27,7 @@ import { cityDefense, defenseBonusAt } from "@/systems/combat.js";
 import { enterCost, isRoadTile } from "@/systems/pathfinding.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
-import { describeAttackArmor, describeIncome, describeSpecials, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
+import { describeAttackArmor, describeSpecials, formatMultiplier, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg, scoutSvg } from "@/render/figures.js";
 import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
 import { canRetrain, canTrain, canTrainScout, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
@@ -264,15 +264,41 @@ function cityDetails(input: InfoPanelInput, city: City): string {
         <dt>Defense</dt><dd>+${Math.round(cityDefense(city) * 100)}%</dd>
         <dt>Walls</dt><dd>${city.buildings.walls ? escapeHtml(BUILDINGS.walls.levels[city.buildings.walls - 1].name) : "None"}</dd>
       </dl>
-      ${mine ? incomeLine(stats, besieged) : ""}
+      ${mine ? incomeTable(stats, besieged) : ""}
       ${!mine && input.visible && !input.visible.has(city.tile) ? `<p class="hint">Garrison out of sight.</p>` : ""}
       ${siegeStatus(state, city)}`;
 }
 
-/** How the city's income is reached: its base, people, mine and farms, then the market, its trade, and taxes. */
-function incomeLine(stats: CityStats, besieged: boolean): string {
-  const text = describeIncome(stats.income, "taxes");
-  return `<p class="income-line">${besieged ? `Normally ${text} gold. Besieged: nothing this turn.` : `${text} gold a turn`}</p>`;
+/**
+ * How the city's income is reached, a row each: its base, people, mine and
+ * farms, the market on those, its trade and the market on that, then taxes.
+ * A multiplier's row shows the gold it adds. Each row is the change in the
+ * rounded running total, so the rows always add up to the total shown.
+ */
+function incomeTable(stats: CityStats, besieged: boolean): string {
+  const i = stats.income;
+  const rows: string[] = [];
+  let running = 0;
+  const row = (label: string, after: number, factor?: number) => {
+    const added = Math.round(after) - Math.round(running);
+    running = after;
+    const sign = added < 0 ? "−" : "+";
+    rows.push(`<tr><th scope="row">${label}${factor !== undefined ? ` <span class="muted">${formatMultiplier(factor)}</span>` : ""}</th><td>${sign}${Math.abs(added)}</td></tr>`);
+  };
+  row("Base", i.base);
+  row("People", running + i.people);
+  if (i.mine) row("Mine", running + i.mine);
+  if (i.farms) row("Farms", running + i.farms);
+  if (i.market !== 1) row("Market", i.subtotal * i.market, i.market);
+  if (i.trade) row("Trade", running + i.trade);
+  if (i.trade && i.tradeMarket !== 1) row("Market on trade", running + i.trade * (i.tradeMarket - 1), i.tradeMarket);
+  if (i.taxes !== 1) row("Taxes", running * i.taxes, i.taxes);
+  return `
+    <table class="income-table">
+      <tbody>${rows.join("")}</tbody>
+      <tfoot><tr><th scope="row">${besieged ? "Normally" : "Gold a turn"}</th><td>${i.total}</td></tr></tfoot>
+    </table>
+    ${besieged ? `<p class="hint">Besieged: no gold this turn.</p>` : ""}`;
 }
 
 /** ◀ Normal tax rate ▶, and what the current rate does. */
@@ -338,15 +364,17 @@ function constructionTab(input: InfoPanelInput, city: City): string {
     // A mine's, farms' or port's gold depends on the land: say what the next level would earn.
     const goldNote = landGoldSummary(state, city, building, next.level);
     const title = `${def.name}, level ${next.level}: ${next.def.name}. ${def.purpose} ${goldNote} ${check.ok ? `Click to queue it.` : check.reason}`;
-    // Short of gold: say so in the box. (A siege or full queue is said once, below.)
-    const blocked = !check.ok && !heldUp ? check.reason : "";
+    // Short of gold: the price turns red, nothing more. Any other reason is said in the box.
+    // (A siege or full queue is said once, below.)
+    const short = (getFaction(state, humanId)?.gold ?? 0) < next.def.cost;
+    const blocked = !check.ok && !heldUp && !short ? check.reason : "";
     return `
       <button type="button" class="building-box" data-build="${building}" ${check.ok ? "" : "disabled"} title="${escapeHtml(title)}">
         ${buildingSvg(building)}
         <span class="unit-name">${def.name}</span>
         ${levelPips(built)}
         ${queued > 0 ? `<span class="unit-stat">+${queued} queued</span>` : ""}
-        <span class="building-next">${status}</span>
+        <span class="building-next${short ? " short" : ""}">${status}</span>
         ${goldNote ? `<span class="building-note">${escapeHtml(goldNote)}</span>` : ""}
         ${blocked ? `<span class="building-lock">${escapeHtml(blocked)}</span>` : ""}
       </button>`;
@@ -417,7 +445,7 @@ function tradeSummary(state: GameState, city: City, building: "roads" | "port", 
   const gold = (routes: TradeRoute[]) => Math.round(routes.reduce((sum, r) => sum + r.gold, 0));
   const now = at(city.buildings[building]);
   const next = nextLevelNumber ? at(nextLevelNumber) : now;
-  if (next.length === 0) return building === "roads" ? "No city of yours at the other end of its roads has roads to trade with." : "No port of yours in range to trade with.";
+  if (next.length === 0) return building === "roads" ? "No roads to trade with." : "No port in range.";
   const cut = next.filter((r) => r.cut).length;
   const routes = `${next.length} trade route${next.length === 1 ? "" : "s"} by ${by}${cut ? ` (${cut} cut by enemies)` : ""}`;
   return nextLevelNumber
