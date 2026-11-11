@@ -456,48 +456,47 @@ export function buildWatchtower(color: string): THREE.Object3D {
 }
 
 /** How far a port's pier reaches out from the shore (model units, along +x). */
-const PIER_LENGTH = 26;
+const PIER_LENGTH = 16;
 
 /**
- * A port: a timber pier on posts running out from the shore along +x, with
- * a boat moored at it for each level (sails in the owner's colour), and a
- * storehouse on the landward end of the pier from level 2. The shore end is at the
- * origin, the deck just above the water.
+ * A port: a short timber pier on posts running out from the shore along +x,
+ * a boat moored at its end (sail in the owner's colour), a second boat from
+ * level 2, and a small storehouse at the shore end at level 3. The shore end
+ * is at the origin, the deck just above the water.
  */
 export function buildPort(color: string, level: number): THREE.Object3D {
   const g = new THREE.Group();
-  const deck = box(PIER_LENGTH, 1.2, 6, mat("#a07c52"));
+  const deck = box(PIER_LENGTH, 1.2, 5, mat("#a07c52"));
   deck.position.set(PIER_LENGTH / 2, 2.4, 0);
   g.add(deck);
-  for (let x = 3; x < PIER_LENGTH; x += 6) {
-    for (const z of [-2.6, 2.6]) {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 4, 5), mat("#5a4630"));
+  for (const x of [4, PIER_LENGTH - 2]) {
+    for (const z of [-2.1, 2.1]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 4, 5), mat("#5a4630"));
       post.position.set(x, 1, z);
       g.add(post);
     }
   }
-  // Boats moored alternately either side of the pier, from the far end in.
-  for (let i = 0; i < Math.min(3, level); i++) {
-    const side = i % 2 === 0 ? 1 : -1;
+  // Boats moored either side of the pier's end.
+  for (let i = 0; i < (level >= 2 ? 2 : 1); i++) {
     const boat = new THREE.Group();
-    const hull = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 1.4, 12, 6, 1), mat("#6b4f33"));
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 1.1, 9, 6, 1), mat("#6b4f33"));
     hull.rotation.z = Math.PI / 2;
     hull.scale.set(1, 1, 0.8);
-    hull.position.y = 1.2;
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 11, 4), mat("#5a4630"));
-    mast.position.y = 7;
-    const sail = box(0.4, 6, 7, mat(color));
-    sail.position.y = 8.5;
+    hull.position.y = 1;
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 8, 4), mat("#5a4630"));
+    mast.position.y = 5;
+    const sail = box(0.4, 4.5, 5, mat(color));
+    sail.position.y = 6.2;
     boat.add(hull, mast, sail);
-    boat.position.set(PIER_LENGTH - 5 - Math.floor(i / 2) * 13, 0, side * 6.5);
+    boat.position.set(PIER_LENGTH - 4, 0, (i === 0 ? 1 : -1) * 5);
     g.add(boat);
   }
-  if (level >= 2) {
-    const store = box(7, 5, 6, mat("#d8ccaf"));
-    store.position.set(5, 5.5, 0);
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(5.5, 3.5, 4), mat(ROOF));
+  if (level >= 3) {
+    const store = box(5, 3.5, 4.5, mat("#d8ccaf"));
+    store.position.set(3, 4.6, 0);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(4, 2.5, 4), mat(ROOF));
     roof.rotation.y = Math.PI / 4;
-    roof.position.set(5, 9.7, 0);
+    roof.position.set(3, 7.6, 0);
     g.add(store, roof);
   }
   return g;

@@ -275,7 +275,8 @@ building at both ends:
   with roads built.
 - **By sea**: two of your ports within sailing range: 6 / 16 / 40 steps
   over the sea for a Jetty / Harbour / Great harbour. A port stands on the
-  shore by its city, with a boat for each level, and your open sea routes
+  shore by its city: a small pier with a boat, a second boat at Harbour and
+  a storehouse at Great harbour. Your open sea routes
   are drawn as pale blue dashes from port to port.
 
 A route runs at the lower of the two cities' levels and pays each end

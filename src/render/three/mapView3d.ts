@@ -37,10 +37,10 @@ const CITY_SCALE = 1.2;
 const SCOUT_SCALE = 1.1;
 /** Watchtowers are slim, so they're drawn larger to read at campaign zoom. */
 const TOWER_SCALE = 1.9;
-/** Ports are drawn larger than life, like watchtowers, so they read at campaign zoom. */
-const PORT_SCALE = 2.2;
+/** Ports are drawn a little larger than life, so they read at campaign zoom without crowding the sea tile. */
+const PORT_SCALE = 1.4;
 /** Where a pier starts, from the shore's land tile (0) to the port tile's centre (1). */
-const PORT_OFFSHORE = 0.7;
+const PORT_OFFSHORE = 0.55;
 /** A sea trade route: a dashed lane over the water, pale blue to tell it from a crossing. */
 const SEA_LANE = { color: "#a9d8e8", width: 2.4, lift: 0.9 };
 /** The fog over tiles out of sight: a dark blue-grey wash, [r, g, b, opacity]. */
