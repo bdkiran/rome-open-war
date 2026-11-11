@@ -597,7 +597,16 @@ so.
   factions fallen 3 to 4 / 3 to 2, no invalid orders. Levers: exterminating best after 100
   turns 2 to 4 of 55 cities, "grow, then tax" overtakes normal at turn 43 (was 52), normal
   overtakes high at 86 (was 87). One game ended with Thrace at −8 gold (see the backlog).
-  Regrowth for sacked cities was held back as a proposal (`docs/proposals/regrowth.md`).
+  Regrowth for sacked cities was held back, then rejected (below).
+
+- **No regrowth bonus for cities below their old size.** Growing ×1.25 (or more) until a
+  city is back to its highest population was proposed so sacks recover sooner. The player
+  rejected it: it makes exterminating cheaper (its cost is the halved city's slow recovery,
+  and exterminating is already best after 100 turns in 4 of 55 cities, near the balance
+  test's limit), it makes recruiting cheaper late on (drafted cities count as below their
+  peak), and it mostly helps the conqueror, who holds the sacked cities. The growth floor
+  and the 1.25 curve already fixed cities that never recovered; 33–41 turns back is the
+  price of a sack.
 
 - **The AI saves for its government buildings.** It had about 1 level 3 city a
   game, and we blamed watchtowers competing with the Senate, wrongly: removing
@@ -815,5 +824,3 @@ in detail, and `npm run levers` covers the economy.
   in debt (Thrace, −8, in one compare game at the 1.25 growth curve). `npm test` would
   fail on it as an AI in debt. Fix: skip fallen factions in the debt check, or keep upkeep
   from taking a treasury below zero.
-- Regrowth (a city below its old size grows faster until it's back) is proposed, not
-  built: `docs/proposals/regrowth.md`.
