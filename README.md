@@ -243,15 +243,15 @@ militia until it builds one.
 
 | Building | Effect per level (1 / 2 / 3)                               | Cost (1 / 2 / 3)     | Turns     |
 |----------|------------------------------------------------------------|----------------------|-----------|
-| Spear yard    | Trains basic / advanced / elite spearmen | 150 / 300 / 500 gold | 2 / 3 / 4 |
-| Archery range | Trains basic / advanced / elite archers  | 200 / 350 / 550 gold | 2 / 3 / 4 |
-| Stables       | Trains basic / advanced / elite cavalry  | 250 / 400 / 650 gold | 2 / 3 / 4 |
-| Walls    | +15% / +30% / +50% defense, on top of the city's 10%       | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Farms    | +20% / +40% / +60% population growth, and +0.25 / +0.5 / +0.75 gold per plains tile in its land | 150 / 300 / 550 gold | 2 / 3 / 4 |
-| Market   | +25% / +50% / +80% gold, and +50% / +100% / +150% trade gold | 150 / 300 / 500 gold | 2 / 3 / 4 |
-| Mine     | +1 / +2 / +3 gold per hills or mountain tile in its land   | 200 / 400 / 700 gold | 2 / 3 / 4 |
-| Port     | +30% / +60% / +90% growth, times the city's share of sea, and trade by sea with your other ports (cities whose land touches the sea) | 150 / 250 / 450 gold | 2 / 3 / 4 |
-| Roads    | Builds the city's half of its roads: faster movement on them for every army (see Movement), and trade by land with your cities at the other end | 150 / 300 / 500 gold | 2 / 3 / 4 |
+| Spear yard    | Trains basic / advanced / elite spearmen | 135 / 300 / 500 gold | 2 / 3 / 4 |
+| Archery range | Trains basic / advanced / elite archers  | 180 / 350 / 550 gold | 2 / 3 / 4 |
+| Stables       | Trains basic / advanced / elite cavalry  | 225 / 400 / 650 gold | 2 / 3 / 4 |
+| Walls    | +15% / +30% / +50% defense, on top of the city's 10%       | 180 / 400 / 700 gold | 2 / 3 / 4 |
+| Farms    | +20% / +40% / +60% population growth, and +0.25 / +0.5 / +0.75 gold per plains tile in its land | 130 / 300 / 550 gold | 2 / 3 / 4 |
+| Market   | +25% / +50% / +80% gold, and +50% / +100% / +150% trade gold | 130 / 300 / 500 gold | 2 / 3 / 4 |
+| Mine     | +1 / +2 / +3 gold per hills or mountain tile in its land   | 170 / 400 / 700 gold | 2 / 3 / 4 |
+| Port     | +30% / +60% / +90% growth, times the city's share of sea, and trade by sea with your other ports (cities whose land touches the sea) | 130 / 250 / 450 gold | 2 / 3 / 4 |
+| Roads    | Builds the city's half of its roads: faster movement on them for every army (see Movement), and trade by land with your cities at the other end | 130 / 300 / 500 gold | 2 / 3 / 4 |
 
 A mine can only be built in a city whose territory has at least 5 hills or
 mountain tiles, so it's worth a lot in hill country and isn't on offer
@@ -318,10 +318,10 @@ archers. Militia are big, cheap regiments of poor fighters.
 
 | Unit     | Movement | Attack | Armor | Special                  | Regiment     | Cost per regiment (basic) | Upkeep per regiment (basic) | Trained in       |
 |----------|----------|--------|-------|--------------------------|--------------|---------------------------|-----------------------------|------------------|
-| Militia  | 12       | 20     | 20    | none                     | 220 soldiers | 110 gold                  | about 2 gold a turn         | any city         |
-| Spearmen | 12       | 30     | 30    | Anti-cavalry +60         | 180 soldiers | 180 gold                  | about 4 gold a turn         | a Spear yard     |
-| Archers  | 12       | 10     | 10    | Ranged 60                | 160 soldiers | 240 gold                  | about 4 gold a turn         | an Archery range |
-| Cavalry  | 16       | 60     | 20    | Charge +20, mounted      | 120 soldiers | 240 gold                  | 4 gold a turn               | Stables          |
+| Militia  | 12       | 20     | 20    | none                     | 220 soldiers | 99 gold                   | about 2 gold a turn         | any city         |
+| Spearmen | 12       | 30     | 30    | Anti-cavalry +60         | 180 soldiers | 162 gold                  | about 3 gold a turn         | a Spear yard     |
+| Archers  | 12       | 10     | 10    | Ranged 60                | 160 soldiers | 216 gold                  | about 3 gold a turn         | an Archery range |
+| Cavalry  | 16       | 60     | 20    | Charge +20, mounted      | 120 soldiers | 216 gold                  | 3 gold a turn               | Stables          |
 
 Any city can train militia. Spearmen, archers and cavalry each need their own
 building, which even a level-1 city can build. Each level of that building
@@ -333,8 +333,8 @@ unlocks a better **tier** of its unit:
 | Advanced | 2 (level-2 city) | ×1.3 | ×1.5           | same   |
 | Elite    | 3 (level-3 city) | ×1.6 | ×2.1           | same   |
 
-Every stat is multiplied, so a regiment of elite spearmen (180 soldiers, 378
-gold, about 8 gold a turn) fights like 288 basic spearmen: a little dearer
+Every stat is multiplied, so a regiment of elite spearmen (180 soldiers, 341
+gold, about 6 gold a turn) fights like 288 basic spearmen: a little dearer
 per gold, much cheaper per person. A regiment keeps the tier it was trained
 at, and is marked II or III in its box. Militia come in one tier. A regiment
 of militia loses to one of spearmen or archers, and about matches one of

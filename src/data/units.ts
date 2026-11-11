@@ -45,22 +45,22 @@ export interface UnitDef {
 }
 
 export const UNITS: Record<UnitType, UnitDef> = {
-  // A basic regiment costs 110 / 180 / 240 / 240 gold and about 2 / 4 / 4 / 4 gold a turn in upkeep.
+  // A basic regiment costs 99 / 162 / 216 / 216 gold and about 1.65 / 2.7 / 2.8 / 3 gold a turn in upkeep.
   militia: {
     name: "Militia", movement: 12, attack: 20, armor: 20, ranged: 0, charge: 0, antiCavalry: 0, mounted: false,
-    goldPerSoldier: 0.5, upkeep: 0.01, regimentSize: 220, building: null,
+    goldPerSoldier: 0.45, upkeep: 0.0075, regimentSize: 220, building: null,
   },
   spearmen: {
     name: "Spearmen", movement: 12, attack: 30, armor: 30, ranged: 0, charge: 0, antiCavalry: 60, mounted: false,
-    goldPerSoldier: 1, upkeep: 0.02, regimentSize: 180, building: "spearYard",
+    goldPerSoldier: 0.9, upkeep: 0.015, regimentSize: 180, building: "spearYard",
   },
   archers: {
     name: "Archers", movement: 12, attack: 10, armor: 10, ranged: 60, charge: 0, antiCavalry: 0, mounted: false,
-    goldPerSoldier: 1.5, upkeep: 0.0234375, regimentSize: 160, building: "archeryRange",
+    goldPerSoldier: 1.35, upkeep: 0.017578125, regimentSize: 160, building: "archeryRange",
   },
   cavalry: {
     name: "Cavalry", movement: 16, attack: 60, armor: 20, ranged: 0, charge: 20, antiCavalry: 0, mounted: true,
-    goldPerSoldier: 2, upkeep: 1 / 30, regimentSize: 120, building: "stables",
+    goldPerSoldier: 1.8, upkeep: 1 / 40, regimentSize: 120, building: "stables",
   },
 };
 

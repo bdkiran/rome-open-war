@@ -624,6 +624,23 @@ so.
   gold. Upkeep cuts and more starting gold did little. Those were measured with the
   old rounding.
 
+- **Cheaper start: level-1 buildings, training and upkeep.** The early game still
+  felt slow: Rome netted ~50 gold a turn, and a Market square took 35 turns to pay
+  back in a 3,000-people town. The player chose a split package over the earlier
+  third-off-everything test (which slowed conquest): economic level-1 buildings −15%
+  (Market square, Fields, Jetty, Tracks 150 → 130, Quarry 200 → 170), military −10%
+  (Spear yard 135, Archery range 180, Stables 225, Palisade 180), training gold −10%
+  and upkeep −25% for every unit (per soldier, so every tier keeps its trade-off).
+  Levels 2 and 3 are unchanged. 8 seeds, 50 turns (normal, then `--garrison`): AI net
+  income +41% / +39%, treasuries +18% / +25%, upkeep 22% → 15% / 24% → 15% of income,
+  cities not with first owner 17 → 16 / 15 → 15, battles +10% / +5%, trade routes up
+  (sea 3 → 7 / 3 → 9). 4 seeds, 100 turns: AI net income +47% / +69%, treasuries
+  638 → 710 / 602 → 1,011, level-3 cities 19 → 23 / 20 → 23, basic-tier regiments 75%
+  → 60% / 71% → 59%, sieges of walled cities 22 → 49 / 21 → 54 and storms 2 → 8 / 1 → 7
+  (richer AIs build walls and the siege works to beat them), factions fallen 3 → 4 /
+  3 → 4; no invalid orders or debt. Levers: "grow, then tax" overtakes normal at turn
+  44 (was 43); exterminating is best after 100 turns in 2 of 55 cities.
+
 ## Economy tuning history
 
 The economy was retuned several times; the lesson each time:
