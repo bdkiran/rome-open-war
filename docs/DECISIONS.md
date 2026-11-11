@@ -173,6 +173,10 @@ so.
   Making mountains cost the same as hills was tried and rejected: it barely
   shortened real routes (armies take the passes) and erased the difference.
   Cavalry was cut from 18 to 16 so they couldn't strike from anywhere.
+- **No supply or attrition for field armies.** Losing soldiers away from friendly
+  land (in enemy land, desert or mountains) was proposed to make where an army marches
+  matter and slow big empires. The player doesn't like it; it won't be built. Only a
+  besieged garrison loses soldiers each turn (Sieges).
 - **Roads are physical: a road between every two bordering cities.** They used to
   speed a city's whole land (Tracks: rough ground like plains; Roads: mountains too;
   Paved: every tile 1). Now each pair of cities whose land borders gets a road, the
