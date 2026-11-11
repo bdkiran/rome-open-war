@@ -186,6 +186,14 @@ so.
   Carales). All tile costs go through `enterCost` (systems/pathfinding.ts).
 - **Zone of control:** entering a tile next to an enemy army ends the move;
   the army can still attack. Armies can't slip past each other.
+- **A move runs into what it couldn't see.** A move is checked against what
+  the faction sees; if a hidden army blocks the way, the army follows its
+  planned path and halts in that army's zone of control (or before its tile),
+  which reveals it. Such moves used to fail outright, so the player couldn't
+  walk up to find out what was there. An attack that needs a march moves
+  first and opens the battle panel from there, so the odds are judged on what
+  the army sees once it arrives. The AI plans on the real state, so it never
+  runs into this.
 - **Marches** (right-click a distant tile) move at the *end* of the owner's
   turn with the movement left, so the army is still usable during the turn. A
   march is only cancelled when the army couldn't step even with full movement

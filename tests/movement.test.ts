@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import type { GameContext } from "@/core/context.js";
 import { applyAction } from "@/core/actions.js";
 import { createGame } from "@/core/setup.js";
-import { armyAt, type City, type GameState } from "@/core/state.js";
+import { armyAt, cityAt, type City, type GameState } from "@/core/state.js";
 import { COMBAT } from "@/data/combat.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { ROAD_MOVE_COST, TERRAIN, type TerrainType } from "@/data/terrain.js";
@@ -13,6 +13,7 @@ import { cityTiles } from "@/systems/cities.js";
 import { attackOptions, reachableTiles } from "@/systems/armies.js";
 import { previewBattle } from "@/systems/combat.js";
 import { costToTarget, enterCost, isRoadTile } from "@/systems/pathfinding.js";
+import { visibleTiles } from "@/systems/vision.js";
 
 const map = ROMAN_WORLD.mapEngine.createMap();
 const ctx: GameContext = { topology: map.topology };
@@ -236,5 +237,57 @@ describe("attacking", () => {
     const lost = applyAction(ctx, { ...state, armies }, "rome", { type: "attack", armyId: "mine", regimentIds: ["m1"], target: first });
     assert.ok(lost.ok);
     for (const r of lost.state.armies.mine?.regiments ?? []) assert.equal(r.movementLeft, 0);
+  });
+});
+
+describe("running into an army out of sight", () => {
+  const spearmen = (id: string) => ({ id, unit: "spearmen" as const, tier: 1 as const, soldiers: regimentSize("spearmen"), experience: 0, movementLeft: 12, pinned: false });
+
+  /**
+   * A Roman army on open plains with a Carthaginian army three steps away,
+   * out of its sight: the state, and the path from the Roman army's tile to
+   * the hidden army's.
+   */
+  function hiddenAhead(): { state: GameState; path: string[] } {
+    const start = { ...newGame(), armies: {}, scouts: {}, watchtowers: {} };
+    const sight = visibleTiles(ctx, start, "rome");
+    const plains = (t: string) => start.tiles[t].terrain === "plains" && !cityAt(start, t) && !sight.has(t);
+    const step = (t: string, not: string[]) =>
+      ctx.topology.neighbors(t).filter((n) => ctx.topology.distance(t, n) === 1 && plains(n) && !not.includes(n));
+    for (const a of ctx.topology.allTiles().filter(plains)) {
+      // A straight run of plains a, b, c, d: each step one further from a.
+      for (const b of step(a, [a])) {
+        for (const c of step(b, [a, b]).filter((t) => ctx.topology.distance(a, t) === 2)) {
+          for (const d of step(c, [a, b, c]).filter((t) => ctx.topology.distance(a, t) === 3)) {
+            const state: GameState = {
+              ...start,
+              armies: {
+                mine: { id: "mine", owner: "rome", tile: a, destination: null, regiments: [spearmen("m1")] },
+                hidden: { id: "hidden", owner: "carthage", tile: d, destination: null, regiments: [spearmen("h1")] },
+              },
+            };
+            if (!visibleTiles(ctx, state, "rome").has(d)) return { state, path: [a, b, c, d] };
+          }
+        }
+      }
+    }
+    throw new Error("no open plains for the test");
+  }
+
+  it("stops the move where the hidden army's zone of control begins, and reveals it", () => {
+    const { state, path } = hiddenAhead();
+    const [, , beside, hidden] = path;
+    const moved = applyAction(ctx, state, "rome", { type: "moveArmy", armyId: "mine", regimentIds: ["m1"], to: hidden });
+    assert.ok(moved.ok, moved.ok ? "" : moved.reason);
+    const mine = moved.state.armies.mine;
+    assert.ok(ctx.topology.neighbors(hidden).includes(mine.tile), `stopped at ${mine.tile}, next to the hidden army (planned via ${beside})`);
+    assert.ok(mine.regiments[0].pinned, "pinned in its zone of control");
+    assert.ok(visibleTiles(ctx, moved.state, "rome").has(hidden), "the hidden army is now in sight");
+  });
+
+  it("still refuses a move that isn't in reach even as the army sees it", () => {
+    const { state } = hiddenAhead();
+    const far = ctx.topology.allTiles().find((t) => ctx.topology.distance(state.armies.mine.tile, t) > 20)!;
+    assert.equal(applyAction(ctx, state, "rome", { type: "moveArmy", armyId: "mine", regimentIds: ["m1"], to: far }).ok, false);
   });
 });

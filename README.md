@@ -82,9 +82,9 @@ Either way you can close the screen to look at the map, or play again.
   armies (its regiment cards in the bottom bar choose which regiments to
   order), then
   right-click a highlighted tile to move there or a red tile to attack it. Red
-  tiles include enemies the army can march up to this turn; it moves next to
-  them and attacks in one go. Attacking an army opens the battle panel with
-  the odds: Fight or Withdraw (Escape also withdraws). Right-clicking an enemy
+  tiles include enemies the army can march up to this turn; it marches up
+  first, and the battle panel opens once it's there, with the odds as seen
+  from there: Fight or Withdraw (Escape also withdraws). Right-clicking an enemy
   city lays siege to it (marching up first if needed) and opens the siege
   screen
 - Right-click a distant tile to send the selected army marching there over
@@ -149,8 +149,9 @@ territory. Sight spreads over land, but whoever sees one shore of a sea
 crossing sees the other. Everywhere else is dimmed and enemy armies are hidden, including
 the garrisons of cities you can't see. The map and the cities on it are
 always known. The AI plays under the same fog. Because orders are planned on
-what you can see, a move can run into an army hidden in the fog; the game
-tells you when that happens.
+what you can see, a move can run into an army hidden in the fog: your army
+goes as far as it can and halts where that army blocks it (in its zone of
+control, or just short of it), which brings it into sight.
 
 **Watching enemy turns.** Whatever the other factions do within your
 sight plays out on the map, one move at a time: the camera glides to it,
@@ -427,7 +428,7 @@ way is blocked, or when an enemy army is next to it.
 
 Armies attack an enemy army, or an enemy city with no army in it, which
 captures the city. The target can be anywhere the army can reach this turn:
-it marches up and attacks, as long as it has movement left when it arrives.
+it marches up, then attacks if it has movement left when it arrives.
 
 A battle is fought in **rounds**:
 
