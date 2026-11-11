@@ -14,7 +14,7 @@ To apply one:
 
 | Proposal | Status | In short |
 |---|---|---|
-| [Culture traits](culture-traits.md) | Proposed (chosen to go first) | Each culture gets a unit edge, an economic edge and a drawback |
+| [Culture traits](culture-traits.md) | Proposed | Each culture gets a unit edge, an economic edge and a drawback |
 | [Public order](public-order.md) | Proposed | Unrest from taxes, conquest and sieges; revolts; a brake on snowballing |
 | [Generals](generals.md) | Proposed | Characters who lead armies, gain traits, and can die |
 | [Diplomacy](diplomacy.md) | Proposed | Peace, truces and tribute, or deliberately none |
