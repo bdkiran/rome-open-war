@@ -55,6 +55,9 @@ so.
   crossing doesn't bring land across it into reach (Carthago was claiming
   Sicily through the Sicily–Africa crossing). Sight (fog of war) counts the
   same steps, so cities and armies no longer see across a crossing.
+  Except the far shore itself: whoever sees one end of a crossing sees the
+  other. Without it an army on the far shore was invisible yet next door, so
+  the player couldn't attack it and a move across failed with no reason shown.
 - **Bigger territories, cities spread apart.** With a 2-tile radius only 16%
   of the land belonged to any city. The radius is now 3, and a city closer
   than 7 tiles to one already placed moves up to 4 steps over land (never
@@ -268,7 +271,10 @@ so.
   walls are now the main source of a city's strength.
 - **Battles pull in every army within one tile of either side**
   (`battleSides`): attackers bring regiments that can still move, defenders
-  bring everything. Losing side loses every army that fought.
+  bring everything. Losing side loses every army that fought. Nobody joins
+  from across a sea crossing (an army waiting on one shore was pulled into
+  battles on the other); the two armies fighting can still face each other
+  across one.
 - **Attacking costs 6 movement, not all of it.** An army that attacked from a
   city was stuck there until next turn, and the player disliked it. Infantry can
   attack twice a turn and cavalry three times if they don't move: the player was

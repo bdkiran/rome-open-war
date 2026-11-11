@@ -554,8 +554,9 @@ export interface BattleSide {
 }
 
 /**
- * Who fights when an army attacks `target`: every army within one tile of
- * either the attacker or the defender joins its own side. The attacker's
+ * Who fights when an army attacks `target`: every army on a tile next to
+ * either the attacker or the defender joins its own side. Two armies can
+ * fight across a sea crossing, but no one joins them from across one. The attacker's
  * other armies bring their regiments that can still move; the defender's
  * other armies bring all of theirs, since defending takes no movement. A
  * besieged garrison only joins a battle against its besiegers. The leading
@@ -570,7 +571,8 @@ export function battleSides(
 ): { attackers: BattleSide[]; defenders: BattleSide[] } {
   const lead = pickRegiments(army, regimentIds) ?? [];
   const defender = armyAt(state, target);
-  const nearby = new Set([army.tile, target, ...ctx.topology.neighbors(army.tile), ...ctx.topology.neighbors(target)]);
+  const nextTo = (tile: TileId) => ctx.topology.neighbors(tile).filter((n) => ctx.topology.distance(tile, n) === 1);
+  const nearby = new Set([army.tile, target, ...nextTo(army.tile), ...nextTo(target)]);
   const others = Object.values(state.armies).filter((a) => a.id !== army.id && a.id !== defender?.id && nearby.has(a.tile));
 
   const attackers: BattleSide[] = [{ army, regiments: lead }];

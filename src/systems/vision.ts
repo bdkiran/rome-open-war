@@ -10,6 +10,10 @@ import { towerSighter } from "@/systems/watchtowers.js";
  * scouts and watchtowers (or an enemy's tower one of its armies stands on), and all of
  * its own territory. Everywhere else, enemy armies are hidden from it.
  * The map itself and the cities on it are always known.
+ *
+ * Sight spreads over land only, but the two shores of a sea crossing see
+ * each other: an army can step or attack across one, so whoever sees one
+ * end must see what stands on the other.
  */
 export function visibleTiles(ctx: GameContext, state: GameState, factionId: FactionId): Set<TileId> {
   const visible = new Set<TileId>();
@@ -32,6 +36,10 @@ export function visibleTiles(ctx: GameContext, state: GameState, factionId: Fact
   }
   for (const tile of Object.keys(state.watchtowers)) {
     if (towerSighter(state, tile) === factionId) add(tilesWithin(ctx.topology, tile, VISION.watchtower));
+  }
+  for (const [a, b] of ctx.topology.links?.() ?? []) {
+    if (visible.has(a)) visible.add(b);
+    else if (visible.has(b)) visible.add(a);
   }
   return visible;
 }

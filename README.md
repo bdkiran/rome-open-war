@@ -145,7 +145,8 @@ out that regiment), and in a city's Recruitment and Retraining tabs.
 
 **Fog of war.** You see the land around your cities (3 tiles), around your
 armies (2 tiles, or 3 if they include cavalry), and all of your own
-territory. Everywhere else is dimmed and enemy armies are hidden, including
+territory. Sight spreads over land, but whoever sees one shore of a sea
+crossing sees the other. Everywhere else is dimmed and enemy armies are hidden, including
 the garrisons of cities you can't see. The map and the cities on it are
 always known. The AI plays under the same fog. Because orders are planned on
 what you can see, a move can run into an army hidden in the fog; the game
@@ -456,8 +457,9 @@ They're all added, so a hill city with stone walls defends at
 15% + 10% + 30% = +55%. The defenders deal that much more and take that much
 less, so +50% makes a garrison fight like one half as big again.
 
-**Joint battles.** Every army within one tile of either the attacker or the
-defender joins the battle on its own side: the attacker's other armies bring
+**Joint battles.** Every army on a tile next to the attacker or the
+defender joins the battle on its own side (two armies can fight across a sea
+crossing, but no one joins them from across one): the attacker's other armies bring
 their regiments that can still move, the defender's bring all of theirs. A
 beaten side's armies each flee (or fight to the death). **Attacking costs 6
 movement** for every regiment that attacks, so a winner can move on or attack
