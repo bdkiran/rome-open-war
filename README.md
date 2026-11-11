@@ -321,7 +321,7 @@ archers. Militia are big, cheap regiments of poor fighters.
 | Militia  | 12       | 20     | 20    | none                     | 220 soldiers | 99 gold                   | about 2 gold a turn         | any city         |
 | Spearmen | 12       | 30     | 30    | Anti-cavalry +60         | 180 soldiers | 162 gold                  | about 3 gold a turn         | a Spear yard     |
 | Archers  | 12       | 10     | 10    | Ranged 60                | 160 soldiers | 216 gold                  | about 3 gold a turn         | an Archery range |
-| Cavalry  | 16       | 60     | 20    | Charge +20, mounted      | 120 soldiers | 216 gold                  | 3 gold a turn               | Stables          |
+| Cavalry  | 16       | 60     | 20    | Charge +20, mounted      | 120 soldiers | 216 gold                  | about 3 gold a turn         | Stables          |
 
 Any city can train militia. Spearmen, archers and cavalry each need their own
 building, which even a level-1 city can build. Each level of that building
