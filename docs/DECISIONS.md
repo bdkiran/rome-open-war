@@ -192,8 +192,9 @@ so.
   which reveals it. Such moves used to fail outright, so the player couldn't
   walk up to find out what was there. An attack that needs a march moves
   first and opens the battle panel from there, so the odds are judged on what
-  the army sees once it arrives. The AI plans on the real state, so it never
-  runs into this.
+  the army sees once it arrives. Withdrawing then leaves the army where it
+  marched: committing to the approach before seeing the odds is the point.
+  The AI plans on the real state, so it never runs into this.
 - **Marches** (right-click a distant tile) move at the *end* of the owner's
   turn with the movement left, so the army is still usable during the turn. A
   march is only cancelled when the army couldn't step even with full movement
