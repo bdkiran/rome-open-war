@@ -581,7 +581,7 @@ button.unit-box:hover:not(:disabled) { background: rgba(224, 181, 79, 0.14); bor
 .building-box:hover:not(:disabled) { background: rgba(224, 181, 79, 0.14); border-color: rgba(224, 181, 79, 0.7); }
 .building-box:disabled { cursor: default; opacity: 1; }
 /* A locked building: dim everything but the reason it's locked. */
-.building-box:disabled > :not(.building-lock) { opacity: 0.5; }
+.building-box:disabled > :not(.building-lock, .short) { opacity: 0.5; }
 .building-art { width: 44px; height: 44px; }
 .building-box .unit-name { font-size: 13px; }
 .level-pips { display: flex; gap: 3px; margin: 1px 0; }
@@ -598,6 +598,7 @@ button.unit-box:hover:not(:disabled) { background: rgba(224, 181, 79, 0.14); bor
   color: var(--brass);
 }
 .building-box:disabled .building-next { color: var(--bone-dim); }
+.building-box .building-next.short { color: #f0806f; }
 
 .queue-title {
   margin: 14px 0 6px !important;

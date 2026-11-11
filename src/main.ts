@@ -31,6 +31,7 @@ import { reachableScoutTiles, scoutAt } from "@/systems/scouts.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 import { renderCityScreen, renderInfoPanel, type CityTab } from "@/ui/infoPanel.js";
 import { renderSelectionBar, type BarTab } from "@/ui/selectionBar.js";
+import { patchHtml } from "@/ui/patchHtml.js";
 import { hideBattlePanel, showBattlePanel } from "@/ui/battlePanel.js";
 import { hideSiegePanel, showSiegePanel } from "@/ui/siegePanel.js";
 import { hideBattleResult, showBattleResult } from "@/ui/battleResult.js";
@@ -750,9 +751,13 @@ function handlePanelClick(e: MouseEvent): void {
   } else if (target.dataset.dismissScout) {
     dispatch({ type: "dismissScout", scoutId: target.dataset.dismissScout });
   } else if (target.dataset.cityTab) {
-    cityTab = target.dataset.cityTab as CityTab;
+    const tab = target.dataset.cityTab as CityTab;
+    const switched = tab !== cityTab;
+    cityTab = tab;
     cityScreenOpen = true;
     renderInfo(state);
+    // A different tab starts at its top; the same tab keeps its place.
+    if (switched) cityScreen.querySelector(".city-screen-main")?.scrollTo(0, 0);
   } else if (target.dataset.closeCityScreen !== undefined) {
     closeCityScreen();
   } else if (target.dataset.cityStep) {
@@ -846,17 +851,18 @@ function syncBarTab(): void {
 function renderInfo(state: GameState): void {
   syncBarTab();
   const input = infoInput(state);
-  infoPanel.innerHTML = renderInfoPanel(input);
+  // Patched rather than rebuilt, so a click doesn't replay the card's animation or lose a list's scroll.
+  patchHtml(infoPanel, renderInfoPanel(input));
   // The city screen stays open only while there's one of the player's cities to show.
   const screen = cityScreenOpen ? renderCityScreen(input) : "";
   if (!screen) cityScreenOpen = false;
   if (screen !== cityScreen.dataset.html) {
-    cityScreen.innerHTML = screen;
+    patchHtml(cityScreen, screen);
     cityScreen.dataset.html = screen;
   }
   cityScreen.hidden = !cityScreenOpen;
   const bar = renderSelectionBar(input, barTab);
-  selectionBar.innerHTML = bar;
+  patchHtml(selectionBar, bar);
   selectionBar.hidden = bar === "";
 }
 

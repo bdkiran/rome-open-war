@@ -338,15 +338,17 @@ function constructionTab(input: InfoPanelInput, city: City): string {
     // A mine's, farms' or port's gold depends on the land: say what the next level would earn.
     const goldNote = landGoldSummary(state, city, building, next.level);
     const title = `${def.name}, level ${next.level}: ${next.def.name}. ${def.purpose} ${goldNote} ${check.ok ? `Click to queue it.` : check.reason}`;
-    // Short of gold: say so in the box. (A siege or full queue is said once, below.)
-    const blocked = !check.ok && !heldUp ? check.reason : "";
+    // Short of gold: the price turns red, nothing more. Any other reason is said in the box.
+    // (A siege or full queue is said once, below.)
+    const short = (getFaction(state, humanId)?.gold ?? 0) < next.def.cost;
+    const blocked = !check.ok && !heldUp && !short ? check.reason : "";
     return `
       <button type="button" class="building-box" data-build="${building}" ${check.ok ? "" : "disabled"} title="${escapeHtml(title)}">
         ${buildingSvg(building)}
         <span class="unit-name">${def.name}</span>
         ${levelPips(built)}
         ${queued > 0 ? `<span class="unit-stat">+${queued} queued</span>` : ""}
-        <span class="building-next">${status}</span>
+        <span class="building-next${short ? " short" : ""}">${status}</span>
         ${goldNote ? `<span class="building-note">${escapeHtml(goldNote)}</span>` : ""}
         ${blocked ? `<span class="building-lock">${escapeHtml(blocked)}</span>` : ""}
       </button>`;
@@ -417,7 +419,7 @@ function tradeSummary(state: GameState, city: City, building: "roads" | "port", 
   const gold = (routes: TradeRoute[]) => Math.round(routes.reduce((sum, r) => sum + r.gold, 0));
   const now = at(city.buildings[building]);
   const next = nextLevelNumber ? at(nextLevelNumber) : now;
-  if (next.length === 0) return building === "roads" ? "No city of yours at the other end of its roads has roads to trade with." : "No port of yours in range to trade with.";
+  if (next.length === 0) return building === "roads" ? "No roads to trade with." : "No port in range.";
   const cut = next.filter((r) => r.cut).length;
   const routes = `${next.length} trade route${next.length === 1 ? "" : "s"} by ${by}${cut ? ` (${cut} cut by enemies)` : ""}`;
   return nextLevelNumber
