@@ -275,8 +275,9 @@ building at both ends:
   with roads built.
 - **By sea**: two of your ports within sailing range: 6 / 16 / 40 steps
   over the sea for a Jetty / Harbour / Great harbour. A port stands on the
-  shore by its city, with a boat for each level, and your open sea routes
-  are drawn as pale blue dashes from port to port.
+  shore by its city: a pier, longer at each level, with a storehouse at
+  Great harbour. Each of your open sea routes is a faint lane over the water
+  with a ship in your colours sailing it from port to port.
 
 A route runs at the lower of the two cities' levels and pays each end
 0.4 / 0.7 / 1 gold per 1,000 people at the other end, so trading with a big

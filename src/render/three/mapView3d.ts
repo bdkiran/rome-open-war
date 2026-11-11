@@ -10,7 +10,7 @@ import { isSpent } from "@/systems/armies.js";
 import { portTile, regionOwner, roadCut, tradeRoutes } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, buildPort, buildScout, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCity, buildPort, buildScout, buildShip, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
 import { buildSiegeWorks } from "@/render/three/town.js";
 
@@ -37,12 +37,18 @@ const CITY_SCALE = 1.2;
 const SCOUT_SCALE = 1.1;
 /** Watchtowers are slim, so they're drawn larger to read at campaign zoom. */
 const TOWER_SCALE = 1.9;
-/** Ports are drawn larger than life, like watchtowers, so they read at campaign zoom. */
-const PORT_SCALE = 2.2;
+/** Ports are drawn a little larger than life, so they read at campaign zoom without crowding the sea tile. */
+const PORT_SCALE = 1.4;
 /** Where a pier starts, from the shore's land tile (0) to the port tile's centre (1). */
-const PORT_OFFSHORE = 0.7;
-/** A sea trade route: a dashed lane over the water, pale blue to tell it from a crossing. */
-const SEA_LANE = { color: "#a9d8e8", width: 2.4, lift: 0.9 };
+const PORT_OFFSHORE = 0.55;
+/**
+ * A sea trade route: a soft, faint lane curving over the water (unlike a
+ * crossing's bold dashes), with a ship sailing it from port to port and back.
+ */
+const SEA_LANE = { color: "#a9d8e8", width: 1.6, lift: 0.9, opacity: 0.35 };
+/** Trading ships: their size, and their speed in map units a second. */
+const SHIP_SCALE = 1.3;
+const SHIP_SPEED = 28;
 /** The fog over tiles out of sight: a dark blue-grey wash, [r, g, b, opacity]. */
 const FOG: Rgba = [0.02, 0.05, 0.07, 0.6];
 /** City name plates are hidden when zoomed out further than this. */
@@ -110,6 +116,8 @@ export class MapView3D {
   private readonly ports = new Map<CityId, { key: string; object: THREE.Object3D }>();
   /** The way over the water between two ports, by the pair of port tiles: found once each. */
   private readonly lanes = new Map<string, TileId[]>();
+  /** Ships on the player's sea trade routes: the route's curve, its length, the ship, and where it starts. */
+  private voyages: { curve: THREE.Curve<THREE.Vector3>; length: number; ship: THREE.Object3D; phase: number; sea: number }[] = [];
   private readonly cityLabels = new Map<string, { el: HTMLElement; text: string }>();
   /** The state and player the plates were last filled in for. */
   private platesFor: GameState | null = null;
@@ -171,6 +179,7 @@ export class MapView3D {
     this.syncBorders(state);
     this.syncRoads(state, view);
     this.syncSeaRoutes(state, view);
+    this.sailShips(time);
     this.syncSelection(view);
     this.syncRoute(view);
     this.syncClearings(state);
@@ -280,9 +289,11 @@ export class MapView3D {
     const key = [state.cities, view.player];
     if (key.every((k, i) => k === this.seen.seaRoutes[i])) return;
     this.seen.seaRoutes = key;
+    this.voyages = [];
     if (!view.player) return this.replace("seaRoutes", null);
     const ctx = { topology: this.topology };
-    const ribbons = new Ribbons();
+    const color = getFaction(state, view.player)?.color ?? "#888888";
+    const group = new THREE.Group();
     for (const city of Object.values(state.cities)) {
       if (city.owner !== view.player) continue;
       for (const route of tradeRoutes(state, city)) {
@@ -292,13 +303,39 @@ export class MapView3D {
         const to = portTile(ctx, state, state.cities[route.partner]);
         if (!from || !to) continue;
         const lane = this.lane(state, from, to);
-        for (let i = 1; i < lane.length; i++) {
-          const h = Math.max(this.terrain.heightOf(lane[i - 1]), this.terrain.heightOf(lane[i])) + SEA_LANE.lift;
-          ribbons.dashed(this.topology.tileCenter(lane[i - 1]), this.topology.tileCenter(lane[i]), h, SEA_LANE.width, SEA_LANE.color);
-        }
+        const sea = this.terrain.heightOf(lane[0]);
+        // A smooth curve through the tiles' centres, so the lane doesn't zig-zag.
+        const points = lane.map((t) => {
+          const c = this.topology.tileCenter(t);
+          return new THREE.Vector3(c.x, sea + SEA_LANE.lift, c.y);
+        });
+        if (points.length < 2 || points[0].distanceTo(points[points.length - 1]) < 1) continue;
+        const curve: THREE.Curve<THREE.Vector3> =
+          points.length > 2 ? new THREE.CatmullRomCurve3(points, false, "centripetal") : new THREE.LineCurve3(points[0], points[1]);
+        group.add(softLane(curve, SEA_LANE.width, SEA_LANE.color, SEA_LANE.opacity));
+        const ship = buildShip(color);
+        ship.scale.setScalar(SHIP_SCALE);
+        group.add(ship);
+        this.voyages.push({ curve, length: curve.getLength(), ship, phase: hash(`${city.id}|${route.partner}`), sea });
       }
     }
-    this.replace("seaRoutes", ribbons.mesh());
+    this.replace("seaRoutes", group.children.length > 0 ? group : null);
+    this.sailShips(this.lastTime);
+  }
+
+  /** Moves each trading ship along its route, out to the far port and back, bobbing a little. */
+  private sailShips(time: number): void {
+    for (const v of this.voyages) {
+      const round = v.length * 2;
+      let travelled = (time * SHIP_SPEED + v.phase * round) % round;
+      const homeward = travelled > v.length;
+      if (homeward) travelled = round - travelled;
+      const u = Math.min(1, Math.max(0, travelled / v.length));
+      const at = v.curve.getPointAt(u);
+      const heading = v.curve.getTangentAt(u);
+      v.ship.position.set(at.x, v.sea + Math.sin(time * 2 + v.phase * 10) * 0.25, at.z);
+      v.ship.rotation.y = Math.atan2(-heading.z, heading.x) + (homeward ? Math.PI : 0);
+    }
   }
 
   /** The shortest way over the water from one sea tile to another (both included), or just the two if there's none. */
@@ -939,6 +976,34 @@ const CUT_ROAD_FOGGED = "#6e3a33";
 const ROUTE_COLORS = ["#e0b54f", "#e8864a", "#d9534f", "#b565c9", "#5b8fd9", "#4fb88a"];
 
 /** Flat coloured strips laid on the terrain, collected into one mesh. */
+/** A soft lane along a curve: a thin, faint ribbon just above the water. */
+function softLane(curve: THREE.Curve<THREE.Vector3>, width: number, color: string, opacity: number): THREE.Mesh {
+  const steps = Math.max(2, Math.ceil(curve.getLength() / 4));
+  const positions: number[] = [];
+  let previous: [THREE.Vector3, THREE.Vector3] | null = null;
+  for (let i = 0; i <= steps; i++) {
+    const u = i / steps;
+    const p = curve.getPointAt(u);
+    const t = curve.getTangentAt(u);
+    const side = new THREE.Vector3(-t.z, 0, t.x).normalize().multiplyScalar(width / 2);
+    const pair: [THREE.Vector3, THREE.Vector3] = [p.clone().add(side), p.clone().sub(side)];
+    if (previous) {
+      const [a, b] = previous;
+      const [c, d] = pair;
+      positions.push(a.x, a.y, a.z, c.x, c.y, c.z, b.x, b.y, b.z, b.x, b.y, b.z, c.x, c.y, c.z, d.x, d.y, d.z);
+    }
+    previous = pair;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  const mesh = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }),
+  );
+  mesh.renderOrder = 2;
+  return mesh;
+}
+
 class Ribbons {
   private readonly positions: number[] = [];
   private readonly colors: number[] = [];
