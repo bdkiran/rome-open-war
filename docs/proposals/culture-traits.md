@@ -10,8 +10,8 @@
 
 Each faction has a culture: Roman, Hellenistic, Punic, Celtic or Thracian
 (`src/data/cultures.ts`). Today it only sets how the soldiers look on the map. Every
-faction plays the same way, so the 14 opponents feel alike. Culture traits are the first
-idea picked for adding depth, because they're cheap: almost all numbers in `src/data/`, and
+faction plays the same way, so the 14 opponents feel alike. Culture traits would be
+cheap to add: almost all numbers in `src/data/`, and
 the AI already reacts to unit strength and cost.
 
 ## Choices already made
