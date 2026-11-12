@@ -1,5 +1,6 @@
 import type { BuildingType } from "@/data/buildings.js";
 import type { Culture } from "@/data/cultures.js";
+import type { VictoryPreset } from "@/data/gameSetup.js";
 import type { TaxRate } from "@/data/economy.js";
 import type { Tier, UnitType } from "@/data/units.js";
 import type { TileDataMap } from "@/map/tiles.js";
@@ -249,6 +250,22 @@ export interface GameState {
   mapSeed: number;
   /** State of the game's RNG. Resume it with createRng(rngState). */
   rngState: number;
+  /** How the game is won, and how close anyone is (see systems/victory.ts). */
+  victory: VictoryState;
+}
+
+/** Why a faction won. */
+export type VictoryReason = "conquest" | "keyCities";
+
+export interface VictoryState {
+  /** Chosen when the game starts. */
+  preset: VictoryPreset;
+  /** The scenario's key cities. */
+  keyCities: CityId[];
+  /** The faction holding enough key cities, and the turn it first did (counted at the end of its turns). */
+  holding: { factionId: FactionId; since: number } | null;
+  /** Set once the game is won by key cities. Last faction standing needs no entry: it's plain to see. */
+  winner: { factionId: FactionId; reason: VictoryReason; turn: number } | null;
 }
 
 /** Whether something is allowed, and if not, a reason to show the player. */

@@ -36,3 +36,28 @@ export const STARTING_ARMIES: { capital: StartingArmy; city: StartingArmy } = {
     { unit: "spearmen", regiments: 1 },
   ],
 };
+
+/** How a game can be won: chosen on the start screen and kept in the game state. */
+export type VictoryPreset = "conquest" | "keyCities";
+
+/**
+ * The ways to win besides being the last faction standing, which always wins.
+ * Key cities are listed by the scenario (`Scenario.keyCities`).
+ */
+export const VICTORY = {
+  /** The start screen's choice if the player makes none (and the simulations' too). */
+  defaultPreset: "keyCities" as VictoryPreset,
+  /** Key cities a faction must hold to win. More than half, so only one faction can at a time. */
+  keyCitiesNeeded: 4,
+  /** ...at the end of this many of its turns in a row. Losing one starts the count again. */
+  holdTurns: 5,
+} as const;
+
+/** What each preset is called on the start screen, and what it means. */
+export const VICTORY_PRESETS: Record<VictoryPreset, { name: string; summary: string }> = {
+  conquest: { name: "Conquest", summary: "Be the last faction standing." },
+  keyCities: {
+    name: "Key cities",
+    summary: `Hold ${VICTORY.keyCitiesNeeded} of the key cities for ${VICTORY.holdTurns} turns, or be the last standing. Any faction can win this way.`,
+  },
+};

@@ -66,6 +66,9 @@ interface GameMetrics {
   seaRoutes: number;
   routeTurnsCut: number;
   tradeShare: number;
+  gamesWon: number;
+  winningTurn: number;
+  mostKeyCities: number;
   mercenariesHired: number;
   mercenariesToppedUp: number;
   mercenariesAlive: number;
@@ -107,11 +110,17 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "seaRoutes", label: "Trade routes by sea, at the end" },
   { key: "routeTurnsCut", label: "Land route-turns cut, %" },
   { key: "tradeShare", label: "Trade, % of AI city gold" },
+  { key: "gamesWon", label: "Games won before the last turn" },
+  { key: "winningTurn", label: "...on turn (0: not won)" },
+  { key: "mostKeyCities", label: "Most key cities held by one faction" },
   { key: "mercenariesHired", label: "Mercenary regiments hired" },
   { key: "mercenariesToppedUp", label: "...soldiers topped up" },
   { key: "mercenariesAlive", label: "...still serving at the end" },
   { key: "seconds", label: "Seconds per game" },
 ];
+
+/** The six great capitals, by name (see keyCities in data/scenarios/romanWorld.ts). */
+const KEY_CITIES = ["Roma", "Carthago", "Pella", "Corinthus", "Antiochia", "Alexandria"];
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(`--${name}`);
@@ -262,6 +271,11 @@ async function runWorker(): Promise<void> {
       }, 0),
       cities.filter((c) => aiIds.has(c.owner)).reduce((n, c) => n + cityStats(state, c).gold, 0),
     ),
+    // Versions before victory conditions stop only at last faction standing.
+    gamesWon: (result as { winner?: object | null }).winner ? 1 : 0,
+    winningTurn: (result as { winner?: { turn: number } | null }).winner?.turn ?? 0,
+    // Counted by name, so versions without key cities report it too.
+    mostKeyCities: Math.max(0, ...state.factions.map((f) => cities.filter((c) => KEY_CITIES.includes(c.name) && c.owner === f.id).length)),
     mercenariesHired: mercenaries.hired,
     mercenariesToppedUp: mercenaries.toppedUp,
     mercenariesAlive: aiRegiments.filter((r) => (r as { mercenary?: boolean }).mercenary).length,

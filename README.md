@@ -59,9 +59,23 @@ Carthage (Lilybaeum, west). A narrow sea from the Hellespont to the
 Bosporus divides Europe from Asia, with Byzantion on the European shore.
 Every city can be reached from every other.
 
-The game is won by being the **last faction standing**: when every rival has
-fallen, a victory screen appears. If Rome loses its last city, it's defeat.
-Either way you can close the screen to look at the map, or play again.
+**How to win** is chosen on the start screen:
+
+| Preset | Rome wins when | Rome loses when |
+|---|---|---|
+| **Conquest** | it's the last faction standing | it loses its last city |
+| **Key cities** (the default) | it holds 4 of the 6 key cities at the end of 5 of its turns in a row, or it's the last standing | it falls, or another faction meets the key-city goal |
+
+The **key cities** are the six great capitals: Roma, Carthago, Pella,
+Corinthus, Antiochia and Alexandria, starred on the map. The scoreboard shows
+how many each faction holds. On the first turn a faction holds 4, everyone is
+told, and the status line counts down to its win; losing any one of them
+starts the count again. Any faction can win this way, AI or not.
+
+There's no time limit: a game goes on until someone wins.
+
+When the game ends, a victory or defeat screen says how. You can close it
+to look at the map, but no more orders go through, or play again.
 
 ## Controls
 
@@ -635,7 +649,8 @@ to expect from them:
 - [x] Phase 4: Cities and economy
 - [x] Phase 5: Combat
 - [x] Phase 6: AI
-- [x] Phase 7: Game structure (last faction standing, victory and defeat screens)
+- [x] Phase 7: Game structure (last faction standing, key cities or a time
+  limit chosen at the start, victory and defeat screens)
 - [ ] Phase 8: Fog of war and polish (done: fog of war, battle preview, march
   orders, next-army hotkey; to do: animations, balance passes)
 - [ ] Phase 9: Save and load
