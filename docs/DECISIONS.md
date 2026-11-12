@@ -649,6 +649,25 @@ so.
   Levers: "grow, then tax" overtakes normal at turn 44 (was 43); exterminating is best
   after 100 turns in 4 of 55 cities.
 
+- **Growth ×1.1 across the board, and road-or-sea trade.** The player asked for 10–20%
+  more base growth (`ECONOMY.growthMultiplier`, applied to the terrain average before
+  taxes, farms and ports), and for cities joined by a road (their land borders) to trade
+  only by land, never by sea as well: before, ~20% of route-ends at turn 100 were a sea
+  route doubling a land one. A third change, markets multiplying only trade (with trade
+  gold +50% and the market's trade bonus doubled to make up for it), was measured and
+  dropped: exterminating became the best choice after 50 turns in 20–29% of cities
+  (`tests/balance.test.ts` allows 15%), since occupied cities earned less while plunder
+  didn't change; cities changing hands fell 19–36%. Growth ×1.2 was measured with it and
+  the player chose ×1.1. Shipped together, against master, 8 seeds, 50 turns (normal,
+  then `--garrison`): AI net income +4% / +17%, treasuries −2% / +10%, cities not with
+  first owner 16 → 15 / 14 → 14, battles +12% / +4%, level-2 cities 19 → 22 / 20 → 22,
+  sea routes 6 → 2 / 6 → 4. 4 seeds, 100 turns: AI net income +14% / +40%, treasuries
+  659 → 867 / 626 → 774, cities not with first owner 32 → 27 / 26 → 22, battles +14% /
+  +15%, level-3 cities 20 → 24 / 21 → 24, sea routes 35 → 14 / 24 → 19, trade 24% → 14% /
+  22% → 16% of AI city gold; no invalid orders or debt. Levers: exterminating best after
+  100 turns in 4 of 55 cities (unchanged), "grow, then tax" overtakes normal at turn 38
+  (was 44).
+
 ## Economy tuning history
 
 The economy was retuned several times; the lesson each time:

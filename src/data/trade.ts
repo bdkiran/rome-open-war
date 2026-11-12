@@ -4,8 +4,8 @@
  * (their land must border), ports in both for a sea route (within the ports'
  * sailing range). A route runs at the lower of the two cities' levels and
  * pays each end gold for every 1,000 people at the other end, so trading
- * with a big city pays more. The market multiplies trade gold more than the
- * rest of a city's income.
+ * with a big city pays more. Cities joined by a road trade only by land.
+ * The market multiplies trade gold more than the rest of a city's income.
  */
 export const TRADE = {
   /** Gold per 1,000 people in the partner city, by a land route's level (index = road level; 0 = no route). */

@@ -1,4 +1,4 @@
-/** Trade routes: roads and ports at both ends, own cities only, cut by sieges; the market's bonus on trade. */
+/** Trade routes: roads and ports at both ends, own cities only, road or sea, cut by sieges; the market's bonus on trade. */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { GameContext } from "@/core/context.js";
@@ -31,11 +31,11 @@ function landPair(state: GameState): [City, City] {
   throw new Error("no land pair");
 }
 
-/** Two ports of the same owner within a Jetty's range. */
+/** Two coastal cities of the same owner within a Jetty's range, not joined by a road. */
 function seaPair(state: GameState): [City, City] {
   for (const city of Object.values(state.cities)) {
     const other = Object.entries(city.seaDistances)
-      .filter(([, steps]) => steps <= TRADE.seaRange[1])
+      .filter(([id, steps]) => steps <= TRADE.seaRange[1] && !city.landNeighbours.includes(id))
       .map(([id]) => state.cities[id])
       .find((c) => c.owner === city.owner);
     if (other) return [city, other];
@@ -142,6 +142,36 @@ describe("cutting a road", () => {
     const { raider: _, ...armies } = cut.armies;
     const clear = processCities({ topology: map.topology }, { ...cut, armies }, a.owner);
     assert.equal(clear.log.filter((e) => e.text.includes("open again")).length, 1);
+  });
+});
+
+describe("road or sea", () => {
+  /** Two cities of the same owner joined by a road, whose coasts are also within a Jetty's range. */
+  function bothPair(state: GameState): [City, City] {
+    for (const city of Object.values(state.cities)) {
+      const other = city.landNeighbours
+        .filter((id) => (city.seaDistances[id] ?? Infinity) <= TRADE.seaRange[1])
+        .map((id) => state.cities[id])
+        .find((c) => c.owner === city.owner);
+      if (other) return [city, other];
+    }
+    throw new Error("no pair joined by road and sea");
+  }
+
+  it("never trades by sea between cities a road joins, built or not", () => {
+    let state = newGame();
+    const [a, b] = bothPair(state);
+    state = build(state, [a.id, b.id], { port: 1 });
+    assert.deepEqual(tradeRoutes(state, state.cities[a.id]).filter((r) => r.partner === b.id), []);
+    state = build(state, [a.id, b.id], { port: 1, roads: 1 });
+    assert.deepEqual(tradeRoutes(state, state.cities[a.id]).filter((r) => r.partner === b.id).map((r) => r.by), ["land"]);
+  });
+
+  it("still trades by sea between ports no road joins", () => {
+    let state = newGame();
+    const [a, b] = seaPair(state);
+    state = build(state, [a.id, b.id], { port: 1 });
+    assert.deepEqual(tradeRoutes(state, state.cities[a.id]).filter((r) => r.partner === b.id).map((r) => r.by), ["sea"]);
   });
 });
 

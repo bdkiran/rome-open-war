@@ -209,7 +209,7 @@ export interface CityStats {
   landCapacity: number;
   /** Whether its level's limit, rather than its land, is what holds it back. */
   limitedByLevel: boolean;
-  /** Growth per turn when the city is small, e.g. 0.025 = 2.5%. Average of its terrain. */
+  /** Growth per turn when the city is small, e.g. 0.025 = 2.5%. Average of its terrain, × ECONOMY.growthMultiplier. */
   baseGrowthRate: number;
   /** The base rate after the city's tax rate. */
   growthRate: number;
@@ -260,7 +260,7 @@ export function cityStats(state: GameState, city: City): CityStats {
     if (state.tiles[tile].terrain === "plains") plains++;
   }
   const places = tiles.length + city.fishingGrounds;
-  const baseGrowthRate = places > 0 ? growthSum / places : 0;
+  const baseGrowthRate = places > 0 ? (growthSum / places) * ECONOMY.growthMultiplier : 0;
   const tax = TAX_RATES[city.taxRate];
   const farms = BUILDING_EFFECTS.farmsGrowth[city.buildings.farms];
   const port = BUILDING_EFFECTS.portGrowth[city.buildings.port] * seaShare(state, city);
@@ -456,8 +456,9 @@ export function roadCut(state: GameState, road: Road, owner: FactionId): boolean
  * A city's trade routes: by road to each city of the same owner it's joined
  * to, if both have roads, and to each port of the same owner within sailing
  * range, if both have ports. A siege at either end shuts a route; an enemy
- * army on a road or next to it cuts it (it's listed, paying nothing). A pair
- * joined by land and sea trades both ways.
+ * army on a road or next to it cuts it (it's listed, paying nothing). Cities
+ * joined by a road (their land borders) trade only by land, whether or not
+ * they've built roads: the sea is for cities the roads don't join.
  */
 export function tradeRoutes(state: GameState, city: City): TradeRoute[] {
   if (city.besiegedBy) return [];
@@ -478,6 +479,7 @@ export function tradeRoutes(state: GameState, city: City): TradeRoute[] {
   }
   if (city.buildings.port > 0) {
     for (const [id, steps] of Object.entries(city.seaDistances)) {
+      if (city.landNeighbours.includes(id)) continue;
       const other = open(id);
       const level = other ? Math.min(city.buildings.port, other.buildings.port) : 0;
       if (other && level > 0 && steps <= TRADE.seaRange[level]) {

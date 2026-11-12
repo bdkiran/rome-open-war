@@ -22,6 +22,11 @@ export const ECONOMY = {
    * measured too; the player chose 1.25, the gentlest on the late game.
    */
   growthCurve: 1.25,
+  /**
+   * Every city's growth rate from its land is multiplied by this, before taxes,
+   * farms and ports. Raised from 1 to speed up the whole game's growth.
+   */
+  growthMultiplier: 1.1,
 } as const;
 
 export type TaxRate = "low" | "normal" | "high";
