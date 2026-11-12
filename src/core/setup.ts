@@ -1,7 +1,7 @@
 import type { GameContext } from "@/core/context.js";
 import { citiesOf, type Army, type GameState, type Regiment } from "@/core/state.js";
 import { ECONOMY } from "@/data/economy.js";
-import { GAME_SETUP, STARTING_ARMIES } from "@/data/gameSetup.js";
+import { GAME_SETUP, STARTING_ARMIES, VICTORY, type VictoryPreset } from "@/data/gameSetup.js";
 import type { Scenario, ScenarioFaction } from "@/data/scenarios/types.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, UNITS, regimentSize } from "@/data/units.js";
@@ -12,9 +12,14 @@ import { claimTerritory, createCity, drawRegions, mapTradeRoutes, measureCoasts 
 /**
  * Builds the starting state for a scenario: every faction's cities at their
  * historical locations, and its starting armies in its cities. No other
- * cities are ever created.
+ * cities are ever created. The victory preset says how the game can be won.
  */
-export function createGame(ctx: GameContext, map: GameMap, scenario: Scenario): GameState {
+export function createGame(
+  ctx: GameContext,
+  map: GameMap,
+  scenario: Scenario,
+  options: { victory?: VictoryPreset } = {},
+): GameState {
   const { factions } = scenario;
   if (factions.length === 0) throw new Error("A game needs at least one faction");
 
@@ -40,9 +45,17 @@ export function createGame(ctx: GameContext, map: GameMap, scenario: Scenario): 
     nextBattleNumber: 1,
     mapSeed: scenario.seed,
     rngState: scenario.seed >>> 0,
+    victory: { preset: options.victory ?? VICTORY.defaultPreset, keyCities: [], holding: null, winner: null },
   };
 
   state = drawRegions(ctx, mapTradeRoutes(ctx, measureCoasts(ctx, claimTerritory(ctx, placeCities(ctx, state, map, factions)))));
+  const cities = Object.values(state.cities);
+  const keyCities = (scenario.keyCities ?? []).map((name) => {
+    const city = cities.find((c) => c.name === name);
+    if (!city) throw new Error(`Key city ${name} isn't in the scenario`);
+    return city.id;
+  });
+  state = { ...state, victory: { ...state.victory, keyCities } };
   return placeStartingArmies(state);
 }
 

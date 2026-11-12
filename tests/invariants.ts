@@ -79,5 +79,15 @@ export function brokenRules(state: GameState): string[] {
     if (faction.alive && citiesOf(state, faction.id).length === 0) broken.push(`${at}: ${faction.id} is alive with no cities`);
     if (!faction.alive && armiesOf(state, faction.id).length > 0) broken.push(`${at}: fallen ${faction.id} still has armies`);
   }
+  const { victory } = state;
+  for (const id of victory.keyCities) if (!state.cities[id]) broken.push(`${at}: key city ${id} doesn't exist`);
+  if (victory.holding) {
+    if (!state.factions.some((f) => f.id === victory.holding!.factionId)) broken.push(`${at}: ${victory.holding.factionId} holds the key cities but doesn't exist`);
+    if (victory.holding.since > state.turn) broken.push(`${at}: key cities held since turn ${victory.holding.since}, in the future`);
+    if (victory.preset === "conquest") broken.push(`${at}: key cities counted in a conquest game`);
+  }
+  if (victory.winner && !state.factions.find((f) => f.id === victory.winner!.factionId)?.alive) {
+    broken.push(`${at}: ${victory.winner.factionId} won but has fallen`);
+  }
   return broken;
 }

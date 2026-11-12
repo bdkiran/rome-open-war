@@ -70,6 +70,7 @@ html, body {
   background: rgba(20, 30, 36, 0.7);
 }
 .city-plate.capital .name { font-size: 14px; }
+.city-plate .key { margin-right: 3px; color: var(--brass); }
 /* Your cities: how the population is moving, and whether anything is being built or trained */
 .city-plate .pop { display: inline-flex; align-items: center; gap: 3px; }
 .city-plate .pop svg { width: 11px; height: 11px; fill: currentColor; }
@@ -337,6 +338,8 @@ button.report-dismiss { width: 26px; height: 30px; padding: 0; font-size: 16px; 
   font-variant-numeric: tabular-nums;
   color: var(--brass);
 }
+.faction-list .keys { font-size: 12px; font-weight: 600; color: var(--brass); }
+.faction-list .keys:empty { display: none; }
 .faction-list li.defeated { text-decoration: line-through; opacity: 0.5; }
 /* Numbers line up in columns under the header: people, soldiers, gold. */
 .faction-list .count { min-width: 3.2em; text-align: right; }
@@ -816,6 +819,18 @@ button.city-screen-close:hover { background: rgba(224, 181, 79, 0.25); }
 @media (prefers-reduced-motion: reduce) {
   .modal-card { animation: none; }
 }
+
+/* The start screen: how the game is won */
+.start-card { text-align: center; }
+.start-options { display: grid; gap: 10px; }
+.start-option {
+  display: grid;
+  gap: 4px;
+  padding: 12px 16px;
+  text-align: left;
+}
+.start-option-name { font-family: var(--serif); font-size: 18px; font-weight: 600; }
+.start-option-summary { font-size: 13px; opacity: 0.85; }
 
 /* Victory and defeat */
 .game-over-card { text-align: center; padding-top: 36px; }

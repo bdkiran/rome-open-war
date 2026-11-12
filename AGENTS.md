@@ -64,7 +64,8 @@ src/
                siege, conquest (occupy/enslave/exterminate), vision (fog),
                scouts (moving them), watchtowers (building them, who sees
                through them),
-               turn (start/end of each faction's turn), victory, pathfinding
+               turn (start/end of each faction's turn), victory (last standing,
+               key cities, score), pathfinding
   ai/          ai.ts (nextAction: one action at a time), assess.ts (targets,
                threats, relief of besieged cities)
   game/        controller.ts: holds the state, runs AI turns, notifies the UI
@@ -78,13 +79,15 @@ src/
   ui/          panels as HTML strings: infoPanel (side panel: facts + city
                tabs), selectionBar (bottom bar: Army / Town cards), turnPanel
                (scoreboard, money breakdown), battlePanel, battleResult,
-               siegePanel, settlementPanel, reports (notifications), gameOver
+               siegePanel, settlementPanel, reports (notifications), gameOver,
+               startScreen (how the game is won)
   main.ts      wires it all together; view state; player input
 tests/         simulation.test.ts (whole games: invalid orders, debt, state
                never mutated, JSON round trip, determinism), invariants.ts
                (what must hold in any state: add to it when adding rules),
                map.test.ts (every starting city can reach level 3),
                siege.test.ts, buildings.test.ts, trade.test.ts, recruitment.test.ts,
+               victory.test.ts,
                watchtowers.test.ts, scouts.test.ts, experience.test.ts, combat.test.ts,
                flight.test.ts, crossings.test.ts,
                controller.test.ts, playbackBanner.test.ts, aiGovernment.test.ts,

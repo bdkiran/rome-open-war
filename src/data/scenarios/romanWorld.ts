@@ -16,6 +16,8 @@ export const ROMAN_WORLD: Scenario = {
   name: "The Roman World, 218 BC",
   mapEngine: europeMapEngine,
   seed: 218,
+  // The six great capitals of the Mediterranean: hold 4 of them to win.
+  keyCities: ["Roma", "Carthago", "Pella", "Corinthus", "Antiochia", "Alexandria"],
   factions: [
     {
       id: "rome", name: "Roman Republic", shortName: "Rome", color: "#c0392b", culture: "roman", controller: "human",

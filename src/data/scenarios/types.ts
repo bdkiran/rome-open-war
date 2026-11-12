@@ -36,4 +36,6 @@ export interface Scenario {
   seed: number;
   /** In turn order. */
   factions: readonly ScenarioFaction[];
+  /** Cities (by name) whose holder can win the game (see VICTORY in data/gameSetup.ts). None: no key-city victory. */
+  keyCities?: readonly string[];
 }

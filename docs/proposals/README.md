@@ -25,5 +25,4 @@ and its doc is deleted. This folder only holds open proposals.
 | [Naval transport](naval-transport.md) | Proposed | Transports along the coast, and blockades of port cities |
 | [Battles](battles.md) | Proposed | Morale that carries over, frontage by terrain with reserves, and formation, doctrine and orders that decide the tactics (replaces battle stances) |
 | [Events](events.md) | Proposed | Seeded events: plague, harvests, revolts, migrations |
-| [Victory conditions](victory-conditions.md) | Proposed | Win by key cities or by score, not only by being last standing |
 | [Region specialties](region-specialties.md) | Proposed | Resources on the land that make some cities worth more |

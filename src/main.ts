@@ -44,6 +44,7 @@ import { previewBattle, type BattlePreview } from "@/systems/combat.js";
 import { concerns, renderReports } from "@/ui/reports.js";
 import { outcomeFor } from "@/systems/victory.js";
 import { updateTurnPanel } from "@/ui/turnPanel.js";
+import { chooseVictoryPreset } from "@/ui/startScreen.js";
 
 // ---- Scenario -------------------------------------------------------------
 
@@ -56,7 +57,12 @@ const ctx: GameContext = { topology };
 
 // AI actions the player can see are played one at a time (see "Watching the enemy's turns"),
 // so the pause before each AI turn can be short.
-const controller = new GameController(ctx, createGame(ctx, map, scenario), {
+// The start screen: the player picks how the game is won before it begins.
+const victory = await chooseVictoryPreset(
+  { root: byId<HTMLElement>("start"), options: byId<HTMLElement>("start-options") },
+  scenario.keyCities ?? [],
+);
+const controller = new GameController(ctx, createGame(ctx, map, scenario, { victory }), {
   aiTurnDelayMs: 40,
   showAiAction: (step) => showAiStep(step),
 });

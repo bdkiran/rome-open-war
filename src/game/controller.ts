@@ -2,6 +2,7 @@ import { nextAction } from "@/ai/ai.js";
 import { applyAction, type Action, type ActionResult } from "@/core/actions.js";
 import type { GameContext } from "@/core/context.js";
 import { currentFaction, type FactionId, type GameState } from "@/core/state.js";
+import { winner } from "@/systems/victory.js";
 
 /** Stops a buggy AI from looping forever within one turn. */
 const MAX_AI_ACTIONS_PER_TURN = 200;
@@ -75,7 +76,7 @@ export class GameController {
     if (this.aiRunning) return;
     this.aiRunning = true;
     try {
-      while (currentFaction(this.state).controller === "ai" && this.anyHumanAlive()) {
+      while (currentFaction(this.state).controller === "ai" && this.anyHumanAlive() && !winner(this.state)) {
         const faction = currentFaction(this.state);
         await delay(this.options.aiTurnDelayMs);
 

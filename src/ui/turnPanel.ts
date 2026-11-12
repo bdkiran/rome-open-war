@@ -16,7 +16,8 @@ import { TAX_RATES } from "@/data/economy.js";
 import { SCOUT } from "@/data/scouts.js";
 import { scoutsOf } from "@/systems/scouts.js";
 import { escapeHtml, signed } from "@/ui/html.js";
-import { outcomeFor } from "@/systems/victory.js";
+import { VICTORY } from "@/data/gameSetup.js";
+import { keyCitiesCount, keyCitiesHeld, keyCityWinTurn, outcomeFor, scoreFor } from "@/systems/victory.js";
 
 export interface TurnPanelElements {
   turnNumber: HTMLElement;
@@ -37,9 +38,18 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
   const playerTurn = current.id === humanId && !outcome;
 
   el.turnNumber.textContent = `Turn ${state.turn}`;
-  if (outcome?.kind === "defeat") el.turnStatus.textContent = `${outcome.faction.name} has fallen.`;
-  else if (outcome?.kind === "victory") el.turnStatus.textContent = "Victory. Every rival has fallen.";
-  else el.turnStatus.textContent = playerTurn ? "Your turn." : `${current.name} is taking its turn.`;
+  const holding = state.victory.holding;
+  const holder = holding ? getFaction(state, holding.factionId) : undefined;
+  if (outcome?.kind === "defeat") {
+    el.turnStatus.textContent = outcome.winner && outcome.winner.reason !== "conquest" ? `${outcome.winner.faction.name} has won.` : `${outcome.faction.name} has fallen.`;
+  } else if (outcome?.kind === "victory") {
+    el.turnStatus.textContent =
+      outcome.reason === "keyCities" ? "Victory. The key cities are yours." : outcome.reason === "score" ? "Victory, on score." : "Victory. Every rival has fallen.";
+  } else if (holding && holder) {
+    // Someone is counting down to a key-city win: say so every turn until it's over.
+    const mine = holder.id === humanId;
+    el.turnStatus.textContent = `${mine ? "You win" : `${holder.shortName} wins`} after turn ${keyCityWinTurn(holding.since)} unless ${mine ? "you fall" : "it falls"} below ${VICTORY.keyCitiesNeeded} key cities.`;
+  } else el.turnStatus.textContent = playerTurn ? "Your turn." : `${current.name} is taking its turn.`;
   el.endTurnButton.disabled = !playerTurn;
   const hasCities = humanId !== null && citiesOf(state, humanId).length > 0;
   el.prevCityButton.disabled = !hasCities;
@@ -71,7 +81,14 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
       const name = document.createElement("span");
       name.className = "name";
       name.textContent = faction.id === humanId ? `${faction.shortName} (you)` : faction.shortName;
-      name.title = faction.name;
+      name.title = state.victory.preset === "timeLimit" && faction.alive ? `${faction.name}: score ${formatNumber(scoreFor(state, faction.id))}` : faction.name;
+
+      // Key cities held, when they can win the game.
+      const held = faction.alive && keyCitiesCount(state) ? keyCitiesHeld(state, faction.id) : 0;
+      const keys = document.createElement("span");
+      keys.className = "keys";
+      keys.textContent = held > 0 ? `★${held}` : "";
+      keys.title = `Key cities held (${VICTORY.keyCitiesNeeded} of ${state.victory.keyCities.length} for ${VICTORY.holdTurns} turns wins)`;
 
       const count = document.createElement("span");
       count.className = "count";
@@ -90,7 +107,7 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
       gold.textContent = faction.alive ? formatCompact(faction.gold) : "";
       gold.title = "Treasury (gold)";
 
-      item.append(swatch, name, count, soldiers, gold);
+      item.append(swatch, keys, name, count, soldiers, gold);
       return item;
     }),
   );

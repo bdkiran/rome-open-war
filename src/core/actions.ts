@@ -40,6 +40,7 @@ import type { SettlementChoice } from "@/data/conquest.js";
 import type { BuildingType } from "@/data/buildings.js";
 import { endTurn } from "@/systems/turn.js";
 import { buildWatchtower, canBuildWatchtower } from "@/systems/watchtowers.js";
+import { winner } from "@/systems/victory.js";
 
 /** Everything a player (human or AI) can do. */
 export type Action =
@@ -103,6 +104,9 @@ export function applyAction(ctx: GameContext, state: GameState, factionId: Facti
 }
 
 function perform(ctx: GameContext, state: GameState, factionId: FactionId, action: Action): ActionResult {
+  // Once the game is won, the map can still be looked at, but nothing more happens.
+  const won = winner(state);
+  if (won) return { ok: false, reason: `The game is over: ${won.faction.name} has won.` };
   const current = currentFaction(state);
   if (current.id !== factionId) {
     return { ok: false, reason: `It is ${current.name}'s turn.` };

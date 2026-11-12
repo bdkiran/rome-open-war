@@ -5,11 +5,13 @@ import { progressConstruction } from "@/systems/buildings.js";
 import { processRecruitment } from "@/systems/recruitment.js";
 import { processCities } from "@/systems/cities.js";
 import { processSieges } from "@/systems/siege.js";
+import { checkScoreTurn, trackKeyCities } from "@/systems/victory.js";
 
 /**
  * Ends the current faction's turn: runs its end-of-turn processing, then
  * passes play to the next living faction. When play wraps back to the first
- * faction, the turn number goes up.
+ * faction, the turn number goes up, and with a time limit, the last round
+ * may decide the game on score.
  */
 export function endTurn(ctx: GameContext, state: GameState): GameState {
   const finished = endFactionTurn(ctx, state, currentFaction(state).id);
@@ -23,13 +25,15 @@ export function endTurn(ctx: GameContext, state: GameState): GameState {
     if (finished.factions[index].alive) break;
   }
 
-  const next: GameState = { ...finished, currentFactionIndex: index, turn };
+  const scored = turn > finished.turn ? checkScoreTurn(finished, finished.turn) : finished;
+  const next: GameState = { ...scored, currentFactionIndex: index, turn };
   return startFactionTurn(ctx, next, next.factions[index].id);
 }
 
 /**
  * Runs as a faction ends its turn: its marching armies move, and its cities pay income, grow, build and recruit,
- * its sieges tighten (or lift, if it has walked away), and its army is paid.
+ * its sieges tighten (or lift, if it has walked away), its army is paid, and
+ * its hold on the key cities is counted.
  * Doing it here gives every faction exactly one tick per round, whatever its
  * turn order.
  */
@@ -40,7 +44,7 @@ function endFactionTurn(ctx: GameContext, state: GameState, factionId: FactionId
   next = progressConstruction(next, factionId);
   next = processRecruitment(next, factionId);
   next = processSieges(ctx, next, factionId);
-  return payUpkeep(next, factionId);
+  return trackKeyCities(payUpkeep(next, factionId), factionId);
 }
 
 /** Runs at the start of each faction's turn: its armies get their movement back. */

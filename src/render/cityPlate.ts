@@ -2,12 +2,14 @@ import type { City, GameState } from "@/core/state.js";
 import { formatCompact } from "@/render/format.js";
 import { cityStats } from "@/systems/cities.js";
 import { escapeHtml } from "@/ui/html.js";
+import { isKeyCity, keyCitiesCount } from "@/systems/victory.js";
 
 /**
  * A city's name plate on the map, as HTML: its name and its people. On the
  * player's own cities a small figure beside the people shows how they're
  * moving (green rising fast, yellow slow or not at all, red falling), and a
  * hammer or crossed swords show that something is being built or trained.
+ * A star before the name marks a key city, when they can win the game.
  * Icons only, no words: the city panel has the detail.
  */
 
@@ -36,7 +38,8 @@ export function growthTrend(state: GameState, city: City): "rising" | "steady" |
  * its growth and work shown, since a rival's aren't the player's to see.
  */
 export function cityPlate(state: GameState, city: City, mine: boolean): string {
-  const name = `<span class="name">${escapeHtml(city.name)}</span>`;
+  const key = keyCitiesCount(state) && isKeyCity(state, city.id) ? `<span class="key" aria-label="Key city">★</span>` : "";
+  const name = `<span class="name">${key}${escapeHtml(city.name)}</span>`;
   const people = formatCompact(city.population);
   if (!mine) return `${name}<span class="pop">${people}</span>`;
 

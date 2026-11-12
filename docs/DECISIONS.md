@@ -777,7 +777,26 @@ in detail, and `npm run levers` covers the economy.
   reach, a rival road was in range 5 times in 121 chances, and none was ever occupied.
   The player chose to ship without it, so cutting roads is a tool for the player.
 
-## Interface
+## Game structure
+
+- **Victory: key cities or a time limit, chosen on a start screen.** Being the last
+  faction standing needs some 14 factions to fall, at about 2 per 100 turns, so a game
+  almost never ended. Three presets: *Conquest* (last standing, as before), *Key cities*
+  (the default: hold 4 of the six great capitals, Roma, Carthago, Pella, Corinthus,
+  Antiochia and Alexandria, at the end of 5 of your turns in a row) and *Time limit*
+  (key cities, or the best score once turn 150 is over: 100 per city, 10 per 1,000
+  people, 300 per key city, no gold so hoarding doesn't pay). Last standing always wins.
+  Any faction can win on key cities, so they put pressure on the player; the first turn
+  one holds 4 is announced to everyone and the status line counts down. 4 of 6 is more
+  than half, so only one faction can be counting at a time. Once a game is won,
+  `applyAction` refuses every order: the map can be viewed, nothing moves. The AI doesn't
+  chase key cities (it still targets whatever is cheapest). Measured with the default
+  preset, over 8 seeds × 100 turns, with and without `--garrison`: no game won, every
+  other number identical to before; the most key cities one faction held was 2 (2–3).
+  Over 4 seeds × 150 turns with `--garrison`: one AI win, Egypt on turn 143 (Pella,
+  Corinthus, Antiochia, Alexandria, warned on turn 139). The east is the easy route, as
+  expected: Macedon and the Greeks are small. In two other seeds an AI held Roma by
+  turn 150, garrison or not.
 
 - **3D campaign map** (three.js), tilted camera, raised terrain. The 2D
   canvas map was removed. Models are built in code; real `.glb` files can

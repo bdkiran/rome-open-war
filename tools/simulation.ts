@@ -11,10 +11,14 @@ import { armyAt, citiesOf, currentFaction, type GameState } from "@/core/state.j
 import { nextAction } from "@/ai/ai.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize, type UnitType } from "@/data/units.js";
+import type { VictoryPreset } from "@/data/gameSetup.js";
+import { winner } from "@/systems/victory.js";
 
 export interface SimulationOptions {
-  /** Play until this turn is over (or one faction is left). */
+  /** Play until this turn is over (or the game is won). */
   turns: number;
+  /** How the game can be won. Defaults to the start screen's default. */
+  victory?: VictoryPreset;
   /** Seeds the battles. Defaults to the scenario's own seed. */
   seed?: number;
   /** Give the passive player a strong garrison in each city, so the AIs fight each other. */
@@ -37,6 +41,8 @@ export interface SimulationResult {
   actions: number;
   actionsByType: Record<string, number>;
   mostActionsInOneTurn: number;
+  /** Who won, how and on which turn, if the game ended before the turn limit. */
+  winner: { factionId: string; reason: string; turn: number } | null;
   ms: number;
 }
 
@@ -49,12 +55,12 @@ export function simulate(options: SimulationOptions): SimulationResult {
   const map = scenario.mapEngine.createMap();
   const ctx: GameContext = { topology: map.topology };
   const keep = (s: GameState) => (options.freeze ? deepFreeze(s) : s);
-  let state = createGame(ctx, map, scenario);
+  let state = createGame(ctx, map, scenario, { victory: options.victory });
   const player = state.factions.find((f) => f.controller === "human")!.id;
   if (options.garrison) state = garrisonCities(state, player);
   state = keep(state);
 
-  const result: Omit<SimulationResult, "state" | "ms"> = {
+  const result: Omit<SimulationResult, "state" | "ms" | "winner"> = {
     ctx,
     invalid: [],
     stuck: [],
@@ -64,7 +70,7 @@ export function simulate(options: SimulationOptions): SimulationResult {
   };
   const started = performance.now();
 
-  while (state.turn <= options.turns && state.factions.filter((f) => f.alive).length > 1) {
+  while (state.turn <= options.turns && !winner(state)) {
     const faction = currentFaction(state);
     if (faction.controller === "human") {
       options.onRound?.(state);
@@ -98,7 +104,13 @@ export function simulate(options: SimulationOptions): SimulationResult {
     result.mostActionsInOneTurn = Math.max(result.mostActionsInOneTurn, taken);
   }
 
-  return { ...result, state, ms: performance.now() - started };
+  const won = winner(state);
+  return {
+    ...result,
+    state,
+    winner: won ? { factionId: won.faction.id, reason: won.reason, turn: state.victory.winner?.turn ?? state.turn } : null,
+    ms: performance.now() - started,
+  };
 }
 
 function mustApply(ctx: GameContext, state: GameState, factionId: string, action: Action): GameState {
