@@ -10,6 +10,6 @@ export const SCOUT = {
   upkeep: 4,
   /** Movement points a turn: more than cavalry (see data/units.ts). */
   movement: 20,
-  /** The city level needed to train one. */
-  cityLevel: 2,
+  /** The Market level a city needs to train one. */
+  marketLevel: 1,
 } as const;

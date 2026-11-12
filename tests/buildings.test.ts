@@ -104,7 +104,7 @@ describe("ports and roads", () => {
 });
 
 describe("gold from farms", () => {
-  it("adds gold for every plains tile with farms, before taxes and the market", () => {
+  it("adds gold for every plains tile with farms, and for every fishing ground with a port, before taxes", () => {
     let state = newGame();
     const city = Object.values(state.cities).find((c) => c.coast > 0 && plainsTiles(state, c.id) > 0)!;
     const before = cityStats(state, city).income;
@@ -113,8 +113,10 @@ describe("gold from farms", () => {
       state = withCity(state, built);
       const income = cityStats(state, built).income;
       assert.equal(income.farms, Math.round(plainsTiles(state, city.id) * BUILDING_EFFECTS.farmsGoldPerPlainsTile[level]));
-      assert.equal(income.subtotal, before.subtotal + income.farms);
-      assert.equal(income.total, Math.round((income.subtotal * income.market + income.trade * income.tradeMarket) * income.taxes));
+      assert.equal(income.port, Math.round(city.fishingGrounds * BUILDING_EFFECTS.portGoldPerFishingGround[level]));
+      assert.ok(income.port > 0);
+      assert.equal(income.subtotal, before.subtotal + income.farms + income.port);
+      assert.equal(income.total, Math.round((income.subtotal + income.trade * income.tradeMarket) * income.taxes));
     }
   });
 

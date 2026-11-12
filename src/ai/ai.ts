@@ -38,7 +38,7 @@ import {
   upkeepFor,
 } from "@/systems/armies.js";
 import { canHire, canTopUp, topUpPlan } from "@/systems/mercenaries.js";
-import { cityStats, factionIncome, mineableTiles, regionOwner } from "@/systems/cities.js";
+import { cityStats, factionIncome, mineableTiles, regionOwner, tradeRoutes } from "@/systems/cities.js";
 import { SCOUT } from "@/data/scouts.js";
 import { reachableScoutTiles, scoutsOf } from "@/systems/scouts.js";
 import { WATCHTOWER } from "@/data/watchtowers.js";
@@ -548,13 +548,14 @@ function savingForBuilding(ctx: GameContext, state: GameState, factionId: Factio
 
 
 /**
- * The order the AI builds in a city: government, market, the unit buildings
+ * The order the AI builds in a city: government, farms, the unit buildings
  * (spear yard, archery range, stables), a mine (only with enough hills or
- * mountains to dig), farms, a port (only with sea), walls, then roads. With
- * enemies near, walls come first. The market comes before the military
- * buildings so the economy isn't starved early. Roads move up beside the
- * port when the city borders one of its owner's other cities, since then
- * they carry trade.
+ * mountains to dig), a port (only with sea), walls, then roads. With enemies
+ * near, walls come first. Farms come before the military buildings so the
+ * economy isn't starved early. Roads move up beside the port when the city
+ * borders one of its owner's other cities, since then they carry trade. The
+ * market multiplies only trade, so it comes after the trade buildings, and
+ * only once the city has a trade route to multiply.
  */
 export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boolean): BuildingType[] {
   const city = state.cities[cityId];
@@ -564,9 +565,10 @@ export function aiBuildOrder(state: GameState, cityId: CityId, threatened: boole
   const trade: BuildingType[] = trades ? [...port, "roads"] : port;
   const late: BuildingType[] = trades ? [] : ["roads"];
   const military: BuildingType[] = ["spearYard", "archeryRange", "stables"];
+  const market: BuildingType[] = tradeRoutes(state, city).length > 0 ? ["market"] : [];
   return threatened
-    ? ["walls", "government", "market", ...military, ...mine, "farms", ...trade, ...late]
-    : ["government", "market", ...military, ...mine, "farms", ...trade, "walls", ...late];
+    ? ["walls", "government", "farms", ...military, ...mine, ...trade, ...market, ...late]
+    : ["government", "farms", ...military, ...mine, ...trade, ...market, "walls", ...late];
 }
 
 /**

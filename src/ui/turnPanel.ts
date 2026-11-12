@@ -115,7 +115,7 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
 
 /**
  * Where the player's money comes from and goes, turn by turn: each city's
- * gold (its base, people, mine, farms and trade, times its market and taxes), each army's
+ * gold (its base, people, mine, farms, fishing and trade, its trade times its market, all times its taxes), each army's
  * upkeep (and how much of it is mercenaries'), and what's left.
  */
 function moneyBreakdown(state: GameState, factionId: FactionId): string {

@@ -47,17 +47,17 @@ const PORT_OFFSHORE = 0.55;
  */
 const SEA_LANE = { color: "#a9d8e8", width: 1.6, lift: 0.9, opacity: 0.35 };
 /** Trading ships: their size, and their speed in map units a second. */
-const SHIP_SCALE = 1.3;
-const SHIP_SPEED = 28;
+const SHIP_SCALE = 0.9;
+const SHIP_SPEED = 16;
 /** Trading carts on the roads: their size, their speed, and how far short of each town they turn round. */
-const CART_SCALE = 1.6;
-const CART_SPEED = 14;
+const CART_SCALE = 1.1;
+const CART_SPEED = 8;
 const CART_TOWN_CLEARANCE = 30;
 /**
  * More trade, more traffic: a route carries one ship or cart for every this
  * much gold a turn it pays (both ends together), from one up to the most.
  */
-const TRAFFIC = { goldPerVehicle: 6, most: 4 };
+const TRAFFIC = { goldPerVehicle: 10, most: 2 };
 /** The fog over tiles out of sight: a dark blue-grey wash, [r, g, b, opacity]. */
 const FOG: Rgba = [0.02, 0.05, 0.07, 0.6];
 /** City name plates are hidden when zoomed out further than this. */

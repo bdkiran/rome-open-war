@@ -85,7 +85,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   farms: {
     name: "Farms",
-    purpose: "Faster population growth, and a little gold from every plains tile in the city's land.",
+    purpose: "Faster population growth, and gold from every plains tile in the city's land.",
     levels: [
       { name: "Fields", cost: 130, turns: 2 },
       { name: "Farmsteads", cost: 300, turns: 3 },
@@ -94,7 +94,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   market: {
     name: "Market",
-    purpose: "More gold from the city, and much more from its trade.",
+    purpose: "Much more gold from the city's trade. Lets it train scouts.",
     levels: [
       { name: "Market square", cost: 130, turns: 2 },
       { name: "Trade hall", cost: 300, turns: 3 },
@@ -112,7 +112,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   port: {
     name: "Port",
-    purpose: "Faster growth, the more of the city's reach is sea, and trade by sea with your other ports in range. Needs sea.",
+    purpose: "Trade by sea with your other ports in range, a little gold from fishing, and faster growth the more of the city's reach is sea. Needs sea.",
     levels: [
       { name: "Jetty", cost: 130, turns: 2 },
       { name: "Harbour", cost: 250, turns: 3 },
@@ -161,15 +161,19 @@ export const BUILDING_EFFECTS = {
   /** Extra defense for the city's garrison, added to the city and terrain bonuses. */
   wallsDefense: [0, 0.15, 0.3, 0.5],
   /** Extra population growth. */
-  farmsGrowth: [0, 0.2, 0.4, 0.6],
-  /** Extra gold from everything but trade (trade has its own, larger bonus: TRADE.marketTrade). */
-  marketGold: [0, 0.25, 0.5, 0.8],
-  /** Gold per hills or mountain tile in the city's territory, before taxes and the market. */
+  farmsGrowth: [0, 0.3, 0.6, 0.9],
+  /** Gold per hills or mountain tile in the city's territory, before taxes. */
   mineGoldPerTile: [0, 1, 2, 3],
   /** Hills and mountain tiles a city needs to build a mine: with fewer, it would take too long to repay. */
   mineMinTiles: 5,
-  /** Gold per plains tile in the city's territory, before taxes and the market. */
-  farmsGoldPerPlainsTile: [0, 0.25, 0.5, 0.75],
+  /** Gold per plains tile in the city's territory, before taxes. */
+  farmsGoldPerPlainsTile: [0, 0.5, 1, 1.5],
+  /**
+   * Gold per fishing ground (sea within the city's reach) from its port's
+   * catch, before taxes: a small trickle for the early game. Ports are mainly
+   * for trade.
+   */
+  portGoldPerFishingGround: [0, 0.2, 0.4, 0.6],
   /** Extra population growth from a port, scaled by the share of the city's reach that is sea. */
   portGrowth: [0, 0.3, 0.6, 0.9],
 } as const;

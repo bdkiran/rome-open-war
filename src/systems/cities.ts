@@ -233,17 +233,17 @@ export interface IncomeBreakdown {
   mine: number;
   /** From its farms, for each plains tile it farms. */
   farms: number;
-  /** base + people + mine + farms. */
+  /** From its port's fishing, for each fishing ground. */
+  port: number;
+  /** base + people + mine + farms + port. */
   subtotal: number;
   /** From its trade routes, by land and sea. */
   trade: number;
   /** The tax rate's multiplier, e.g. 1.5 on high taxes. */
   taxes: number;
-  /** The market's multiplier on the subtotal, e.g. 1.15 with a market square. */
-  market: number;
-  /** The market's multiplier on trade, e.g. 1.5 with a market square. */
+  /** The market's multiplier on trade, e.g. 2 with a market square. It touches nothing else. */
   tradeMarket: number;
-  /** (subtotal × market + trade × tradeMarket) × taxes, rounded. */
+  /** (subtotal + trade × tradeMarket) × taxes, rounded. */
   total: number;
 }
 
@@ -273,11 +273,11 @@ export function cityStats(state: GameState, city: City): CityStats {
   const people = Math.round((city.population / 1000) * ECONOMY.goldPer1000People);
   const mine = mineable * BUILDING_EFFECTS.mineGoldPerTile[city.buildings.mine];
   const farmGold = Math.round(plains * BUILDING_EFFECTS.farmsGoldPerPlainsTile[city.buildings.farms]);
-  const subtotal = base + people + mine + farmGold;
+  const portGold = Math.round(city.fishingGrounds * BUILDING_EFFECTS.portGoldPerFishingGround[city.buildings.port]);
+  const subtotal = base + people + mine + farmGold + portGold;
   const trade = Math.round(tradeRoutes(state, city).reduce((sum, r) => sum + r.gold, 0));
-  const market = 1 + BUILDING_EFFECTS.marketGold[city.buildings.market];
   const tradeMarket = 1 + TRADE.marketTrade[city.buildings.market];
-  const total = Math.round((subtotal * market + trade * tradeMarket) * tax.gold);
+  const total = Math.round((subtotal + trade * tradeMarket) * tax.gold);
 
   return {
     capacity: fedCapacity,
@@ -287,7 +287,7 @@ export function cityStats(state: GameState, city: City): CityStats {
     growthRate,
     growth: populationGrowth(city.population, fedCapacity, growthRate),
     gold: total,
-    income: { base, people, mine, farms: farmGold, subtotal, trade, taxes: tax.gold, market, tradeMarket, total },
+    income: { base, people, mine, farms: farmGold, port: portGold, subtotal, trade, taxes: tax.gold, tradeMarket, total },
   };
 }
 

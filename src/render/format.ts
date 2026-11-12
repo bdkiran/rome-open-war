@@ -62,14 +62,14 @@ export function formatMultiplier(n: number): string {
 }
 
 /**
- * How a city's gold is reached, e.g. "5 base + 20 people = 25 ×1.15 market,
- * 12 trade ×1.5 market, ×1.5 high taxes = 70". `taxName` names the rate.
+ * How a city's gold is reached, e.g. "5 base + 20 people + 2 fishing,
+ * 12 trade ×2 market, ×1.5 high taxes = 77". `taxName` names the rate.
  */
 export function describeIncome(i: IncomeBreakdown, taxName: string): string {
   const x = formatMultiplier;
-  const sources = [`${i.base} base`, `${i.people} people`, ...(i.mine ? [`${i.mine} mine`] : []), ...(i.farms ? [`${i.farms} farms`] : [])];
-  const parts = [`${sources.join(" + ")}${i.market !== 1 ? ` = ${i.subtotal} ${x(i.market)} market` : ""}`];
+  const sources = [`${i.base} base`, `${i.people} people`, ...(i.mine ? [`${i.mine} mine`] : []), ...(i.farms ? [`${i.farms} farms`] : []), ...(i.port ? [`${i.port} fishing`] : [])];
+  const parts = [sources.join(" + ")];
   if (i.trade) parts.push(`${i.trade} trade${i.tradeMarket !== 1 ? ` ${x(i.tradeMarket)} market` : ""}`);
   if (i.taxes !== 1) parts.push(`${x(i.taxes)} ${taxName}`);
-  return parts.length > 1 || i.market !== 1 ? `${parts.join(", ")} = ${i.total}` : `${parts[0]} = ${i.total}`;
+  return `${parts.join(", ")} = ${i.total}`;
 }

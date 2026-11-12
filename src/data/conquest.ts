@@ -36,7 +36,7 @@ export const SETTLEMENT: Record<SettlementChoice, SettlementDef> = {
   exterminate: {
     name: "Exterminate",
     description: "Put half the city to the sword and strip it of everything of value.",
-    goldPer1000: 40,
+    goldPer1000: 30,
     moved: 0,
     lost: 0.5,
   },
