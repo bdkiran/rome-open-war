@@ -262,7 +262,7 @@ militia until it builds one.
 | Archery range | Trains basic / advanced / elite archers  | 180 / 350 / 550 gold | 2 / 3 / 4 |
 | Stables       | Trains basic / advanced / elite cavalry  | 225 / 400 / 650 gold | 2 / 3 / 4 |
 | Walls    | +15% / +30% / +50% defense, on top of the city's 10%       | 180 / 400 / 700 gold | 2 / 3 / 4 |
-| Farms    | +30% / +60% / +90% population growth, and +0.5 / +1 / +1.5 gold per plains tile in its land | 130 / 300 / 550 gold | 2 / 3 / 4 |
+| Farms    | +25% / +50% / +75% population growth, and +0.5 / +1 / +1.5 gold per plains tile in its land | 130 / 300 / 550 gold | 2 / 3 / 4 |
 | Market   | +100% / +200% / +300% trade gold (nothing else); lets the city train scouts | 130 / 300 / 500 gold | 2 / 3 / 4 |
 | Mine     | +1 / +2 / +3 gold per hills or mountain tile in its land   | 170 / 400 / 700 gold | 2 / 3 / 4 |
 | Port     | trade by sea with your other ports (cities whose land touches the sea), +0.2 / +0.4 / +0.6 gold per fishing ground, and +30% / +60% / +90% growth, times the city's share of sea | 130 / 250 / 450 gold | 2 / 3 / 4 |
@@ -590,11 +590,11 @@ surrender), you choose its fate:
 |-----------------|---------------------------------------------------------|--------------------|
 | **Occupy**      | Kept as they are                                        | 5 gold per 1,000   |
 | **Enslave**     | 25% sent to your other cities (shared evenly), 5% lost  | 15 gold per 1,000  |
-| **Exterminate** | 50% killed                                              | 30 gold per 1,000  |
+| **Exterminate** | 40% killed                                              | 30 gold per 1,000  |
 
 Plunder grows by 50% for each city level above 1, and is always worked out
 from the city's population when it falls, so a city that's already been
-sacked yields much less. A 10,000-person level-2 city gives 75, 225 or 600
+sacked yields much less. A 10,000-person level-2 city gives 75, 225 or 450
 gold. You must decide before ending your turn; a city that surrenders at the
 end of your turn is decided at the start of your next. A faction with no
 cities left is eliminated.

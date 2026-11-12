@@ -1,6 +1,6 @@
 /**
  * What happens to a city its conqueror takes. The conqueror chooses: occupy
- * it as it is, enslave part of its people, or put half of them to the sword.
+ * it as it is, enslave part of its people, or put 40% of them to the sword.
  * The plunder is worked out from the city's population and level when it's
  * taken, so a city sacked once yields far less the next time.
  */
@@ -35,10 +35,10 @@ export const SETTLEMENT: Record<SettlementChoice, SettlementDef> = {
   },
   exterminate: {
     name: "Exterminate",
-    description: "Put half the city to the sword and strip it of everything of value.",
+    description: "Put 40% of the city's people to the sword and strip it of everything of value.",
     goldPer1000: 30,
     moved: 0,
-    lost: 0.5,
+    lost: 0.4,
   },
 };
 

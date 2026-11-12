@@ -161,7 +161,7 @@ export const BUILDING_EFFECTS = {
   /** Extra defense for the city's garrison, added to the city and terrain bonuses. */
   wallsDefense: [0, 0.15, 0.3, 0.5],
   /** Extra population growth. */
-  farmsGrowth: [0, 0.3, 0.6, 0.9],
+  farmsGrowth: [0, 0.25, 0.5, 0.75],
   /** Gold per hills or mountain tile in the city's territory, before taxes. */
   mineGoldPerTile: [0, 1, 2, 3],
   /** Hills and mountain tiles a city needs to build a mine: with fewer, it would take too long to repay. */
