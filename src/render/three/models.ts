@@ -511,6 +511,44 @@ export function buildShip(color: string): THREE.Object3D {
 }
 
 /**
+ * A trading cart, heading along +x: an ox in front, and behind it a cart on
+ * two wheels with a covered load in the owner's colour. About 12 long in
+ * model units, standing on y = 0.
+ */
+export function buildCart(color: string): THREE.Object3D {
+  const g = new THREE.Group();
+  // The cart: a bed, a hooped cover over the load, two wheels and a pole to the ox.
+  const bed = box(6, 1, 4.4, mat("#8a6a45"));
+  bed.position.set(-2, 2.6, 0);
+  const cover = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 5.4, 8, 1, false, 0, Math.PI), mat(color));
+  cover.rotation.z = Math.PI / 2;
+  cover.rotation.x = -Math.PI / 2;
+  cover.position.set(-2, 3.1, 0);
+  g.add(bed, cover);
+  for (const z of [-2.5, 2.5]) {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.6, 8), mat("#5a4630"));
+    wheel.rotation.x = Math.PI / 2;
+    wheel.position.set(-2, 1.6, z);
+    g.add(wheel);
+  }
+  const shaft = box(3.5, 0.4, 0.4, mat("#5a4630"));
+  shaft.position.set(2.6, 2.5, 0);
+  // The ox: body, head and four legs.
+  const hide = mat("#7a5a3a");
+  const body = box(4.2, 2.2, 2.2, hide);
+  body.position.set(6.2, 3, 0);
+  const head = box(1.6, 1.4, 1.4, hide);
+  head.position.set(8.8, 3.6, 0);
+  g.add(shaft, body, head);
+  for (const [x, z] of [[4.7, -0.7], [4.7, 0.7], [7.7, -0.7], [7.7, 0.7]]) {
+    const leg = box(0.6, 1.9, 0.6, hide);
+    leg.position.set(x, 1, z);
+    g.add(leg);
+  }
+  return g;
+}
+
+/**
  * A battle's clash, played once on its tile: a ring of dust spreading over
  * the ground and two crossed blades in the attacker's colours that flash up
  * and fade. `update` takes the progress from 0 to 1.

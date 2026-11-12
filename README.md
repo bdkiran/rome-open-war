@@ -272,12 +272,16 @@ adds to the farms' bonus.
 building at both ends:
 
 - **By land**: two of your cities joined by a road (see Movement), both
-  with roads built.
+  with roads built. Carts in your colours drive the road from town to town;
+  a road cut by an enemy army carries none.
 - **By sea**: two of your ports no road joins, within sailing range: 6 / 16 / 40 steps
   over the sea for a Jetty / Harbour / Great harbour. A port stands on the
   shore by its city: a pier, longer at each level, with a storehouse at
   Great harbour. Each of your open sea routes is a faint lane over the water
-  with a ship in your colours sailing it from port to port.
+  with ships in your colours sailing it from port to port.
+
+The busier a route, the more carts or ships it carries: one for every 6
+gold a turn it pays (both ends together), up to four.
 
 A route runs at the lower of the two cities' levels and pays each end, for
 every 1,000 people at the other end, 0.4 / 0.7 / 1 gold by road or
