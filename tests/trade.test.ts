@@ -176,7 +176,7 @@ describe("road or sea", () => {
 });
 
 describe("trade gold", () => {
-  it("is added after the market's bonus on ordinary income, with the market's larger bonus on trade, then taxed", () => {
+  it("is the only income the market multiplies, then everything is taxed", () => {
     let state = newGame();
     const [a, b] = landPair(state);
     for (const market of [0, 1, 2, 3]) {
@@ -184,9 +184,8 @@ describe("trade gold", () => {
       const city = { ...state.cities[a.id], taxRate: "high" as const };
       const i = cityStats(state, city).income;
       assert.ok(i.trade > 0);
-      assert.equal(i.market, 1 + BUILDING_EFFECTS.marketGold[market]);
       assert.equal(i.tradeMarket, 1 + TRADE.marketTrade[market]);
-      assert.equal(i.total, Math.round((i.subtotal * i.market + i.trade * i.tradeMarket) * i.taxes));
+      assert.equal(i.total, Math.round((i.subtotal + i.trade * i.tradeMarket) * i.taxes));
     }
   });
 });

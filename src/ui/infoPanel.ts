@@ -292,7 +292,7 @@ function incomeTable(stats: CityStats, besieged: boolean): string {
   row("People", running + i.people);
   if (i.mine) row("Mine", running + i.mine);
   if (i.farms) row("Farms", running + i.farms);
-  if (i.market !== 1) row("Market", i.subtotal * i.market, i.market);
+  if (i.port) row("Fishing", running + i.port);
   if (i.trade) row("Trade", running + i.trade);
   if (i.trade && i.tradeMarket !== 1) row("Market on trade", running + i.trade * (i.tradeMarket - 1), i.tradeMarket);
   if (i.taxes !== 1) row("Taxes", running * i.taxes, i.taxes);

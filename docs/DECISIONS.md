@@ -498,7 +498,7 @@ so.
   multiplying its stats; see Combat) for
   ×1 / 1.5 / 2.1 the gold and upkeep and the same people: a little worse per
   gold, much better per person. A regiment's tier is fixed; merging needs
-  the same unit and tier. The AI builds its market before the unit
+  the same unit and tier. The AI builds its farms (once its market) before the unit
   buildings (an early Barracks had slowed its economy) and trains the best
   tier whose upkeep it can afford. First results: the AI builds the
   buildings widely but still trains mostly militia (most training happens
@@ -702,6 +702,41 @@ so.
   21 → 24, sea routes 35 → 17 / 24 → 17, trade 24% → 18% / 22% → 19% of AI city gold;
   no invalid orders or debt. Levers: exterminating best after 100 turns in 2 of 55
   cities (was 4), "grow, then tax" overtakes normal at turn 40 (was 44).
+
+- **Markets multiply only trade; farms and a port's catch carry the early game.** The
+  player wanted the market to be a trade building, and the early economy to come from
+  farms and ports. Before, the market's +25 / 50 / 80% on everything but trade was 18% of
+  AI city gold at turn 25 and 29% at turn 100, while trade was 0% and 9%. Now the market
+  adds +100 / 200 / 300% to trade gold and nothing else (was +50 / 100 / 150%), and lets
+  a city train scouts (instead of needing level 2). Farms pay 0.5 / 1 / 1.5 gold per
+  plains tile (was 0.25 / 0.5 / 0.75) and add +25 / 50 / 75% growth (was +20 / 40 /
+  60%; +30 / 60 / 90% was measured first, and the player stepped it down: level-3
+  cities went 23 → 31 by turn 100). A port's catch pays 0.2 / 0.4 / 0.6 gold per fishing ground (about 2 / 4 / 6 for
+  a median city), a small help early; ports stay mainly for trade, their growth bonus
+  unchanged. The AI builds farms where it built the market (second), and the market only
+  once the city has a trade route. This is the change dropped earlier (see above), and it
+  broke the same guard rail: exterminating became best after 50 turns in 36% of cities
+  (16% with the old farm growth), since occupied cities' people no longer earn the
+  market's bonus and faster growth refills a sacked city sooner. The fix: exterminating's
+  plunder is 30 gold per 1,000 people (was 40), which brought it to 4–5%. Raising
+  people's gold to 5 per 1,000 instead also fixed it but put AI income up 37–65%. The
+  player then had exterminating kill 40% of the people (was 50%); with farms at +25%
+  it's best after 50 / 100 turns in 9% / 7% of cities (with loot back at 40, 36% / 40%,
+  so the loot cut stays).
+  Shipped, against master, 8 seeds (50 turns, then 100): AI net income +3% / −10%,
+  treasuries +10% / +3%, cities not with first owner 15 → 16 / 26 → 28, factions fallen
+  1 → 0 / 3 → 4, battles +6% / +2%, level-3 cities 1 → 1 / 23 → 28 (level 1: 10 → 5 at
+  100), trade 4% → 5% / 18% → 25% of AI city gold, AI scouts 17 → 5 / 20 → 16 (markets
+  come later now); no invalid orders or debt. Farms are 14% / 10% / 8% of AI city gold at
+  turns 25 / 50 / 100 (was 1–3%). Levers: grow-then-tax overtakes all-high at turn 68
+  (was 70), plain normal at turn 100 (was 84); exterminating best after 100 turns in 4
+  of 55 cities (was 1).
+- **Terrain defense −25%.** Forest +7.5%, hills +11.25%, mountains +18.75% (was 10 / 15
+  / 25%): the player found rough-ground fights too lopsided. Measured with the change
+  above (it's in the same numbers).
+- **Trade traffic: smaller, slower, fewer.** Ships 1.3 → 0.9 size and 28 → 16 speed,
+  carts 1.6 → 1.1 and 14 → 8, one vehicle per 10 gold of trade (was 6) and at most two
+  a route (was four): the traffic cluttered the map.
 
 ## Economy tuning history
 

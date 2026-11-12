@@ -108,11 +108,11 @@ export function queueTraining(state: GameState, factionId: FactionId, cityId: Ci
   return addOrders(state, factionId, cityId, [{ kind: "train", unit, tier, cost }], cost);
 }
 
-/** Whether a city can queue a scout: a high enough level, room in its queue, not besieged, and the gold. */
+/** Whether a city can queue a scout: a Market, room in its queue, not besieged, and the gold. */
 export function canTrainScout(state: GameState, factionId: FactionId, cityId: CityId): Check {
   const city = state.cities[cityId];
-  if (city && city.owner === factionId && city.buildings.government < SCOUT.cityLevel) {
-    return { ok: false, reason: `Scouts need a level ${SCOUT.cityLevel} city.` };
+  if (city && city.owner === factionId && city.buildings.market < SCOUT.marketLevel) {
+    return { ok: false, reason: "Scouts need a Market square." };
   }
   return queueCheck(state, factionId, cityId, 1, SCOUT.cost);
 }

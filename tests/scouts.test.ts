@@ -37,12 +37,12 @@ function openGround(state: GameState): { tile: string; next: string } {
 }
 
 describe("training a scout", () => {
-  it("needs a level 2 city and the gold, and takes a turn", () => {
+  it("needs a Market and the gold, and takes a turn", () => {
     const state = newGame();
-    const city = Object.values(state.cities).find((c) => c.owner === "rome" && c.buildings.government < SCOUT.cityLevel)!;
+    const city = Object.values(state.cities).find((c) => c.owner === "rome" && c.buildings.market < SCOUT.marketLevel)!;
     assert.equal(applyAction(ctx, state, "rome", { type: "trainScout", cityId: city.id }).ok, false);
 
-    const raised = { ...city, buildings: { ...city.buildings, government: SCOUT.cityLevel } };
+    const raised = { ...city, buildings: { ...city.buildings, market: SCOUT.marketLevel } };
     const able: GameState = { ...state, cities: { ...state.cities, [city.id]: raised } };
     const before = able.factions[0].gold;
     const queued = apply(able, "rome", { type: "trainScout", cityId: city.id });
@@ -58,7 +58,9 @@ describe("training a scout", () => {
   });
 
   it("waits if another of its faction's scouts is on the city, and refunds when cancelled", () => {
-    const state = newGame();
+    const start = newGame();
+    // Roma with a Market, so it can train scouts.
+    const state: GameState = { ...start, cities: { ...start.cities, [roma(start).id]: { ...roma(start), buildings: { ...roma(start).buildings, market: SCOUT.marketLevel } } } };
     const city = roma(state);
     const { state: occupied } = withScout(state, city.tile);
     const queued = apply(occupied, "rome", { type: "trainScout", cityId: city.id });
