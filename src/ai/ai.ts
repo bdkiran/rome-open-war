@@ -33,9 +33,11 @@ import {
   canMerge,
 
   factionUpkeep,
+  mercenaryCost,
   reachableTiles,
   upkeepFor,
 } from "@/systems/armies.js";
+import { canHire } from "@/systems/mercenaries.js";
 import { cityStats, factionIncome, mineableTiles, regionOwner } from "@/systems/cities.js";
 import { SCOUT } from "@/data/scouts.js";
 import { reachableScoutTiles, scoutsOf } from "@/systems/scouts.js";
@@ -71,9 +73,11 @@ import { costToTarget } from "@/systems/pathfinding.js";
  *
  * When one of its own cities is besieged, relieving it comes first: armies
  * besieging it are attacked at even odds, the garrison sallies (at any odds
- * once the city is about to surrender), a relief force is trained and sent
- * from the nearest free city, and every field army marches to the city.
- *   5. Defend: replenish battered garrisons and train garrisons for its cities.
+ * once the city is about to surrender), a relief force is trained (or, when
+ * training can't, hired) and sent from the nearest free city, and every
+ * field army marches to the city.
+ *   5. Defend: replenish battered garrisons and train garrisons for its cities
+ *      (hiring mercenaries for an empty or threatened city that can't train).
  *   6. Build: walls where enemies are near, then advancing the city, then
  *      markets and farms, keeping a little gold in reserve.
  *   7. Train field regiments that counter the target's defenders. While the
@@ -436,7 +440,7 @@ function trainingAction(
   if (phase === "defense" && relief?.muster) {
     const main = relief.besiegers.sort((a, b) => b.regiments.length - a.regiments.length)[0];
     const unit = trainAgainst(relief.muster, main) ?? leastRepresented(relief.muster, armyAt(state, relief.muster.tile));
-    const order = unitOrMilitia(state, factionId, relief.muster.id, unit);
+    const order = unitOrMilitia(state, factionId, relief.muster.id, unit) ?? hireAction(state, factionId, relief.muster.id, unit);
     if (order) return order;
   }
 
@@ -470,7 +474,7 @@ function trainingAction(
     const emergency = regimentsAt(city.tile) === 0 || enemyRegimentsNear(ctx, state, factionId, city.tile) > 0;
     if (!emergency && city.population < AI.minRecruitPopulation) continue;
     if (emergency) {
-      const order = unitOrMilitia(state, factionId, city.id, unit);
+      const order = unitOrMilitia(state, factionId, city.id, unit) ?? hireAction(state, factionId, city.id, unit);
       if (order) return order;
       continue;
     }
@@ -710,6 +714,24 @@ function unitOrMilitia(state: GameState, factionId: FactionId, cityId: string, u
   for (const choice of [unit, "militia"] as const) {
     const tier = affordableTier(state, factionId, cityId, choice, Infinity);
     if (tier) return { type: "trainRegiment", cityId, unit: choice, tier };
+  }
+  return null;
+}
+
+/**
+ * Mercenaries for an emergency that training can't meet (the city's queue
+ * is busy, or it hasn't the people): the unit, or militia. Only with
+ * AI.buildReserve left after paying, and only if income still covers upkeep
+ * with them, so hiring can't put the faction into debt. Never for the field
+ * campaign.
+ */
+function hireAction(state: GameState, factionId: FactionId, cityId: string, unit: UnitType): Action | null {
+  const gold = getFaction(state, factionId)?.gold ?? 0;
+  const net = factionIncome(state, factionId) - factionUpkeep(state, factionId);
+  for (const choice of [unit, "militia"] as const) {
+    if (gold - mercenaryCost(choice) < AI.buildReserve) continue;
+    if (net - upkeepFor(choice, regimentSize(choice), 1, true) <= 0) continue;
+    if (canHire(state, factionId, cityId, choice).ok) return { type: "hireMercenaries", cityId, unit: choice };
   }
   return null;
 }

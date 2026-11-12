@@ -94,7 +94,7 @@ export const BUILDINGS: Record<BuildingType, BuildingDef> = {
   },
   market: {
     name: "Market",
-    purpose: "More gold from the city, and much more from its trade.",
+    purpose: "More gold from the city, much more from its trade, and mercenaries for hire.",
     levels: [
       { name: "Market square", cost: 130, turns: 2 },
       { name: "Trade hall", cost: 300, turns: 3 },

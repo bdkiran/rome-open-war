@@ -44,6 +44,7 @@ export function createCity(
     besiegedSince: null,
     siegeWorks: 0,
     recruitQueue: [],
+    mercenariesHired: 0,
     taxRate: "normal",
     // Every city has a council hall; a capital starts with a forum (level 2). None can train more than militia yet.
     buildings: {
@@ -600,6 +601,7 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
         // Buildings stand; whatever was being built or trained is lost.
         constructionQueue: [],
         recruitQueue: [],
+        mercenariesHired: 0,
         // The conqueror decides what becomes of it.
         unsettled: true,
         cutRoads: [],

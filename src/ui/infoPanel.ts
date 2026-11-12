@@ -11,7 +11,7 @@ import {
   type RegimentId,
 } from "@/core/state.js";
 import { TERRAIN } from "@/data/terrain.js";
-import { ARMY_RULES, LINE_UNITS, TIERS, UNITS, type UnitType, regimentSize, unitName } from "@/data/units.js";
+import { ARMY_RULES, LINE_UNITS, MERCENARIES, TIERS, UNITS, type UnitType, regimentSize, unitName } from "@/data/units.js";
 import { TAX_ORDER, TAX_RATES } from "@/data/economy.js";
 import {
   BUILDING_EFFECTS,
@@ -29,8 +29,9 @@ import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
 import { describeAttackArmor, describeSpecials, formatMultiplier, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg, scoutSvg } from "@/render/figures.js";
-import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
-import { canRetrain, canTrain, canTrainScout, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
+import { besiegedCity, mercenaryCost, regimentCost, upkeepFor } from "@/systems/armies.js";
+import { canHire, hiresLeft } from "@/systems/mercenaries.js";
+import { canRetrain, canTrain, canTrainScout, retrainCost, trainableOptions, trainableUnits, unitUnlocked } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
 import { cityStats, mineableTiles, plainsTiles, tradeRoutes, type CityStats, type TradeRoute } from "@/systems/cities.js";
@@ -518,7 +519,39 @@ function recruitmentTab(input: InfoPanelInput, city: City): string {
     <div class="box-grid units">${boxes}${scoutBox}</div>
     ${next ? `<p class="hint">${escapeHtml(next)}</p>` : ""}
     ${recruitQueue(city, color)}
-    ${note ? `<p class="hint">${note}</p>` : ""}`;
+    ${note ? `<p class="hint">${note}</p>` : ""}
+    ${mercenarySection(input, city, color)}`;
+}
+
+/**
+ * Mercenaries for hire in the city: a box per basic unit it could train
+ * (click to hire one at once), and the hires left this turn. Without a
+ * Market, a line saying so.
+ */
+function mercenarySection(input: InfoPanelInput, city: City, color: string): string {
+  const { state, humanId } = input;
+  if (!humanId) return "";
+  const allowance = MERCENARIES.hiresByMarketLevel[city.buildings.market] ?? 0;
+  if (allowance === 0) return `<h4 class="queue-title">Mercenaries</h4><p class="hint">Hired in a city with a Market.</p>`;
+  const boxes = trainableUnits(city).map((unit) => {
+    const gold = mercenaryCost(unit);
+    const upkeep = upkeepFor(unit, regimentSize(unit), 1, true);
+    const check = canHire(state, humanId, city.id, unit);
+    const name = UNITS[unit].name;
+    return `
+      <button type="button" class="unit-box" data-hire="${unit}" ${check.ok ? "" : "disabled"}
+        title="${escapeHtml(check.ok ? `Hire ${name.toLowerCase()} now: ${gold} gold, no people, upkeep ${formatUpkeep(upkeep)} a turn. They can't move until next turn, and desert if you're in debt.` : check.reason)}">
+        <span class="merc-mark">&#9679;</span>
+        ${figureSvg(unit, color, 1)}
+        <span class="unit-name">${escapeHtml(name)}</span>
+        <span class="unit-stat">${regimentSize(unit)} soldiers</span>
+        <span class="unit-stat">${formatNumber(gold)} gold</span>
+        <span class="unit-stat">Upkeep ${formatUpkeep(upkeep)}</span>
+      </button>`;
+  }).join("");
+  return `
+    <h4 class="queue-title">Mercenaries <span class="queue-count">${hiresLeft(city)}/${allowance} this turn</span></h4>
+    <div class="box-grid units">${boxes}</div>`;
 }
 
 /**
@@ -583,7 +616,7 @@ function recruitQueue(city: City, color: string): string {
   // Every retrain is done next turn; new regiments come one a turn, in order.
   let people = city.recruitQueue
     .filter((o) => o.kind === "retrain")
-    .reduce((sum, o) => sum + o.soldiers * ARMY_RULES.populationPerSoldier, 0);
+    .reduce((sum, o) => sum + (o.kind === "retrain" && !o.mercenary ? o.soldiers : 0) * ARMY_RULES.populationPerSoldier, 0);
   const retrainPeople = people;
   let trainingAhead = 0;
   const items = city.recruitQueue.map((order, index) => {

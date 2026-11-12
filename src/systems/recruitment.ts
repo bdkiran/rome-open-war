@@ -16,7 +16,7 @@ import {
 import { BUILDINGS } from "@/data/buildings.js";
 import { SCOUT } from "@/data/scouts.js";
 import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, unitName, type Tier, type UnitType } from "@/data/units.js";
-import { placeNewArmy, regimentCost, trainingCost } from "@/systems/armies.js";
+import { mercenaryCost, placeNewArmy, regimentCost, trainingCost } from "@/systems/armies.js";
 import { scoutAt } from "@/systems/scouts.js";
 
 /**
@@ -29,9 +29,13 @@ import { scoutAt } from "@/systems/scouts.js";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-/** Gold to bring a regiment back to full strength at its own tier, rounded up to a whole coin. */
+/**
+ * Gold to bring a regiment back to full strength at its own tier, rounded up
+ * to a whole coin. Mercenaries are topped up at the hire price.
+ */
 export function retrainCost(regiment: Regiment): number {
-  return trainingCost(regiment.unit, regimentSize(regiment.unit) - regiment.soldiers, regiment.tier).gold;
+  const missing = regimentSize(regiment.unit) - regiment.soldiers;
+  return regiment.mercenary ? mercenaryCost(regiment.unit, missing) : trainingCost(regiment.unit, missing, regiment.tier).gold;
 }
 
 function queueCheck(state: GameState, factionId: FactionId, cityId: CityId, orders: number, gold: number): Check {
@@ -153,7 +157,8 @@ export function queueRetraining(state: GameState, factionId: FactionId, cityId: 
   const army = armyAt(state, state.cities[cityId].tile)!;
   const orders: RecruitOrder[] = regimentIds.map((id) => {
     const r = army.regiments.find((x) => x.id === id)!;
-    return { kind: "retrain", unit: r.unit, regimentId: r.id, soldiers: regimentSize(r.unit) - r.soldiers, cost: retrainCost(r) };
+    const order: RecruitOrder = { kind: "retrain", unit: r.unit, regimentId: r.id, soldiers: regimentSize(r.unit) - r.soldiers, cost: retrainCost(r) };
+    return r.mercenary ? { ...order, mercenary: true } : order;
   });
   return addOrders(state, factionId, cityId, orders, orders.reduce((sum, o) => sum + o.cost, 0));
 }
@@ -212,8 +217,9 @@ function retrainAll(state: GameState, factionId: FactionId, cityId: CityId): Gam
       next = updateFaction(next, factionId, (f) => ({ ...f, gold: f.gold + order.cost }));
       continue;
     }
-    const needed = (regimentSize(regiment.unit) - regiment.soldiers) * ARMY_RULES.populationPerSoldier;
-    if (city.population - ARMY_RULES.minCityPopulation < needed) {
+    // Mercenaries are topped up with more hired men, not the city's people.
+    const needed = order.mercenary ? 0 : (regimentSize(regiment.unit) - regiment.soldiers) * ARMY_RULES.populationPerSoldier;
+    if (needed > 0 && city.population - ARMY_RULES.minCityPopulation < needed) {
       kept.push(order); // not enough people yet: try again next turn
       continue;
     }
@@ -314,12 +320,10 @@ export function dropStrayRetraining(state: GameState): GameState {
   return next;
 }
 
-/** People the orders in a city's queue will take when they're completed. */
+/** People the orders in a city's queue will take when they're completed (mercenaries take none). */
 export function queuedPeople(city: City): number {
-  return city.recruitQueue.reduce(
-    (sum, o) => sum + (o.kind === "scout" ? 0 : o.kind === "train" ? regimentSize(o.unit) : o.soldiers) * ARMY_RULES.populationPerSoldier,
-    0,
-  );
+  const people = (o: RecruitOrder) => (o.kind === "scout" ? 0 : o.kind === "train" ? regimentSize(o.unit) : o.mercenary ? 0 : o.soldiers);
+  return city.recruitQueue.reduce((sum, o) => sum + people(o) * ARMY_RULES.populationPerSoldier, 0);
 }
 
 function addOrders(state: GameState, factionId: FactionId, cityId: CityId, orders: RecruitOrder[], gold: number): GameState {

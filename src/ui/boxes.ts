@@ -18,6 +18,7 @@ export function regimentBox(
   return `
     <${tag} ${tag === "button" ? 'type="button"' : ""} class="reg-box${opts.dim ? " dim" : ""}" ${opts.attr} ${pressed} title="${escapeHtml(opts.title)}">
       ${tierMark(r.tier)}
+      ${r.mercenary ? mercenaryMark() : ""}
       ${experiencePips(r.experience)}
       ${figureSvg(r.unit, color, r.tier)}
       <span class="reg-count">${formatNumber(r.soldiers)}</span>
@@ -37,6 +38,11 @@ export function experiencePips(points: number): string {
 /** A small II or III in a box's corner for advanced or elite troops; nothing for basic ones. */
 export function tierMark(tier: Tier): string {
   return tier > 1 ? `<span class="tier-mark tier-${tier}" title="${TIERS[tier].name}">${tier === 2 ? "II" : "III"}</span>` : "";
+}
+
+/** A small coin in a box's corner for a regiment of mercenaries. */
+export function mercenaryMark(): string {
+  return `<span class="merc-mark" title="Mercenaries: double upkeep, desert in debt">&#9679;</span>`;
 }
 
 /** A building's level as a row of pips, filled up to `built`. */

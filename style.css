@@ -1069,6 +1069,14 @@ button.bar-action:hover:not(:disabled) { background: rgba(224, 181, 79, 0.18); }
 }
 .tier-mark.tier-3 { color: #f0cd70; text-shadow: 0 0 4px rgba(224, 181, 79, 0.6); }
 .unit-box { position: relative; }
+.merc-mark {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  line-height: 1;
+  color: #f0cd70;
+}
 
 /* While the enemy's moves play out */
 .playback-hint {

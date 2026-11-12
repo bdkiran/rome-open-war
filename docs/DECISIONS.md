@@ -436,6 +436,23 @@ so.
 
 ## Armies and recruitment
 
+- **Mercenaries: gold into regiments at once.** A city trains one regiment a turn and
+  each soldier costs a person, so gold couldn't become an army quickly (the old backlog
+  item "late-game spending"). Mercenaries are the other way to spend, leaving the queue
+  and its one-a-turn rule alone. A city with a Market hires as many basic regiments a turn
+  as its Market's level, of any unit it could train (unit buildings stay the only way to
+  new units). They take no people, cost ×2 gold and ×2 upkeep, can't move on the turn
+  they're hired (so gold can't buy a surprise attack), retrain at the hire price and merge
+  only with mercenaries. A faction still in debt after upkeep loses its dearest mercenary
+  regiment each turn. The AI hires only for a relief force or an empty or threatened
+  garrison that training can't meet, keeping 100 gold back and only if income still covers
+  upkeep with them; never for the field campaign. Over 8 seeds × 100 turns (without /
+  with `--garrison`): 27 / 30 hires a game (target 10–60), 16 / 13 still serving at the
+  end, no desertions, no AI debt; AI net income −3% / −5%, treasuries −6% / +8% (the
+  10–30% drop hoped for didn't come: the AI hires only in emergencies), cities taken +8% /
+  0%, factions fallen and battles unchanged, level-3 cities 23→24 / 24→23. Levers
+  unchanged. At 50 turns there were almost none (2 / 0 a game).
+
 - **Archers and cavalry cost 240 a regiment, ports 150 / 250 / 450.** Measured in
   simulated battles, joining an army of 2 spearmen and 2 militia, archers added what
   spearmen add for 1.8 times the gold, and cavalry 71% of it for twice the gold, which
@@ -833,9 +850,6 @@ in detail, and `npm run levers` covers the economy.
 ## Backlog and known issues
 
 - **Phase 9: save and load** (not started; keep state serializable).
-- Late-game spending: a city still trains only one regiment a turn. Recruitment
-  slots by city level (1/2/3) were proposed; unit buildings and tiers gate
-  units instead.
 - The AI doesn't single out the player; it targets whoever is cheapest to
   take.
 - Territory can straddle a sea crossing (cosmetic).

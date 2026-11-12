@@ -133,3 +133,18 @@ export const ARMY_RULES = {
   /** Orders a city's recruitment queue can hold (training and retraining share it). */
   recruitQueueSize: 6,
 } as const;
+
+/**
+ * Mercenaries: basic regiments hired for gold in a city with a Market. They
+ * join its army at once (but can't move until next turn), take no people and
+ * skip the queue, so gold can raise an army fast. They cost more, to hire and
+ * to keep, and desert a faction in debt (see systems/mercenaries.ts).
+ */
+export const MERCENARIES = {
+  /** Hiring costs this times the gold of training the same basic regiment. */
+  goldMultiplier: 2,
+  /** Their upkeep is this times a trained regiment's. Retraining them costs `goldMultiplier` times as much, and no people. */
+  upkeepMultiplier: 2,
+  /** Regiments a city can hire each turn, by its Market level (0 = no Market: none). */
+  hiresByMarketLevel: [0, 1, 2, 3],
+} as const;

@@ -9,7 +9,7 @@ import {
   type GameState,
 } from "@/core/state.js";
 import { describeIncome, formatCompact, formatNumber } from "@/render/format.js";
-import { factionUpkeep, upkeepFor } from "@/systems/armies.js";
+import { factionUpkeep, regimentUpkeep } from "@/systems/armies.js";
 import { cityStats, factionIncome, factionPopulation } from "@/systems/cities.js";
 import { placeName } from "@/systems/combat.js";
 import { TAX_RATES } from "@/data/economy.js";
@@ -99,7 +99,7 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
 /**
  * Where the player's money comes from and goes, turn by turn: each city's
  * gold (its base, people, mine, farms and trade, times its market and taxes), each army's
- * upkeep, and what's left.
+ * upkeep (and how much of it is mercenaries'), and what's left.
  */
 function moneyBreakdown(state: GameState, factionId: FactionId): string {
   const cities = citiesOf(state, factionId).map((city) => {
@@ -115,11 +115,14 @@ function moneyBreakdown(state: GameState, factionId: FactionId): string {
 
   const armies = armiesOf(state, factionId).map((army) => {
     const where = cityAt(state, army.tile)?.name ?? placeName(state, army.tile).replace(/^(at|near|in) /, "");
-    const cost = army.regiments.reduce((sum, r) => sum + upkeepFor(r.unit, r.soldiers, r.tier), 0);
+    const cost = army.regiments.reduce((sum, r) => sum + regimentUpkeep(r), 0);
+    const hired = army.regiments.filter((r) => r.mercenary);
+    const hiredCost = hired.reduce((sum, r) => sum + regimentUpkeep(r), 0);
+    const mercenaries = hired.length ? ` (${hired.length} mercenary, −${formatNumber(Math.round(hiredCost * 10) / 10)})` : "";
     return `
       <tr>
         <th scope="row">${escapeHtml(where)}</th>
-        <td class="how">${formatNumber(armySoldiers(army))} soldiers, ${army.regiments.length} regiment${army.regiments.length === 1 ? "" : "s"}</td>
+        <td class="how">${formatNumber(armySoldiers(army))} soldiers, ${army.regiments.length} regiment${army.regiments.length === 1 ? "" : "s"}${mercenaries}</td>
         <td class="amount negative">−${formatNumber(Math.round(cost * 10) / 10)}</td>
       </tr>`;
   }).join("");

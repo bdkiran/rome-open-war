@@ -812,6 +812,8 @@ function handlePanelClick(e: MouseEvent): void {
     dispatch({ type: "cancelConstruction", cityId: city.id, index: Number(target.dataset.cancelConstruction) });
   } else if (target.dataset.cancelRecruit !== undefined && city) {
     dispatch({ type: "cancelRecruit", cityId: city.id, index: Number(target.dataset.cancelRecruit) });
+  } else if (target.dataset.hire && city) {
+    dispatch({ type: "hireMercenaries", cityId: city.id, unit: target.dataset.hire as UnitType });
   } else if (target.dataset.train && city) {
     const tier = Number(target.dataset.tier ?? 1) as Tier;
     dispatch({ type: "trainRegiment", cityId: city.id, unit: target.dataset.train as UnitType, tier });

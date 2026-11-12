@@ -248,7 +248,7 @@ militia until it builds one.
 | Stables       | Trains basic / advanced / elite cavalry  | 225 / 400 / 650 gold | 2 / 3 / 4 |
 | Walls    | +15% / +30% / +50% defense, on top of the city's 10%       | 180 / 400 / 700 gold | 2 / 3 / 4 |
 | Farms    | +20% / +40% / +60% population growth, and +0.25 / +0.5 / +0.75 gold per plains tile in its land | 130 / 300 / 550 gold | 2 / 3 / 4 |
-| Market   | +25% / +50% / +80% gold, and +50% / +100% / +150% trade gold | 130 / 300 / 500 gold | 2 / 3 / 4 |
+| Market   | +25% / +50% / +80% gold, and +50% / +100% / +150% trade gold; hires 1 / 2 / 3 mercenary regiments a turn | 130 / 300 / 500 gold | 2 / 3 / 4 |
 | Mine     | +1 / +2 / +3 gold per hills or mountain tile in its land   | 170 / 400 / 700 gold | 2 / 3 / 4 |
 | Port     | +30% / +60% / +90% growth, times the city's share of sea, and trade by sea with your other ports (cities whose land touches the sea) | 130 / 250 / 450 gold | 2 / 3 / 4 |
 | Roads    | Builds the city's half of its roads: faster movement on them for every army (see Movement), and trade by land with your cities at the other end | 130 / 300 / 500 gold | 2 / 3 / 4 |
@@ -369,9 +369,27 @@ training is queued ahead of it. It costs what training the missing soldiers
 would. A regiment that leaves the city (or is lost) is dropped from the queue
 and refunded at once.
 
+**Mercenaries.** A city with a **Market** can hire regiments at once, in the
+Mercenaries row of its Recruitment tab: basic regiments of any unit the city
+could train (militia anywhere), as many a turn as its Market's level (1, 2 or
+3). They skip the queue and take no people, joining the army in the city
+straight away, but can't move until your next turn. They cost twice as much
+as trained ones, to hire and to keep, and are marked with a gold dot:
+
+| Mercenaries | Hire     | Upkeep             |
+|-------------|----------|--------------------|
+| Militia     | 198 gold | about 4 gold a turn |
+| Spearmen    | 324 gold | about 6 gold a turn |
+| Archers     | 432 gold | about 6 gold a turn |
+| Cavalry     | 432 gold | about 7 gold a turn |
+
+A besieged city can't hire. Mercenaries retrain at the hire price, with no
+people, and merge only with other mercenaries.
+
 **Upkeep** is paid at the end of each of your turns, after income. If the
 treasury can't cover it, gold goes below zero: while in debt you can't train
-new regiments, but your armies stay intact.
+or hire new regiments, and at the end of each turn you're still in debt, your
+dearest regiment of mercenaries deserts. Trained armies stay intact.
 
 **Stacks.** An **army** is a stack of up to 10 regiments on one tile, and
 only one army can stand on a tile. Selecting an army chooses every regiment
@@ -569,12 +587,14 @@ to expect from them:
   it to surrender or for good odds to storm it once their siege works allow,
   and once they're camped outside a city they stick with it.
 - **They defend their cities hard.** When one is besieged, they raise taxes,
-  train a relief force suited to the besiegers, and march every field
+  train a relief force suited to the besiegers (hiring mercenaries when the
+  muster city can't train), and march every field
   army to it. The garrison sallies at even odds, attacks at poor odds once
   surrender is two turns away, and makes a **last stand** at any odds on its
   final turn of supplies.
 - They garrison cities against nearby enemies (a city under 2,000 people
-  trains only when it's empty or threatened), build walls near their
+  trains only when it's empty or threatened, and an empty or threatened city
+  that can't train hires mercenaries), build walls near their
   borders, advance their cities, build markets, then a spear yard, archery
   range and stables, then mines, farms and ports, then walls and roads (roads
   come with the port where a city borders one of their own, since they carry
