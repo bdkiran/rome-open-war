@@ -209,7 +209,7 @@ export interface CityStats {
   landCapacity: number;
   /** Whether its level's limit, rather than its land, is what holds it back. */
   limitedByLevel: boolean;
-  /** Growth per turn when the city is small, e.g. 0.025 = 2.5%. Average of its terrain, × ECONOMY.growthMultiplier. */
+  /** Growth per turn when the city is small, e.g. 0.025 = 2.5%. Average of its terrain. */
   baseGrowthRate: number;
   /** The base rate after the city's tax rate. */
   growthRate: number;
@@ -260,7 +260,7 @@ export function cityStats(state: GameState, city: City): CityStats {
     if (state.tiles[tile].terrain === "plains") plains++;
   }
   const places = tiles.length + city.fishingGrounds;
-  const baseGrowthRate = places > 0 ? (growthSum / places) * ECONOMY.growthMultiplier : 0;
+  const baseGrowthRate = places > 0 ? growthSum / places : 0;
   const tax = TAX_RATES[city.taxRate];
   const farms = BUILDING_EFFECTS.farmsGrowth[city.buildings.farms];
   const port = BUILDING_EFFECTS.portGrowth[city.buildings.port] * seaShare(state, city);

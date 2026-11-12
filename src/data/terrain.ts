@@ -40,12 +40,12 @@ export interface TerrainDef {
 }
 
 export const TERRAIN: Record<TerrainType, TerrainDef> = {
-  water:     { name: "Sea",       moveCost: Infinity, passable: false, defenseBonus: 0,    capacity: 500,   growth: 0.035, mineable: false, openGround: false },
-  plains:    { name: "Plains",    moveCost: 2,        passable: true,  defenseBonus: 0,    capacity: 1600,  growth: 0.05,  mineable: false, openGround: true },
-  forest:    { name: "Forest",    moveCost: 3,        passable: true,  defenseBonus: 0.1,  capacity: 800,   growth: 0.035, mineable: false, openGround: false },
-  hills:     { name: "Hills",     moveCost: 3,        passable: true,  defenseBonus: 0.15, capacity: 650,   growth: 0.025, mineable: true,  openGround: false },
-  mountains: { name: "Mountains", moveCost: 4,        passable: true,  defenseBonus: 0.25, capacity: 200,   growth: 0.01,  mineable: true,  openGround: false },
-  desert:    { name: "Desert",    moveCost: 3,        passable: true,  defenseBonus: 0,    capacity: 75,    growth: 0.01,  mineable: false, openGround: true },
+  water:     { name: "Sea",       moveCost: Infinity, passable: false, defenseBonus: 0,    capacity: 500,   growth: 0.03675, mineable: false, openGround: false },
+  plains:    { name: "Plains",    moveCost: 2,        passable: true,  defenseBonus: 0,    capacity: 1600,  growth: 0.0525, mineable: false, openGround: true },
+  forest:    { name: "Forest",    moveCost: 3,        passable: true,  defenseBonus: 0.1,  capacity: 800,   growth: 0.03675, mineable: false, openGround: false },
+  hills:     { name: "Hills",     moveCost: 3,        passable: true,  defenseBonus: 0.15, capacity: 650,   growth: 0.02625, mineable: true,  openGround: false },
+  mountains: { name: "Mountains", moveCost: 4,        passable: true,  defenseBonus: 0.25, capacity: 200,   growth: 0.0105, mineable: true,  openGround: false },
+  desert:    { name: "Desert",    moveCost: 3,        passable: true,  defenseBonus: 0,    capacity: 75,    growth: 0.0105, mineable: false, openGround: true },
 };
 
 /**
