@@ -21,7 +21,6 @@ and its doc is deleted. This folder only holds open proposals.
 | [Public order](public-order.md) | Proposed | Unrest from taxes, conquest and sieges; revolts; a brake on snowballing |
 | [Generals](generals.md) | Proposed | Characters who lead armies, gain traits, and can die |
 | [Diplomacy](diplomacy.md) | Proposed | Peace, truces and tribute, or deliberately none |
-| [Mercenaries](mercenaries.md) | Proposed | Hire regiments at once for gold, without using people |
 | [Naval transport](naval-transport.md) | Proposed | Transports along the coast, and blockades of port cities |
 | [Battles](battles.md) | Proposed | Morale that carries over, frontage by terrain with reserves, and formation, doctrine and orders that decide the tactics (replaces battle stances) |
 | [Events](events.md) | Proposed | Seeded events: plague, harvests, revolts, migrations |

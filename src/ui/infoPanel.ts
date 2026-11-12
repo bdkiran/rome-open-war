@@ -11,7 +11,7 @@ import {
   type RegimentId,
 } from "@/core/state.js";
 import { TERRAIN } from "@/data/terrain.js";
-import { ARMY_RULES, LINE_UNITS, TIERS, UNITS, type UnitType, regimentSize, unitName } from "@/data/units.js";
+import { ARMY_RULES, LINE_UNITS, MERCENARIES, TIERS, UNIT_TYPES, UNITS, type UnitType, regimentSize, unitName } from "@/data/units.js";
 import { TAX_ORDER, TAX_RATES } from "@/data/economy.js";
 import {
   BUILDING_EFFECTS,
@@ -29,7 +29,8 @@ import { buildingSvg } from "@/ui/buildingArt.js";
 import type { TileId } from "@/map/topology.js";
 import { describeAttackArmor, describeSpecials, formatMultiplier, describeStatsShort, formatNumber, formatPercent } from "@/render/format.js";
 import { figureSvg, scoutSvg } from "@/render/figures.js";
-import { besiegedCity, regimentCost, upkeepFor } from "@/systems/armies.js";
+import { besiegedCity, mercenaryCost, regimentCost, upkeepFor } from "@/systems/armies.js";
+import { canHire, canTopUp, territoryOf, topUpPlan } from "@/systems/mercenaries.js";
 import { canRetrain, canTrain, canTrainScout, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
@@ -74,6 +75,8 @@ export function renderInfoPanel(input: InfoPanelInput): string {
   const orders = army ? armySection(input, army) : "";
   if (orders) sections.push(orders);
   if (city) sections.push(citySection(input, city));
+  const mercenaries = mercenarySection(input, tile);
+  if (mercenaries) sections.push(mercenaries);
   sections.push(terrainSection(state, tile, Boolean(army || city)));
   const tower = watchtowerSection(input, tile);
   if (tower) sections.push(tower);
@@ -522,6 +525,50 @@ function recruitmentTab(input: InfoPanelInput, city: City): string {
 }
 
 /**
+ * Mercenaries for hire where your army stands (or in your empty city): how
+ * many the territory has, a box per unit (click to hire a basic regiment at
+ * once), and a button to top up the army's damaged mercenaries. Empty when
+ * you have nothing here or it's not your turn.
+ */
+function mercenarySection(input: InfoPanelInput, tile: TileId): string {
+  const { state, humanId, playerTurn } = input;
+  if (!humanId || !playerTurn) return "";
+  const army = armyAt(state, tile);
+  const city = cityAt(state, tile);
+  if (army ? army.owner !== humanId : city?.owner !== humanId) return "";
+  const territory = territoryOf(state, tile);
+  if (!territory) return "";
+  const color = getFaction(state, humanId)?.color ?? "#888888";
+  const boxes = UNIT_TYPES.map((unit) => {
+    const gold = mercenaryCost(unit);
+    const upkeep = upkeepFor(unit, regimentSize(unit), 1, true);
+    const check = canHire(state, humanId, tile, unit);
+    const name = UNITS[unit].name;
+    return `
+      <button type="button" class="unit-box" data-hire="${unit}" ${check.ok ? "" : "disabled"}
+        title="${escapeHtml(check.ok ? `Hire basic ${name.toLowerCase()} now: ${gold} gold, no people, upkeep ${formatUpkeep(upkeep)} a turn. They can't move until next turn.` : check.reason)}">
+        <span class="merc-mark">&#9679;</span>
+        ${figureSvg(unit, color, 1)}
+        <span class="unit-name">${escapeHtml(name)}</span>
+        <span class="unit-stat">${regimentSize(unit)} soldiers</span>
+        <span class="unit-stat">${formatNumber(gold)} gold</span>
+      </button>`;
+  }).join("");
+  const plan = army ? topUpPlan(state, army) : null;
+  const check = army ? canTopUp(state, humanId, army.id) : null;
+  const topUpButton =
+    army && plan && plan.soldiers > 0
+      ? `<button type="button" class="action secondary" data-top-up="${army.id}" ${check?.ok ? "" : "disabled"}
+          title="${escapeHtml(check?.ok ? "Fill the damaged mercenary regiments from this territory's mercenaries, at once." : check?.reason ?? "")}">
+          Top up ${formatNumber(plan.soldiers)} mercenaries: ${formatNumber(plan.gold)} gold</button>`
+      : "";
+  return `
+    <h4 class="queue-title">Mercenaries <span class="queue-count" title="Soldiers for hire around ${escapeHtml(territory.name)}. Every round adds ${MERCENARIES.refillPerTurn}, up to ${MERCENARIES.supply}.">${formatNumber(territory.mercenarySupply)} for hire around ${escapeHtml(territory.name)}</span></h4>
+    <div class="box-grid units mercs">${boxes}</div>
+    ${topUpButton}`;
+}
+
+/**
  * A box per regiment stationed in the city: click damaged ones to choose
  * them, then queue them for retraining. Retraining shares the recruitment
  * queue: one order a turn.
@@ -540,10 +587,14 @@ function retrainingTab(input: InfoPanelInput, city: City): string {
   const damaged = (r: Regiment) => r.soldiers < regimentSize(r.unit);
   const boxes = army.regiments
     .map((r) => {
-      const choosable = damaged(r) && !queued.has(r.id);
+      const choosable = damaged(r) && !queued.has(r.id) && !r.mercenary;
       return regimentBox(r, color, {
-        status: queued.has(r.id) ? "Queued" : damaged(r) ? `${formatNumber(retrainCost(r))} gold` : "Full",
+        status: queued.has(r.id) ? "Queued" : r.mercenary && damaged(r) ? "Hired" : damaged(r) ? `${formatNumber(retrainCost(r))} gold` : "Full",
         title: queued.has(r.id)
+          ? `${unitName(r.unit, r.tier)}: queued for retraining`
+          : r.mercenary && damaged(r)
+            ? `Mercenaries: ${r.soldiers} of ${regimentSize(r.unit)}. Top them up from the army's panel, not here.`
+            : queued.has(r.id)
           ? `${unitName(r.unit, r.tier)}: queued for retraining`
           : damaged(r)
             ? `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)}. ${chosen.has(r.id) ? "Click to leave it out." : "Click to choose it for retraining."}`
@@ -558,7 +609,7 @@ function retrainingTab(input: InfoPanelInput, city: City): string {
   const picked = army.regiments.filter((r) => chosen.has(r.id));
   const gold = picked.reduce((sum, r) => sum + retrainCost(r), 0);
   const check = canRetrain(state, humanId, city.id, picked.map((r) => r.id));
-  const anyChoosable = army.regiments.some((r) => damaged(r) && !queued.has(r.id));
+  const anyChoosable = army.regiments.some((r) => damaged(r) && !queued.has(r.id) && !r.mercenary);
   return `
     <div class="box-grid">${boxes}</div>
     ${anyChoosable ? `

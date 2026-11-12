@@ -7,10 +7,10 @@ import { cityPlate } from "@/render/cityPlate.js";
 import { formatCompact } from "@/render/format.js";
 import type { ViewState } from "@/render/mapView.js";
 import { isSpent } from "@/systems/armies.js";
-import { portTile, regionOwner, roadCut, tradeRoutes } from "@/systems/cities.js";
+import { portTile, regionOwner, roadCut, roadsOf, tradeRoutes, type TradeRoute } from "@/systems/cities.js";
 import { towerOwner } from "@/systems/watchtowers.js";
 import { Camera3D } from "@/render/three/camera3d.js";
-import { buildArmy, buildCity, buildPort, buildScout, buildShip, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
+import { buildArmy, buildCart, buildCity, buildPort, buildScout, buildShip, buildWatchtower, clashBurst, ModelLibrary, setFlagClock, WATCHTOWER_SPOT, type Figure } from "@/render/three/models.js";
 import { hash, Terrain3D } from "@/render/three/terrain3d.js";
 import { buildSiegeWorks } from "@/render/three/town.js";
 
@@ -49,6 +49,15 @@ const SEA_LANE = { color: "#a9d8e8", width: 1.6, lift: 0.9, opacity: 0.35 };
 /** Trading ships: their size, and their speed in map units a second. */
 const SHIP_SCALE = 1.3;
 const SHIP_SPEED = 28;
+/** Trading carts on the roads: their size, their speed, and how far short of each town they turn round. */
+const CART_SCALE = 1.6;
+const CART_SPEED = 14;
+const CART_TOWN_CLEARANCE = 30;
+/**
+ * More trade, more traffic: a route carries one ship or cart for every this
+ * much gold a turn it pays (both ends together), from one up to the most.
+ */
+const TRAFFIC = { goldPerVehicle: 6, most: 4 };
 /** The fog over tiles out of sight: a dark blue-grey wash, [r, g, b, opacity]. */
 const FOG: Rgba = [0.02, 0.05, 0.07, 0.6];
 /** City name plates are hidden when zoomed out further than this. */
@@ -116,14 +125,14 @@ export class MapView3D {
   private readonly ports = new Map<CityId, { key: string; object: THREE.Object3D }>();
   /** The way over the water between two ports, by the pair of port tiles: found once each. */
   private readonly lanes = new Map<string, TileId[]>();
-  /** Ships on the player's sea trade routes: the route's curve, its length, the ship, and where it starts. */
-  private voyages: { curve: THREE.Curve<THREE.Vector3>; length: number; ship: THREE.Object3D; phase: number; sea: number }[] = [];
+  /** Ships and carts on the player's trade routes. */
+  private traffic: { sea: Trip[]; land: Trip[] } = { sea: [], land: [] };
   private readonly cityLabels = new Map<string, { el: HTMLElement; text: string }>();
   /** The state and player the plates were last filled in for. */
   private platesFor: GameState | null = null;
   private platesFaction: string | null = null;
-  private readonly layers = { roads: null as THREE.Object3D | null, borders: null as THREE.Object3D | null, selection: null as THREE.Object3D | null, route: null as THREE.Object3D | null, seaRoutes: null as THREE.Object3D | null };
-  private seen = { roads: [] as unknown[], territory: null as unknown, selected: null as unknown, route: "", overlay: [] as unknown[], seaRoutes: [] as unknown[] };
+  private readonly layers = { roads: null as THREE.Object3D | null, borders: null as THREE.Object3D | null, selection: null as THREE.Object3D | null, route: null as THREE.Object3D | null, seaRoutes: null as THREE.Object3D | null, landTrade: null as THREE.Object3D | null };
+  private seen = { roads: [] as unknown[], territory: null as unknown, selected: null as unknown, route: "", overlay: [] as unknown[], seaRoutes: [] as unknown[], landTrade: [] as unknown[] };
   private lastTime = 0;
 
   constructor(
@@ -179,7 +188,8 @@ export class MapView3D {
     this.syncBorders(state);
     this.syncRoads(state, view);
     this.syncSeaRoutes(state, view);
-    this.sailShips(time);
+    this.syncLandTrade(state, view);
+    this.moveTraffic(time);
     this.syncSelection(view);
     this.syncRoute(view);
     this.syncClearings(state);
@@ -289,7 +299,7 @@ export class MapView3D {
     const key = [state.cities, view.player];
     if (key.every((k, i) => k === this.seen.seaRoutes[i])) return;
     this.seen.seaRoutes = key;
-    this.voyages = [];
+    this.traffic.sea = [];
     if (!view.player) return this.replace("seaRoutes", null);
     const ctx = { topology: this.topology };
     const color = getFaction(state, view.player)?.color ?? "#888888";
@@ -313,28 +323,80 @@ export class MapView3D {
         const curve: THREE.Curve<THREE.Vector3> =
           points.length > 2 ? new THREE.CatmullRomCurve3(points, false, "centripetal") : new THREE.LineCurve3(points[0], points[1]);
         group.add(softLane(curve, SEA_LANE.width, SEA_LANE.color, SEA_LANE.opacity));
-        const ship = buildShip(color);
-        ship.scale.setScalar(SHIP_SCALE);
-        group.add(ship);
-        this.voyages.push({ curve, length: curve.getLength(), ship, phase: hash(`${city.id}|${route.partner}`), sea });
+        const length = curve.getLength();
+        const ships = vehiclesFor(state, city, route);
+        const start = hash(`${city.id}|${route.partner}`);
+        for (let i = 0; i < ships; i++) {
+          const ship = buildShip(color);
+          ship.scale.setScalar(SHIP_SCALE);
+          group.add(ship);
+          this.traffic.sea.push({ curve, length, object: ship, phase: (start + i / ships) % 1, speed: SHIP_SPEED, margin: 0, sea, ground: [] });
+        }
       }
     }
     this.replace("seaRoutes", group.children.length > 0 ? group : null);
-    this.sailShips(this.lastTime);
+    this.moveTraffic(this.lastTime);
   }
 
-  /** Moves each trading ship along its route, out to the far port and back, bobbing a little. */
-  private sailShips(time: number): void {
-    for (const v of this.voyages) {
-      const round = v.length * 2;
-      let travelled = (time * SHIP_SPEED + v.phase * round) % round;
-      const homeward = travelled > v.length;
+  /**
+   * Carts on the player's open land trade routes, along the road from town to
+   * town; more trade, more carts. A road cut by an enemy army carries none.
+   */
+  private syncLandTrade(state: GameState, view: ViewState): void {
+    const key = [state.cities, state.armies, state.roads, view.player];
+    if (key.every((k, i) => k === this.seen.landTrade[i])) return;
+    this.seen.landTrade = key;
+    this.traffic.land = [];
+    if (!view.player) return this.replace("landTrade", null);
+    const color = getFaction(state, view.player)?.color ?? "#888888";
+    const group = new THREE.Group();
+    for (const city of Object.values(state.cities)) {
+      if (city.owner !== view.player) continue;
+      for (const route of tradeRoutes(state, city)) {
+        // Each pair once, from the city with the lower id; none on a cut road.
+        if (route.by !== "land" || route.cut || route.partner < city.id) continue;
+        const road = roadsOf(state, city.id).find((r) => r.cities.includes(route.partner));
+        if (!road || road.tiles.length < 2) continue;
+        const ground = road.tiles.map((t) => {
+          const c = this.topology.tileCenter(t);
+          return new THREE.Vector3(c.x, this.terrain.heightOf(t), c.y);
+        });
+        const curve: THREE.Curve<THREE.Vector3> =
+          ground.length > 2 ? new THREE.CatmullRomCurve3(ground, false, "centripetal") : new THREE.LineCurve3(ground[0], ground[1]);
+        const length = curve.getLength();
+        const margin = Math.min(CART_TOWN_CLEARANCE, length * 0.3);
+        const carts = vehiclesFor(state, city, route);
+        const start = hash(`${city.id}|${route.partner}|land`);
+        for (let i = 0; i < carts; i++) {
+          const cart = buildCart(color);
+          cart.scale.setScalar(CART_SCALE);
+          group.add(cart);
+          this.traffic.land.push({ curve, length, object: cart, phase: (start + i / carts) % 1, speed: CART_SPEED, margin, sea: null, ground });
+        }
+      }
+    }
+    this.replace("landTrade", group.children.length > 0 ? group : null);
+    this.moveTraffic(this.lastTime);
+  }
+
+  /**
+   * Moves every ship and cart along its route, out to the far end and back:
+   * ships bob on the water, carts keep to the ground of the tile they're on.
+   */
+  private moveTraffic(time: number): void {
+    for (const trip of [...this.traffic.sea, ...this.traffic.land]) {
+      const run = trip.length - 2 * trip.margin;
+      if (run <= 0) continue;
+      const round = run * 2;
+      let travelled = (time * trip.speed + trip.phase * round) % round;
+      const homeward = travelled > run;
       if (homeward) travelled = round - travelled;
-      const u = Math.min(1, Math.max(0, travelled / v.length));
-      const at = v.curve.getPointAt(u);
-      const heading = v.curve.getTangentAt(u);
-      v.ship.position.set(at.x, v.sea + Math.sin(time * 2 + v.phase * 10) * 0.25, at.z);
-      v.ship.rotation.y = Math.atan2(-heading.z, heading.x) + (homeward ? Math.PI : 0);
+      const u = Math.min(1, Math.max(0, (trip.margin + travelled) / trip.length));
+      const at = trip.curve.getPointAt(u);
+      const heading = trip.curve.getTangentAt(u);
+      const y = trip.sea !== null ? trip.sea + Math.sin(time * 2 + trip.phase * 10) * 0.25 : groundUnder(trip.ground, at.x, at.z);
+      trip.object.position.set(at.x, y, at.z);
+      trip.object.rotation.y = Math.atan2(-heading.z, heading.x) + (homeward ? Math.PI : 0);
     }
   }
 
@@ -976,6 +1038,43 @@ const CUT_ROAD_FOGGED = "#6e3a33";
 const ROUTE_COLORS = ["#e0b54f", "#e8864a", "#d9534f", "#b565c9", "#5b8fd9", "#4fb88a"];
 
 /** Flat coloured strips laid on the terrain, collected into one mesh. */
+/** A ship or cart on a trade route, going out and back along its curve. */
+interface Trip {
+  curve: THREE.Curve<THREE.Vector3>;
+  length: number;
+  object: THREE.Object3D;
+  /** Where on its round trip it is at time 0 (0-1). */
+  phase: number;
+  speed: number;
+  /** How far short of each end it turns round (carts stop outside the towns). */
+  margin: number;
+  /** The water's height for a ship; null for a cart, which follows `ground`. */
+  sea: number | null;
+  /** A cart's road: each tile's centre at its ground height. */
+  ground: THREE.Vector3[];
+}
+
+/** How many ships or carts a route carries: one per TRAFFIC.goldPerVehicle it pays both ends, from one up to the most. */
+function vehiclesFor(state: GameState, city: City, route: TradeRoute): number {
+  const back = tradeRoutes(state, state.cities[route.partner]).find((r) => r.partner === city.id && r.by === route.by);
+  const gold = route.gold + (back?.gold ?? 0);
+  return Math.max(1, Math.min(TRAFFIC.most, Math.round(gold / TRAFFIC.goldPerVehicle)));
+}
+
+/** The ground height under (x, z) on a road: the nearest road tile's, just above the road. */
+function groundUnder(ground: readonly THREE.Vector3[], x: number, z: number): number {
+  let best = ground[0];
+  let bestDistance = Infinity;
+  for (const p of ground) {
+    const d = (p.x - x) ** 2 + (p.z - z) ** 2;
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = p;
+    }
+  }
+  return best.y + 0.6;
+}
+
 /** A soft lane along a curve: a thin, faint ribbon just above the water. */
 function softLane(curve: THREE.Curve<THREE.Vector3>, width: number, color: string, opacity: number): THREE.Mesh {
   const steps = Math.max(2, Math.ceil(curve.getLength() / 4));

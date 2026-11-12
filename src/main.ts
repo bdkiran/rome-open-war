@@ -818,6 +818,10 @@ function handlePanelClick(e: MouseEvent): void {
     dispatch({ type: "cancelConstruction", cityId: city.id, index: Number(target.dataset.cancelConstruction) });
   } else if (target.dataset.cancelRecruit !== undefined && city) {
     dispatch({ type: "cancelRecruit", cityId: city.id, index: Number(target.dataset.cancelRecruit) });
+  } else if (target.dataset.hire && view.selected) {
+    dispatch({ type: "hireMercenaries", tile: view.selected, unit: target.dataset.hire as UnitType });
+  } else if (target.dataset.topUp) {
+    dispatch({ type: "topUpMercenaries", armyId: target.dataset.topUp });
   } else if (target.dataset.train && city) {
     const tier = Number(target.dataset.tier ?? 1) as Tier;
     dispatch({ type: "trainRegiment", cityId: city.id, unit: target.dataset.train as UnitType, tier });
@@ -842,7 +846,7 @@ function handlePanelClick(e: MouseEvent): void {
     const army = armyAt(state, city.tile);
     const queued = new Set(city.recruitQueue.flatMap((o) => (o.kind === "retrain" ? [o.regimentId] : [])));
     for (const r of army?.regiments ?? []) {
-      if (r.soldiers < regimentSize(r.unit) && !queued.has(r.id)) retrainQueue.add(r.id);
+      if (r.soldiers < regimentSize(r.unit) && !queued.has(r.id) && !r.mercenary) retrainQueue.add(r.id);
     }
     renderInfo(state);
   } else if (target.dataset.replenish) {

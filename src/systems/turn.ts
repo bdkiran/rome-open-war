@@ -2,6 +2,7 @@ import type { GameContext } from "@/core/context.js";
 import { currentFaction, type FactionId, type GameState } from "@/core/state.js";
 import { continueMarches, payUpkeep, refreshMovement } from "@/systems/armies.js";
 import { progressConstruction } from "@/systems/buildings.js";
+import { refillMercenaries } from "@/systems/mercenaries.js";
 import { processRecruitment } from "@/systems/recruitment.js";
 import { processCities } from "@/systems/cities.js";
 import { processSieges } from "@/systems/siege.js";
@@ -10,7 +11,8 @@ import { trackKeyCities } from "@/systems/victory.js";
 /**
  * Ends the current faction's turn: runs its end-of-turn processing, then
  * passes play to the next living faction. When play wraps back to the first
- * faction, the turn number goes up.
+ * faction, the turn number goes up, and every territory's mercenaries
+ * refill a little.
  */
 export function endTurn(ctx: GameContext, state: GameState): GameState {
   const finished = endFactionTurn(ctx, state, currentFaction(state).id);
@@ -24,7 +26,8 @@ export function endTurn(ctx: GameContext, state: GameState): GameState {
     if (finished.factions[index].alive) break;
   }
 
-  const next: GameState = { ...finished, currentFactionIndex: index, turn };
+  const rounded: GameState = turn > finished.turn ? refillMercenaries(finished) : finished;
+  const next: GameState = { ...rounded, currentFactionIndex: index, turn };
   return startFactionTurn(ctx, next, next.factions[index].id);
 }
 

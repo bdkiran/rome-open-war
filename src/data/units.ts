@@ -133,3 +133,21 @@ export const ARMY_RULES = {
   /** Orders a city's recruitment queue can hold (training and retraining share it). */
   recruitQueueSize: 6,
 } as const;
+
+/**
+ * Mercenaries: basic regiments hired for gold by an army standing anywhere in
+ * a city's territory (or in an empty city of yours), from the soldiers for
+ * hire there. They join at once (but can't move until next turn) and take no
+ * people. Each territory's supply drains as they're hired or topped up, and
+ * slowly refills (see systems/mercenaries.ts).
+ */
+export const MERCENARIES = {
+  /** Hiring costs this times the gold of training the same basic regiment. */
+  goldMultiplier: 2,
+  /** Their upkeep is this times a trained regiment's. Topping them up costs `goldMultiplier` times training's gold. */
+  upkeepMultiplier: 2,
+  /** Soldiers for hire in each territory when it's full: two regiments of militia, or three of cavalry. */
+  supply: 440,
+  /** Soldiers added back to each territory's supply every round, up to `supply`. */
+  refillPerTurn: 40,
+} as const;

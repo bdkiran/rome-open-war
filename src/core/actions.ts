@@ -34,6 +34,7 @@ import {
   queueScout,
   queueTraining,
 } from "@/systems/recruitment.js";
+import { canHire, canTopUp, hire, topUp } from "@/systems/mercenaries.js";
 import { canMoveScout, dismissScout, moveScout } from "@/systems/scouts.js";
 import { canSettle, settleCity, unsettledCities } from "@/systems/conquest.js";
 import type { SettlementChoice } from "@/data/conquest.js";
@@ -47,6 +48,10 @@ export type Action =
   | { type: "endTurn" }
   /** Queues a regiment of 100 for training in a city. It joins the army there when it's done. */
   | { type: "trainRegiment"; cityId: CityId; unit: UnitType; tier?: Tier }
+  /** Hires a basic regiment of mercenaries from the territory a tile is in: it joins your army there (or your empty city) at once. */
+  | { type: "hireMercenaries"; tile: TileId; unit: UnitType }
+  /** Fills an army's damaged mercenary regiments from the territory it stands in, at once. */
+  | { type: "topUpMercenaries"; armyId: ArmyId }
   /** Takes an order out of a city's recruitment queue, refunding it. */
   | { type: "cancelRecruit"; cityId: CityId; index: number }
   /** Moves some or all of an army's regiments. Moving only some splits the army. */
@@ -125,6 +130,18 @@ function perform(ctx: GameContext, state: GameState, factionId: FactionId, actio
       const check = canTrain(state, factionId, action.cityId, action.unit, tier);
       if (!check.ok) return check;
       return { ok: true, state: queueTraining(state, factionId, action.cityId, action.unit, tier) };
+    }
+
+    case "hireMercenaries": {
+      const check = canHire(state, factionId, action.tile, action.unit);
+      if (!check.ok) return check;
+      return { ok: true, state: hire(state, factionId, action.tile, action.unit) };
+    }
+
+    case "topUpMercenaries": {
+      const check = canTopUp(state, factionId, action.armyId);
+      if (!check.ok) return check;
+      return { ok: true, state: topUp(state, factionId, action.armyId) };
     }
 
     case "cancelRecruit": {
