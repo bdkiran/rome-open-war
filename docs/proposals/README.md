@@ -27,4 +27,3 @@ and its doc is deleted. This folder only holds open proposals.
 | [Events](events.md) | Proposed | Seeded events: plague, harvests, revolts, migrations |
 | [Victory conditions](victory-conditions.md) | Proposed | Win by key cities or by score, not only by being last standing |
 | [Region specialties](region-specialties.md) | Proposed | Resources on the land that make some cities worth more |
-| [Regrowth](regrowth.md) | Proposed | A city below its old size grows ×1.25 until it's back, so sacks are recovered sooner |
