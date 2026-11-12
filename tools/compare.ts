@@ -66,6 +66,9 @@ interface GameMetrics {
   seaRoutes: number;
   routeTurnsCut: number;
   tradeShare: number;
+  mercenariesHired: number;
+  mercenariesToppedUp: number;
+  mercenariesAlive: number;
   seconds: number;
 }
 
@@ -104,6 +107,9 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "seaRoutes", label: "Trade routes by sea, at the end" },
   { key: "routeTurnsCut", label: "Land route-turns cut, %" },
   { key: "tradeShare", label: "Trade, % of AI city gold" },
+  { key: "mercenariesHired", label: "Mercenary regiments hired" },
+  { key: "mercenariesToppedUp", label: "...soldiers topped up" },
+  { key: "mercenariesAlive", label: "...still serving at the end" },
   { key: "seconds", label: "Seconds per game" },
 ];
 
@@ -137,6 +143,7 @@ async function runWorker(): Promise<void> {
   const seed = Number(option("seed"));
   let firstOwners: Record<string, string> | null = null;
   const started = performance.now();
+  const mercenaries = { hired: 0, toppedUp: 0 };
   const sieges = { laid: 0, abandoned: 0, storms: 0, aboveMinimum: 0, surrenders: 0, siegeTurns: [] as number[], works: [] as number[] };
   // Versions before siege works have none, so every storm counts as 0 works.
   const worksOf = (city: object) => (city as { siegeWorks?: number }).siegeWorks ?? 0;
@@ -156,6 +163,12 @@ async function runWorker(): Promise<void> {
     },
     // Versions before this option ignore it, and show 0 in the siege rows.
     onAction: (before: GameState, action: Action, factionId: string, after: GameState) => {
+      // Versions before mercenaries have no such action, and show 0.
+      if ((action as { type: string }).type === "hireMercenaries") mercenaries.hired++;
+      if ((action as { type: string }).type === "topUpMercenaries") {
+        const soldiers = (s: GameState) => Object.values(s.armies).reduce((n, a) => n + a.regiments.reduce((m, r) => m + r.soldiers, 0), 0);
+        mercenaries.toppedUp += soldiers(after) - soldiers(before);
+      }
       if (action.type === "besiege") {
         const city = Object.values(before.cities).find((c) => c.tile === action.target);
         if (city && city.buildings.walls > 0) sieges.laid++;
@@ -249,6 +262,9 @@ async function runWorker(): Promise<void> {
       }, 0),
       cities.filter((c) => aiIds.has(c.owner)).reduce((n, c) => n + cityStats(state, c).gold, 0),
     ),
+    mercenariesHired: mercenaries.hired,
+    mercenariesToppedUp: mercenaries.toppedUp,
+    mercenariesAlive: aiRegiments.filter((r) => (r as { mercenary?: boolean }).mercenary).length,
     seconds: Math.round((performance.now() - started) / 100) / 10,
   };
   process.stdout.write(JSON.stringify(metrics));

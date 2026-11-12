@@ -67,6 +67,8 @@ export interface City {
   cutRoads: CityId[];
   /** Coastal cities and the steps over the sea to each: where ports can carry trade. Set once every city has claimed its land. */
   seaDistances: Record<CityId, number>;
+  /** Mercenary soldiers for hire in its territory, by anyone standing there (see MERCENARIES in data/units.ts). */
+  mercenarySupply: number;
 }
 
 /** A road between two bordering cities. */
@@ -116,6 +118,13 @@ export interface Regiment {
    * and can't move again until the owner's next turn, though it can still attack.
    */
   pinned: boolean;
+  /**
+   * Hired, not trained (see MERCENARIES in data/units.ts): always basic tier,
+   * dearer to keep, topped up only from a territory's mercenaries (never
+   * retrained in a city), and merged only with other mercenaries. Absent on
+   * trained regiments.
+   */
+  mercenary?: true;
 }
 
 /**

@@ -61,6 +61,7 @@ src/
                marches, zone of control, merging), combat (battles, battleSides,
                previews), cities (growth, income, trade routes, capture), buildings
                (construction queue), recruitment (training/retraining queue),
+               mercenaries (hiring and topping up from each territory's supply),
                siege, conquest (occupy/enslave/exterminate), vision (fog),
                scouts (moving them), watchtowers (building them, who sees
                through them),
@@ -85,6 +86,7 @@ tests/         simulation.test.ts (whole games: invalid orders, debt, state
                (what must hold in any state: add to it when adding rules),
                map.test.ts (every starting city can reach level 3),
                siege.test.ts, buildings.test.ts, trade.test.ts, recruitment.test.ts,
+               mercenaries.test.ts,
                watchtowers.test.ts, scouts.test.ts, experience.test.ts, combat.test.ts,
                flight.test.ts, crossings.test.ts,
                controller.test.ts, playbackBanner.test.ts, aiGovernment.test.ts,

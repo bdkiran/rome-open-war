@@ -124,8 +124,9 @@ export function queueScout(state: GameState, factionId: FactionId, cityId: CityI
 
 /**
  * Whether regiments in the army standing in a city can be queued for
- * retraining: damaged, not already queued, trainable here (the unit's
- * building at the regiment's tier), and paid for.
+ * retraining: damaged, not already queued, not mercenaries (they're topped
+ * up from a territory's supply instead), trainable here (the unit's building
+ * at the regiment's tier), and paid for.
  */
 export function canRetrain(state: GameState, factionId: FactionId, cityId: CityId, regimentIds: readonly RegimentId[]): Check {
   const city = state.cities[cityId];
@@ -136,6 +137,7 @@ export function canRetrain(state: GameState, factionId: FactionId, cityId: CityI
   const regiments = regimentIds.map((id) => army.regiments.find((r) => r.id === id));
   if (regiments.some((r) => !r)) return { ok: false, reason: "Those regiments aren't in the city." };
   if (regiments.some((r) => r!.soldiers >= regimentSize(r!.unit))) return { ok: false, reason: "That regiment is already at full strength." };
+  if (regiments.some((r) => r!.mercenary)) return { ok: false, reason: "Mercenaries are topped up with more mercenaries, not retrained." };
   // Retraining needs what training would: the unit's building, at the regiment's tier.
   const untrained = regiments.find((r) => !unitUnlocked(city, r!.unit, r!.tier));
   if (untrained) {

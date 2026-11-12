@@ -13,6 +13,7 @@ import {
 import { BUILDING_EFFECTS, LEVEL_POPULATION_LIMIT } from "@/data/buildings.js";
 import { ECONOMY, TAX_RATES } from "@/data/economy.js";
 import { GAME_SETUP } from "@/data/gameSetup.js";
+import { MERCENARIES } from "@/data/units.js";
 import { TRADE } from "@/data/trade.js";
 import { maxSupplies } from "@/systems/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
@@ -44,6 +45,7 @@ export function createCity(
     besiegedSince: null,
     siegeWorks: 0,
     recruitQueue: [],
+    mercenarySupply: MERCENARIES.supply,
     taxRate: "normal",
     // Every city has a council hall; a capital starts with a forum (level 2). None can train more than militia yet.
     buildings: {

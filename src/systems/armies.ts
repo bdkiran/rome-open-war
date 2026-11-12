@@ -19,7 +19,7 @@ import {
 import { SCOUT } from "@/data/scouts.js";
 import { SIEGE } from "@/data/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
-import { ARMY_RULES, TIERS, UNITS, regimentSize, type Tier, type UnitType } from "@/data/units.js";
+import { ARMY_RULES, MERCENARIES, TIERS, UNITS, regimentSize, type Tier, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import { costToTarget, enterCost } from "@/systems/pathfinding.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
@@ -45,16 +45,21 @@ export function trainingCost(unit: UnitType, soldiers: number, tier: Tier = 1): 
   };
 }
 
-/** Gold per turn to keep this many soldiers of a type and tier. Not rounded. */
-export function upkeepFor(unit: UnitType, soldiers: number, tier: Tier = 1): number {
-  return soldiers * UNITS[unit].upkeep * TIERS[tier].cost;
+/** Gold per turn to keep this many soldiers of a type and tier, trained or hired. Not rounded. */
+export function upkeepFor(unit: UnitType, soldiers: number, tier: Tier = 1, mercenary = false): number {
+  return soldiers * UNITS[unit].upkeep * TIERS[tier].cost * (mercenary ? MERCENARIES.upkeepMultiplier : 1);
+}
+
+/** Gold per turn to keep a regiment as it stands. Not rounded. */
+export function regimentUpkeep(r: Regiment): number {
+  return upkeepFor(r.unit, r.soldiers, r.tier, r.mercenary === true);
 }
 
 /** Total gold per turn a faction pays for all its regiments, rounded. */
 export function factionUpkeep(state: GameState, factionId: FactionId): number {
   let total = 0;
   for (const army of armiesOf(state, factionId)) {
-    for (const r of army.regiments) total += upkeepFor(r.unit, r.soldiers, r.tier);
+    for (const r of army.regiments) total += regimentUpkeep(r);
   }
   total += Object.values(state.scouts).filter((s) => s.owner === factionId).length * SCOUT.upkeep;
   return Math.round(total);
@@ -78,6 +83,11 @@ export function regimentCost(unit: UnitType, tier: Tier = 1): TrainingCost {
   return trainingCost(unit, regimentSize(unit), tier);
 }
 
+/** Gold to hire this many mercenaries of a unit type (always basic), rounded up. They take no people. */
+export function mercenaryCost(unit: UnitType, soldiers = regimentSize(unit)): number {
+  return Math.ceil(soldiers * UNITS[unit].goldPerSoldier * MERCENARIES.goldMultiplier);
+}
+
 /** Adds a new army with the given regiments. */
 export function placeNewArmy(state: GameState, owner: FactionId, tile: TileId, regiments: Regiment[]): GameState {
   const army: Army = { id: `army${state.nextArmyNumber}`, owner, tile, regiments, destination: null };
@@ -86,18 +96,22 @@ export function placeNewArmy(state: GameState, owner: FactionId, tile: TileId, r
 
 // ---- Merging and replenishing ------------------------------------------
 
+/** Regiments that can merge: the same unit and tier, and both hired or both trained. */
+const mergeKind = (r: Regiment) => `${r.unit}/${r.tier}/${r.mercenary ? "hired" : "trained"}`;
+
 /** Whether merging would do anything: some unit type in the army has two or more under-strength regiments. */
 export function canMerge(army: Army): boolean {
   const damaged = new Map<string, number>();
   for (const r of army.regiments) {
-    const kind = `${r.unit}/${r.tier}`;
+    const kind = mergeKind(r);
     if (r.soldiers < regimentSize(r.unit)) damaged.set(kind, (damaged.get(kind) ?? 0) + 1);
   }
   return [...damaged.values()].some((n) => n >= 2);
 }
 
 /**
- * Combines under-strength regiments of the same type and tier into as few
+ * Combines under-strength regiments of the same type and tier (mercenaries
+ * only with mercenaries) into as few
  * as possible: full regiments, plus one holding any remainder (so 120 and 140
  * Spearmen become 180 and 80). Full regiments are left alone. Free, and takes no
  * movement, but a merged regiment moves at the pace of the slowest regiment
@@ -108,9 +122,9 @@ export function mergeRegiments(state: GameState, armyId: ArmyId): GameState {
   const damaged = (r: Regiment) => r.soldiers < regimentSize(r.unit);
   const regiments: Regiment[] = army.regiments.filter((r) => !damaged(r));
 
-  const kinds = [...new Map(army.regiments.map((r) => [`${r.unit}/${r.tier}`, r])).values()];
-  for (const { unit, tier } of kinds) {
-    const group = army.regiments.filter((r) => r.unit === unit && r.tier === tier && damaged(r));
+  const kinds = new Set(army.regiments.map(mergeKind));
+  for (const kind of kinds) {
+    const group = army.regiments.filter((r) => mergeKind(r) === kind && damaged(r));
     if (group.length === 0) continue;
     let soldiers = group.reduce((sum, r) => sum + r.soldiers, 0);
     const movementLeft = Math.min(...group.map((r) => r.movementLeft));
@@ -120,7 +134,7 @@ export function mergeRegiments(state: GameState, armyId: ArmyId): GameState {
     // Keep the ids of the first regiments in the group; the rest are folded in.
     for (const original of group) {
       if (soldiers <= 0) break;
-      const size = Math.min(regimentSize(unit), soldiers);
+      const size = Math.min(regimentSize(original.unit), soldiers);
       regiments.push({ ...original, soldiers: size, experience, movementLeft, pinned });
       soldiers -= size;
     }

@@ -4,7 +4,7 @@ import { MAX_EXPERIENCE } from "@/data/experience.js";
 import { SCOUT } from "@/data/scouts.js";
 import { SIEGE } from "@/data/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
-import { ARMY_RULES, UNITS, regimentSize } from "@/data/units.js";
+import { ARMY_RULES, MERCENARIES, UNITS, regimentSize } from "@/data/units.js";
 
 /**
  * Everything that must hold in any game state, whatever has happened.
@@ -37,6 +37,7 @@ export function brokenRules(state: GameState): string[] {
       if (!Number.isInteger(r.experience) || r.experience < 0 || r.experience > MAX_EXPERIENCE) {
         broken.push(`${at}: regiment ${r.id} has ${r.experience} experience`);
       }
+      if (r.mercenary && r.tier !== 1) broken.push(`${at}: mercenary regiment ${r.id} is tier ${r.tier}`);
       if (!(r.movementLeft >= 0 && r.movementLeft <= UNITS[r.unit].movement)) {
         broken.push(`${at}: regiment ${r.id} has ${r.movementLeft} movement`);
       }
@@ -54,6 +55,9 @@ export function brokenRules(state: GameState): string[] {
     if (!(city.siegeWorks >= 0 && city.siegeWorks <= SIEGE.maxWorks)) broken.push(`${at}: ${city.name} has ${city.siegeWorks} siege works`);
     if (city.siegeWorks > 0 && (!city.besiegedBy || city.buildings.walls === 0)) broken.push(`${at}: ${city.name} has siege works with no siege or walls`);
     if (city.besiegedBy && !state.factions.find((f) => f.id === city.besiegedBy)?.alive) broken.push(`${at}: ${city.name} is besieged by a fallen faction`);
+    if (!(Number.isInteger(city.mercenarySupply) && city.mercenarySupply >= 0 && city.mercenarySupply <= MERCENARIES.supply)) {
+      broken.push(`${at}: ${city.name} has ${city.mercenarySupply} mercenaries for hire`);
+    }
     const level = city.buildings.government;
     if (!(level >= 1 && level <= 3)) broken.push(`${at}: ${city.name} is level ${level}`);
   }
