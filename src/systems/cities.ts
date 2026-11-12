@@ -456,8 +456,9 @@ export function roadCut(state: GameState, road: Road, owner: FactionId): boolean
  * A city's trade routes: by road to each city of the same owner it's joined
  * to, if both have roads, and to each port of the same owner within sailing
  * range, if both have ports. A siege at either end shuts a route; an enemy
- * army on a road or next to it cuts it (it's listed, paying nothing). A pair
- * joined by land and sea trades both ways.
+ * army on a road or next to it cuts it (it's listed, paying nothing). Cities
+ * joined by a road (their land borders) trade only by land, whether or not
+ * they've built roads: the sea is for cities the roads don't join.
  */
 export function tradeRoutes(state: GameState, city: City): TradeRoute[] {
   if (city.besiegedBy) return [];
@@ -478,6 +479,7 @@ export function tradeRoutes(state: GameState, city: City): TradeRoute[] {
   }
   if (city.buildings.port > 0) {
     for (const [id, steps] of Object.entries(city.seaDistances)) {
+      if (city.landNeighbours.includes(id)) continue;
       const other = open(id);
       const level = other ? Math.min(city.buildings.port, other.buildings.port) : 0;
       if (other && level > 0 && steps <= TRADE.seaRange[level]) {

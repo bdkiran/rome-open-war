@@ -658,6 +658,28 @@ so.
   Levers: "grow, then tax" overtakes normal at turn 44 (was 43); exterminating is best
   after 100 turns in 4 of 55 cities.
 
+- **Growth +5%, road-or-sea trade, sea trade +25%.** The player asked for more base
+  growth, and for cities joined by a road (their land borders) to trade only by land,
+  never by sea as well: before, ~20% of route-ends at turn 100 were a sea route doubling
+  a land one. Every terrain's growth rate went up 5% (plains 5% → 5.25%, forest and sea
+  3.5% → 3.675%, hills 2.5% → 2.625%, mountains and desert 1% → 1.05%), in the terrain
+  table rather than as a multiplier, so farms and ports, which add a share of it, grow
+  with it. ×1.1 and ×1.2 were measured first; the player wanted a smaller swing. Sea
+  trade pays 0.5 / 0.875 / 1.25 per 1,000 people (was 0.4 / 0.7 / 1, as roads still are),
+  to make up for the sea routes the road rule removes. A third change, markets
+  multiplying only trade (with trade gold +50% and the market's trade bonus doubled),
+  was measured and dropped: exterminating became the best choice after 50 turns in
+  20–29% of cities (`tests/balance.test.ts` allows 15%), since occupied cities earned
+  less while plunder didn't change, and cities changing hands fell 19–36%. Shipped,
+  against master, 8 seeds, 50 turns (normal, then `--garrison`): AI net income +5% /
+  +15%, treasuries −3% / +15%, cities not with first owner 16 → 14 / 14 → 13, battles
+  −1% / −6%, level-2 cities 19 → 23 / 20 → 22, sea routes 6 → 2 / 6 → 3. 4 seeds, 100
+  turns: AI net income −4% / +29%, treasuries 659 → 682 / 626 → 711, cities not with
+  first owner 32 → 25 / 26 → 25, factions fallen 5 → 4 / 2 → 3, level-3 cities 20 → 23 /
+  21 → 24, sea routes 35 → 17 / 24 → 17, trade 24% → 18% / 22% → 19% of AI city gold;
+  no invalid orders or debt. Levers: exterminating best after 100 turns in 2 of 55
+  cities (was 4), "grow, then tax" overtakes normal at turn 40 (was 44).
+
 ## Economy tuning history
 
 The economy was retuned several times; the lesson each time:

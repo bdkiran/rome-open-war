@@ -213,8 +213,8 @@ growth = baseGrowthRate × population × (1 − (population / capacity)^1.25)
   with a Senate (level 3). The city panel marks Capacity with ⚠ when the
   level, not the land, is what holds a city back.
 - **Base growth rate** is the average of each terrain type's rate across the
-  city's land and fishing grounds, e.g. plains 5%, forest and sea 3.5%, hills
-  2.5%, mountains and desert 1%.
+  city's land and fishing grounds: plains 5.25%, forest and sea 3.675%, hills
+  2.625%, mountains and desert 1.05%.
 
 Cities grow close to their base rate while small and slow down only as they
 near capacity: at half full they still grow at 58% of their rate, at three
@@ -273,15 +273,16 @@ building at both ends:
 
 - **By land**: two of your cities joined by a road (see Movement), both
   with roads built.
-- **By sea**: two of your ports within sailing range: 6 / 16 / 40 steps
+- **By sea**: two of your ports no road joins, within sailing range: 6 / 16 / 40 steps
   over the sea for a Jetty / Harbour / Great harbour. A port stands on the
   shore by its city: a pier, longer at each level, with a storehouse at
   Great harbour. Each of your open sea routes is a faint lane over the water
   with a ship in your colours sailing it from port to port.
 
-A route runs at the lower of the two cities' levels and pays each end
-0.4 / 0.7 / 1 gold per 1,000 people at the other end, so trading with a big
-city pays more. Two cities joined by land and sea trade both ways. The
+A route runs at the lower of the two cities' levels and pays each end, for
+every 1,000 people at the other end, 0.4 / 0.7 / 1 gold by road or
+0.5 / 0.875 / 1.25 by sea, so trading with a big city pays more. Two cities joined by a road (their land borders) trade only
+by land, even when both have ports: the sea is for cities no road joins. The
 market multiplies trade gold more than the rest (+50% / +100% / +150%), and
 taxes apply as usual. A siege at either end shuts the route, and **an enemy
 army standing on a road, or next to it, cuts it**: no gold while it stays.
