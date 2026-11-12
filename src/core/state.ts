@@ -246,7 +246,7 @@ export interface GameState {
 }
 
 /** Why a faction won. */
-export type VictoryReason = "conquest" | "keyCities" | "score";
+export type VictoryReason = "conquest" | "keyCities";
 
 export interface VictoryState {
   /** Chosen when the game starts. */
@@ -255,7 +255,7 @@ export interface VictoryState {
   keyCities: CityId[];
   /** The faction holding enough key cities, and the turn it first did (counted at the end of its turns). */
   holding: { factionId: FactionId; since: number } | null;
-  /** Set once the game is won by key cities or score. Last faction standing needs no entry: it's plain to see. */
+  /** Set once the game is won by key cities. Last faction standing needs no entry: it's plain to see. */
   winner: { factionId: FactionId; reason: VictoryReason; turn: number } | null;
 }
 

@@ -65,7 +65,7 @@ src/
                scouts (moving them), watchtowers (building them, who sees
                through them),
                turn (start/end of each faction's turn), victory (last standing,
-               key cities, score), pathfinding
+               key cities), pathfinding
   ai/          ai.ts (nextAction: one action at a time), assess.ts (targets,
                threats, relief of besieged cities)
   game/        controller.ts: holds the state, runs AI turns, notifies the UI

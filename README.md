@@ -65,7 +65,6 @@ Every city can be reached from every other.
 |---|---|---|
 | **Conquest** | it's the last faction standing | it loses its last city |
 | **Key cities** (the default) | it holds 4 of the 6 key cities at the end of 5 of its turns in a row, or it's the last standing | it falls, or another faction meets the key-city goal |
-| **Time limit** | as with key cities, or it has the best score once turn 150 is over | as with key cities, or another faction has the best score after turn 150 |
 
 The **key cities** are the six great capitals: Roma, Carthago, Pella,
 Corinthus, Antiochia and Alexandria, starred on the map. The scoreboard shows
@@ -73,9 +72,7 @@ how many each faction holds. On the first turn a faction holds 4, everyone is
 told, and the status line counts down to its win; losing any one of them
 starts the count again. Any faction can win this way, AI or not.
 
-The **score** is 100 per city, 10 per 1,000 people and 300 more per key city
-(gold doesn't count; it's in each faction's tooltip on the scoreboard). A tie
-goes to the faction with more cities.
+There's no time limit: a game goes on until someone wins.
 
 When the game ends, a victory or defeat screen says how. You can close it
 to look at the map, but no more orders go through, or play again.

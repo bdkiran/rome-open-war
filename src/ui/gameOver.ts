@@ -2,7 +2,7 @@ import { citiesOf, type GameState } from "@/core/state.js";
 import { VICTORY } from "@/data/gameSetup.js";
 import { formatNumber } from "@/render/format.js";
 import { factionPopulation } from "@/systems/cities.js";
-import { scoreFor, type Outcome } from "@/systems/victory.js";
+import type { Outcome } from "@/systems/victory.js";
 import { escapeHtml } from "@/ui/html.js";
 
 export interface GameOverElements {
@@ -24,9 +24,7 @@ export function showGameOver(el: GameOverElements, state: GameState, outcome: Ou
     const how =
       outcome.reason === "keyCities"
         ? `${name} has held ${VICTORY.keyCitiesNeeded} of the ${keyCities} key cities for ${VICTORY.holdTurns} turns.`
-        : outcome.reason === "score"
-          ? `Turn ${VICTORY.scoreTurn} is over, and ${name} has the best score: ${formatNumber(scoreFor(state, outcome.faction.id))}.`
-          : `${name} stands alone. Every rival has fallen.`;
+        : `${name} stands alone. Every rival has fallen.`;
     el.title.textContent = "Victory";
     el.text.innerHTML = `${how} After ${turns} you hold ${cities} cities and ${formatNumber(factionPopulation(state, outcome.faction.id))} people.`;
   } else {
@@ -35,12 +33,7 @@ export function showGameOver(el: GameOverElements, state: GameState, outcome: Ou
     el.title.textContent = "Defeat";
     if (won && won.reason !== "conquest") {
       const rival = escapeHtml(won.faction.name);
-      const how =
-        won.reason === "keyCities"
-          ? `${rival} has held ${VICTORY.keyCitiesNeeded} of the ${keyCities} key cities for ${VICTORY.holdTurns} turns and wins the game.`
-          : `Turn ${VICTORY.scoreTurn} is over, and ${rival} has the best score: ${formatNumber(scoreFor(state, won.faction.id))}` +
-            (outcome.faction.alive ? `, to your ${formatNumber(scoreFor(state, outcome.faction.id))}.` : ".");
-      el.text.innerHTML = how;
+      el.text.innerHTML = `${rival} has held ${VICTORY.keyCitiesNeeded} of the ${keyCities} key cities for ${VICTORY.holdTurns} turns and wins the game.`;
     } else {
       el.text.innerHTML =
         `${escapeHtml(outcome.faction.name)} has fallen after ${turns}.` +

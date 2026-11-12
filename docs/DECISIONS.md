@@ -779,13 +779,13 @@ in detail, and `npm run levers` covers the economy.
 
 ## Game structure
 
-- **Victory: key cities or a time limit, chosen on a start screen.** Being the last
+- **Victory: key cities, chosen on a start screen; no time limit.** Being the last
   faction standing needs some 14 factions to fall, at about 2 per 100 turns, so a game
-  almost never ended. Three presets: *Conquest* (last standing, as before), *Key cities*
+  almost never ended. Two presets: *Conquest* (last standing, as before) and *Key cities*
   (the default: hold 4 of the six great capitals, Roma, Carthago, Pella, Corinthus,
-  Antiochia and Alexandria, at the end of 5 of your turns in a row) and *Time limit*
-  (key cities, or the best score once turn 150 is over: 100 per city, 10 per 1,000
-  people, 300 per key city, no gold so hoarding doesn't pay). Last standing always wins.
+  Antiochia and Alexandria, at the end of 5 of your turns in a row). Last standing always
+  wins. A third, *Time limit* (key cities, or the best score once turn 150 is over), was
+  built and dropped at review: the player didn't want a game decided by the clock.
   Any faction can win on key cities, so they put pressure on the player; the first turn
   one holds 4 is announced to everyone and the status line counts down. 4 of 6 is more
   than half, so only one faction can be counting at a time. Once a game is won,

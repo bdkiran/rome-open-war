@@ -1,4 +1,4 @@
-/** How a game is won: last standing, key cities held for a few turns, or score at the time limit. */
+/** How a game is won: last standing, or key cities held for a few turns. There's no time limit. */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { applyAction, type Action } from "@/core/actions.js";
@@ -7,7 +7,7 @@ import { createGame } from "@/core/setup.js";
 import { currentFaction, type GameState } from "@/core/state.js";
 import { VICTORY, type VictoryPreset } from "@/data/gameSetup.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
-import { keyCitiesHeld, outcomeFor, scoreFor, winner } from "@/systems/victory.js";
+import { keyCitiesHeld, outcomeFor, winner } from "@/systems/victory.js";
 
 const map = ROMAN_WORLD.mapEngine.createMap();
 const ctx: GameContext = { topology: map.topology };
@@ -85,26 +85,9 @@ describe("key cities", () => {
   });
 });
 
-describe("the time limit", () => {
-  it("gives the game to the best score once its round is over", () => {
-    let s = newGame("timeLimit");
-    s = give({ ...s, turn: VICTORY.scoreTurn }, "carthage", ["Roma"]);
-    const best = s.factions.filter((f) => f.alive).reduce((a, b) => (scoreFor(s, b.id) > scoreFor(s, a.id) ? b : a));
-    s = round(s);
-    assert.equal(winner(s)?.faction.id, best.id);
-    assert.equal(winner(s)?.reason, "score");
-  });
-
-  it("counts cities, people and key cities, not gold", () => {
-    const s = newGame("timeLimit");
-    const rich = { ...s, factions: s.factions.map((f) => (f.id === "rome" ? { ...f, gold: 100_000 } : f)) };
-    assert.equal(scoreFor(rich, "rome"), scoreFor(s, "rome"));
-    const more = give(s, "rome", ["Carthago"]);
-    assert.ok(scoreFor(more, "rome") - scoreFor(s, "rome") > VICTORY.scorePerCity + VICTORY.scorePerKeyCity);
-  });
-
-  it("doesn't end a key-cities game", () => {
-    let s: GameState = { ...newGame("keyCities"), turn: VICTORY.scoreTurn };
+describe("no time limit", () => {
+  it("lets a key-cities game run past turn 150 with no winner", () => {
+    let s: GameState = { ...newGame("keyCities"), turn: 150 };
     s = round(s);
     assert.equal(winner(s), null);
   });
@@ -112,7 +95,7 @@ describe("the time limit", () => {
 
 describe("last faction standing", () => {
   it("still wins, whatever the preset", () => {
-    for (const preset of ["conquest", "keyCities", "timeLimit"] as const) {
+    for (const preset of ["conquest", "keyCities"] as const) {
       const s = newGame(preset);
       const alone = { ...s, factions: s.factions.map((f) => ({ ...f, alive: f.id === "rome" })) };
       assert.deepEqual(winner(alone), { faction: alone.factions[0], reason: "conquest" }, preset);

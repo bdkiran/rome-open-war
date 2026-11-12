@@ -38,7 +38,7 @@ export const STARTING_ARMIES: { capital: StartingArmy; city: StartingArmy } = {
 };
 
 /** How a game can be won: chosen on the start screen and kept in the game state. */
-export type VictoryPreset = "conquest" | "keyCities" | "timeLimit";
+export type VictoryPreset = "conquest" | "keyCities";
 
 /**
  * The ways to win besides being the last faction standing, which always wins.
@@ -51,12 +51,6 @@ export const VICTORY = {
   keyCitiesNeeded: 4,
   /** ...at the end of this many of its turns in a row. Losing one starts the count again. */
   holdTurns: 5,
-  /** With the time limit, the best score wins once this round is over. */
-  scoreTurn: 150,
-  /** Score: per city held, per 1,000 people, and per key city on top of its city. Gold doesn't count. */
-  scorePerCity: 100,
-  scorePer1000People: 10,
-  scorePerKeyCity: 300,
 } as const;
 
 /** What each preset is called on the start screen, and what it means. */
@@ -65,9 +59,5 @@ export const VICTORY_PRESETS: Record<VictoryPreset, { name: string; summary: str
   keyCities: {
     name: "Key cities",
     summary: `Hold ${VICTORY.keyCitiesNeeded} of the key cities for ${VICTORY.holdTurns} turns, or be the last standing. Any faction can win this way.`,
-  },
-  timeLimit: {
-    name: "Time limit",
-    summary: `Key cities or conquest, or the best score after turn ${VICTORY.scoreTurn}.`,
   },
 };

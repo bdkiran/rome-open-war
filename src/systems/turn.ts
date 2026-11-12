@@ -5,13 +5,12 @@ import { progressConstruction } from "@/systems/buildings.js";
 import { processRecruitment } from "@/systems/recruitment.js";
 import { processCities } from "@/systems/cities.js";
 import { processSieges } from "@/systems/siege.js";
-import { checkScoreTurn, trackKeyCities } from "@/systems/victory.js";
+import { trackKeyCities } from "@/systems/victory.js";
 
 /**
  * Ends the current faction's turn: runs its end-of-turn processing, then
  * passes play to the next living faction. When play wraps back to the first
- * faction, the turn number goes up, and with a time limit, the last round
- * may decide the game on score.
+ * faction, the turn number goes up.
  */
 export function endTurn(ctx: GameContext, state: GameState): GameState {
   const finished = endFactionTurn(ctx, state, currentFaction(state).id);
@@ -25,8 +24,7 @@ export function endTurn(ctx: GameContext, state: GameState): GameState {
     if (finished.factions[index].alive) break;
   }
 
-  const scored = turn > finished.turn ? checkScoreTurn(finished, finished.turn) : finished;
-  const next: GameState = { ...scored, currentFactionIndex: index, turn };
+  const next: GameState = { ...finished, currentFactionIndex: index, turn };
   return startFactionTurn(ctx, next, next.factions[index].id);
 }
 

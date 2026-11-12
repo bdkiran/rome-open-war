@@ -17,7 +17,7 @@ import { SCOUT } from "@/data/scouts.js";
 import { scoutsOf } from "@/systems/scouts.js";
 import { escapeHtml, signed } from "@/ui/html.js";
 import { VICTORY } from "@/data/gameSetup.js";
-import { keyCitiesCount, keyCitiesHeld, keyCityWinTurn, outcomeFor, scoreFor } from "@/systems/victory.js";
+import { keyCitiesCount, keyCitiesHeld, keyCityWinTurn, outcomeFor } from "@/systems/victory.js";
 
 export interface TurnPanelElements {
   turnNumber: HTMLElement;
@@ -44,7 +44,7 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
     el.turnStatus.textContent = outcome.winner && outcome.winner.reason !== "conquest" ? `${outcome.winner.faction.name} has won.` : `${outcome.faction.name} has fallen.`;
   } else if (outcome?.kind === "victory") {
     el.turnStatus.textContent =
-      outcome.reason === "keyCities" ? "Victory. The key cities are yours." : outcome.reason === "score" ? "Victory, on score." : "Victory. Every rival has fallen.";
+      outcome.reason === "keyCities" ? "Victory. The key cities are yours." : "Victory. Every rival has fallen.";
   } else if (holding && holder) {
     // Someone is counting down to a key-city win: say so every turn until it's over.
     const mine = holder.id === humanId;
@@ -81,7 +81,7 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
       const name = document.createElement("span");
       name.className = "name";
       name.textContent = faction.id === humanId ? `${faction.shortName} (you)` : faction.shortName;
-      name.title = state.victory.preset === "timeLimit" && faction.alive ? `${faction.name}: score ${formatNumber(scoreFor(state, faction.id))}` : faction.name;
+      name.title = faction.name;
 
       // Key cities held, when they can win the game.
       const held = faction.alive && keyCitiesCount(state) ? keyCitiesHeld(state, faction.id) : 0;
