@@ -16,7 +16,7 @@ import {
 import { BUILDINGS } from "@/data/buildings.js";
 import { SCOUT } from "@/data/scouts.js";
 import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, unitName, type Tier, type UnitType } from "@/data/units.js";
-import { mercenaryCost, placeNewArmy, regimentCost, trainingCost } from "@/systems/armies.js";
+import { placeNewArmy, regimentCost, trainingCost } from "@/systems/armies.js";
 import { scoutAt } from "@/systems/scouts.js";
 
 /**
@@ -29,13 +29,9 @@ import { scoutAt } from "@/systems/scouts.js";
 
 const fmt = (n: number) => n.toLocaleString("en-US");
 
-/**
- * Gold to bring a regiment back to full strength at its own tier, rounded up
- * to a whole coin. Mercenaries are topped up at the hire price.
- */
+/** Gold to bring a regiment back to full strength at its own tier, rounded up to a whole coin. */
 export function retrainCost(regiment: Regiment): number {
-  const missing = regimentSize(regiment.unit) - regiment.soldiers;
-  return regiment.mercenary ? mercenaryCost(regiment.unit, missing) : trainingCost(regiment.unit, missing, regiment.tier).gold;
+  return trainingCost(regiment.unit, regimentSize(regiment.unit) - regiment.soldiers, regiment.tier).gold;
 }
 
 function queueCheck(state: GameState, factionId: FactionId, cityId: CityId, orders: number, gold: number): Check {
@@ -128,8 +124,9 @@ export function queueScout(state: GameState, factionId: FactionId, cityId: CityI
 
 /**
  * Whether regiments in the army standing in a city can be queued for
- * retraining: damaged, not already queued, trainable here (the unit's
- * building at the regiment's tier), and paid for.
+ * retraining: damaged, not already queued, not mercenaries (they're topped
+ * up from a territory's supply instead), trainable here (the unit's building
+ * at the regiment's tier), and paid for.
  */
 export function canRetrain(state: GameState, factionId: FactionId, cityId: CityId, regimentIds: readonly RegimentId[]): Check {
   const city = state.cities[cityId];
@@ -140,6 +137,7 @@ export function canRetrain(state: GameState, factionId: FactionId, cityId: CityI
   const regiments = regimentIds.map((id) => army.regiments.find((r) => r.id === id));
   if (regiments.some((r) => !r)) return { ok: false, reason: "Those regiments aren't in the city." };
   if (regiments.some((r) => r!.soldiers >= regimentSize(r!.unit))) return { ok: false, reason: "That regiment is already at full strength." };
+  if (regiments.some((r) => r!.mercenary)) return { ok: false, reason: "Mercenaries are topped up with more mercenaries, not retrained." };
   // Retraining needs what training would: the unit's building, at the regiment's tier.
   const untrained = regiments.find((r) => !unitUnlocked(city, r!.unit, r!.tier));
   if (untrained) {
@@ -157,8 +155,7 @@ export function queueRetraining(state: GameState, factionId: FactionId, cityId: 
   const army = armyAt(state, state.cities[cityId].tile)!;
   const orders: RecruitOrder[] = regimentIds.map((id) => {
     const r = army.regiments.find((x) => x.id === id)!;
-    const order: RecruitOrder = { kind: "retrain", unit: r.unit, regimentId: r.id, soldiers: regimentSize(r.unit) - r.soldiers, cost: retrainCost(r) };
-    return r.mercenary ? { ...order, mercenary: true } : order;
+    return { kind: "retrain", unit: r.unit, regimentId: r.id, soldiers: regimentSize(r.unit) - r.soldiers, cost: retrainCost(r) };
   });
   return addOrders(state, factionId, cityId, orders, orders.reduce((sum, o) => sum + o.cost, 0));
 }
@@ -217,9 +214,8 @@ function retrainAll(state: GameState, factionId: FactionId, cityId: CityId): Gam
       next = updateFaction(next, factionId, (f) => ({ ...f, gold: f.gold + order.cost }));
       continue;
     }
-    // Mercenaries are topped up with more hired men, not the city's people.
-    const needed = order.mercenary ? 0 : (regimentSize(regiment.unit) - regiment.soldiers) * ARMY_RULES.populationPerSoldier;
-    if (needed > 0 && city.population - ARMY_RULES.minCityPopulation < needed) {
+    const needed = (regimentSize(regiment.unit) - regiment.soldiers) * ARMY_RULES.populationPerSoldier;
+    if (city.population - ARMY_RULES.minCityPopulation < needed) {
       kept.push(order); // not enough people yet: try again next turn
       continue;
     }
@@ -320,10 +316,12 @@ export function dropStrayRetraining(state: GameState): GameState {
   return next;
 }
 
-/** People the orders in a city's queue will take when they're completed (mercenaries take none). */
+/** People the orders in a city's queue will take when they're completed. */
 export function queuedPeople(city: City): number {
-  const people = (o: RecruitOrder) => (o.kind === "scout" ? 0 : o.kind === "train" ? regimentSize(o.unit) : o.mercenary ? 0 : o.soldiers);
-  return city.recruitQueue.reduce((sum, o) => sum + people(o) * ARMY_RULES.populationPerSoldier, 0);
+  return city.recruitQueue.reduce(
+    (sum, o) => sum + (o.kind === "scout" ? 0 : o.kind === "train" ? regimentSize(o.unit) : o.soldiers) * ARMY_RULES.populationPerSoldier,
+    0,
+  );
 }
 
 function addOrders(state: GameState, factionId: FactionId, cityId: CityId, orders: RecruitOrder[], gold: number): GameState {

@@ -42,7 +42,7 @@ export function tierMark(tier: Tier): string {
 
 /** A small coin in a box's corner for a regiment of mercenaries. */
 export function mercenaryMark(): string {
-  return `<span class="merc-mark" title="Mercenaries: double upkeep, desert in debt">&#9679;</span>`;
+  return `<span class="merc-mark" title="Mercenaries: double upkeep, topped up from the land they stand in">&#9679;</span>`;
 }
 
 /** A building's level as a row of pips, filled up to `built`. */

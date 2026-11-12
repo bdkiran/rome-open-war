@@ -2,7 +2,7 @@ import type { GameContext } from "@/core/context.js";
 import { currentFaction, type FactionId, type GameState } from "@/core/state.js";
 import { continueMarches, payUpkeep, refreshMovement } from "@/systems/armies.js";
 import { progressConstruction } from "@/systems/buildings.js";
-import { mercenariesDesert, resetHires } from "@/systems/mercenaries.js";
+import { refillMercenaries } from "@/systems/mercenaries.js";
 import { processRecruitment } from "@/systems/recruitment.js";
 import { processCities } from "@/systems/cities.js";
 import { processSieges } from "@/systems/siege.js";
@@ -10,7 +10,8 @@ import { processSieges } from "@/systems/siege.js";
 /**
  * Ends the current faction's turn: runs its end-of-turn processing, then
  * passes play to the next living faction. When play wraps back to the first
- * faction, the turn number goes up.
+ * faction, the turn number goes up, and every territory's mercenaries
+ * refill a little.
  */
 export function endTurn(ctx: GameContext, state: GameState): GameState {
   const finished = endFactionTurn(ctx, state, currentFaction(state).id);
@@ -24,14 +25,14 @@ export function endTurn(ctx: GameContext, state: GameState): GameState {
     if (finished.factions[index].alive) break;
   }
 
-  const next: GameState = { ...finished, currentFactionIndex: index, turn };
+  const rounded: GameState = turn > finished.turn ? refillMercenaries(finished) : finished;
+  const next: GameState = { ...rounded, currentFactionIndex: index, turn };
   return startFactionTurn(ctx, next, next.factions[index].id);
 }
 
 /**
  * Runs as a faction ends its turn: its marching armies move, and its cities pay income, grow, build and recruit,
  * its sieges tighten (or lift, if it has walked away), and its army is paid.
- * Still in debt after that, it loses a regiment of mercenaries.
  * Doing it here gives every faction exactly one tick per round, whatever its
  * turn order.
  */
@@ -42,10 +43,10 @@ function endFactionTurn(ctx: GameContext, state: GameState, factionId: FactionId
   next = progressConstruction(next, factionId);
   next = processRecruitment(next, factionId);
   next = processSieges(ctx, next, factionId);
-  return mercenariesDesert(payUpkeep(next, factionId), factionId);
+  return payUpkeep(next, factionId);
 }
 
-/** Runs at the start of each faction's turn: its armies get their movement back, and its cities can hire again. */
+/** Runs at the start of each faction's turn: its armies get their movement back. */
 function startFactionTurn(_ctx: GameContext, state: GameState, factionId: FactionId): GameState {
-  return resetHires(refreshMovement(state, factionId), factionId);
+  return refreshMovement(state, factionId);
 }

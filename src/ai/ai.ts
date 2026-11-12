@@ -37,7 +37,7 @@ import {
   reachableTiles,
   upkeepFor,
 } from "@/systems/armies.js";
-import { canHire } from "@/systems/mercenaries.js";
+import { canHire, canTopUp, topUpPlan } from "@/systems/mercenaries.js";
 import { cityStats, factionIncome, mineableTiles, regionOwner } from "@/systems/cities.js";
 import { SCOUT } from "@/data/scouts.js";
 import { reachableScoutTiles, scoutsOf } from "@/systems/scouts.js";
@@ -76,8 +76,9 @@ import { costToTarget } from "@/systems/pathfinding.js";
  * once the city is about to surrender), a relief force is trained (or, when
  * training can't, hired) and sent from the nearest free city, and every
  * field army marches to the city.
- *   5. Defend: replenish battered garrisons and train garrisons for its cities
- *      (hiring mercenaries for an empty or threatened city that can't train).
+ *   5. Defend: replenish battered garrisons (topping up mercenaries from the
+ *      land they stand in) and train garrisons for its cities (hiring
+ *      mercenaries for an empty or threatened city that can't train).
  *   6. Build: walls where enemies are near, then advancing the city, then
  *      markets and farms, keeping a little gold in reserve.
  *   7. Train field regiments that counter the target's defenders. While the
@@ -451,11 +452,20 @@ function trainingAction(
     if (army?.owner !== factionId) continue;
     const queued = new Set(city.recruitQueue.flatMap((o) => (o.kind === "retrain" ? [o.regimentId] : [])));
     const battered = army.regiments
-      .filter((r) => r.soldiers <= regimentSize(r.unit) / 2 && !queued.has(r.id) && unitUnlocked(city, r.unit, r.tier))
+      .filter((r) => !r.mercenary && r.soldiers <= regimentSize(r.unit) / 2 && !queued.has(r.id) && unitUnlocked(city, r.unit, r.tier))
       .map((r) => r.id);
     if (battered.length > 0 && canRetrain(state, factionId, city.id, battered).ok) {
       return { type: "replenish", cityId: city.id, regimentIds: battered };
     }
+  }
+
+  // Mercenaries are topped up where they stand, from the territory's supply,
+  // when half a regiment's worth is missing and the gold leaves the reserve.
+  for (const army of phase === "defense" ? armiesOf(state, factionId) : []) {
+    const missing = army.regiments.some((r) => r.mercenary && r.soldiers <= regimentSize(r.unit) / 2);
+    if (!missing || !canTopUp(state, factionId, army.id).ok) continue;
+    const gold = getFaction(state, factionId)?.gold ?? 0;
+    if (gold - topUpPlan(state, army).gold >= AI.buildReserve) return { type: "topUpMercenaries", armyId: army.id };
   }
 
   // Saving for a government building: no new regiments, once it has the bare minimum of an army.
@@ -720,7 +730,8 @@ function unitOrMilitia(state: GameState, factionId: FactionId, cityId: string, u
 
 /**
  * Mercenaries for an emergency that training can't meet (the city's queue
- * is busy, or it hasn't the people): the unit, or militia. Only with
+ * is busy, or it hasn't the people): the unit, or militia, from the city's
+ * own territory. Only with
  * AI.buildReserve left after paying, and only if income still covers upkeep
  * with them, so hiring can't put the faction into debt. Never for the field
  * campaign.
@@ -731,7 +742,8 @@ function hireAction(state: GameState, factionId: FactionId, cityId: string, unit
   for (const choice of [unit, "militia"] as const) {
     if (gold - mercenaryCost(choice) < AI.buildReserve) continue;
     if (net - upkeepFor(choice, regimentSize(choice), 1, true) <= 0) continue;
-    if (canHire(state, factionId, cityId, choice).ok) return { type: "hireMercenaries", cityId, unit: choice };
+    const tile = state.cities[cityId].tile;
+    if (canHire(state, factionId, tile, choice).ok) return { type: "hireMercenaries", tile, unit: choice };
   }
   return null;
 }

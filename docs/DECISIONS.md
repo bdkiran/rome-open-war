@@ -436,22 +436,28 @@ so.
 
 ## Armies and recruitment
 
-- **Mercenaries: gold into regiments at once.** A city trains one regiment a turn and
-  each soldier costs a person, so gold couldn't become an army quickly (the old backlog
-  item "late-game spending"). Mercenaries are the other way to spend, leaving the queue
-  and its one-a-turn rule alone. A city with a Market hires as many basic regiments a turn
-  as its Market's level, of any unit it could train (unit buildings stay the only way to
-  new units). They take no people, cost ×2 gold and ×2 upkeep, can't move on the turn
-  they're hired (so gold can't buy a surprise attack), retrain at the hire price and merge
-  only with mercenaries. A faction still in debt after upkeep loses its dearest mercenary
-  regiment each turn. The AI hires only for a relief force or an empty or threatened
-  garrison that training can't meet, keeping 100 gold back and only if income still covers
-  upkeep with them; never for the field campaign. Over 8 seeds × 100 turns (without /
-  with `--garrison`): 27 / 30 hires a game (target 10–60), 16 / 13 still serving at the
-  end, no desertions, no AI debt; AI net income −3% / −5%, treasuries −6% / +8% (the
-  10–30% drop hoped for didn't come: the AI hires only in emergencies), cities taken +8% /
-  0%, factions fallen and battles unchanged, level-3 cities 23→24 / 24→23. Levers
-  unchanged. At 50 turns there were almost none (2 / 0 a game).
+- **Mercenaries: gold into regiments at once, hired in the land.** A city trains one
+  regiment a turn and each soldier costs a person, so gold couldn't become an army quickly
+  (the old backlog item "late-game spending"). Mercenaries are the other way to spend,
+  leaving the queue and its one-a-turn rule alone. They're hired out in the territories,
+  not in cities: every city's territory holds 440 soldiers for hire (two regiments of
+  militia, three of cavalry), whoever owns it, refilling 40 a round. An army standing
+  anywhere in a territory (or an empty city of its owner) hires from it, so a campaign can
+  be reinforced far from home, and repeated hiring drains a territory instead of being
+  capped per turn. Only basic regiments, of any unit, buildings or not (unit buildings
+  stay the only way to better tiers). They take no people, cost ×2 gold and ×2 upkeep,
+  can't move on the turn they're hired (so gold can't buy a surprise attack), merge only
+  with mercenaries, and are never retrained in a city: an army tops them up from the
+  territory it stands in, at the hire price, which drains the same supply. No desertion:
+  debt only stops new hires, as it stops training (a first version had the dearest
+  mercenary regiment desert each turn in debt; the player didn't want it). The AI hires
+  for a relief force or an empty or threatened garrison that training can't meet, from
+  the city's own territory, and tops up mercenary regiments at half strength or less,
+  keeping 100 gold back. Over 8 seeds × 100 turns (without / with `--garrison`): 35 / 32
+  hires a game, about 1,900 / 2,000 soldiers topped up, 17 / 19 still serving at the end,
+  no AI debt; AI net income −11% / −11% and treasuries −11% / −3% (their upkeep and
+  top-ups), AI soldiers +8% / +1%, cities taken +4% / 0%, battles +3% / +3%, city levels
+  unchanged. Levers within noise.
 
 - **Archers and cavalry cost 240 a regiment, ports 150 / 250 / 450.** Measured in
   simulated battles, joining an army of 2 spearmen and 2 militia, archers added what

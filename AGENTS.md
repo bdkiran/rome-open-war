@@ -61,7 +61,7 @@ src/
                marches, zone of control, merging), combat (battles, battleSides,
                previews), cities (growth, income, trade routes, capture), buildings
                (construction queue), recruitment (training/retraining queue),
-               mercenaries (hiring, desertion in debt),
+               mercenaries (hiring and topping up from each territory's supply),
                siege, conquest (occupy/enslave/exterminate), vision (fog),
                scouts (moving them), watchtowers (building them, who sees
                through them),

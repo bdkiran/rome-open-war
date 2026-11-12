@@ -55,8 +55,8 @@ export function brokenRules(state: GameState): string[] {
     if (!(city.siegeWorks >= 0 && city.siegeWorks <= SIEGE.maxWorks)) broken.push(`${at}: ${city.name} has ${city.siegeWorks} siege works`);
     if (city.siegeWorks > 0 && (!city.besiegedBy || city.buildings.walls === 0)) broken.push(`${at}: ${city.name} has siege works with no siege or walls`);
     if (city.besiegedBy && !state.factions.find((f) => f.id === city.besiegedBy)?.alive) broken.push(`${at}: ${city.name} is besieged by a fallen faction`);
-    if (city.mercenariesHired > (MERCENARIES.hiresByMarketLevel[city.buildings.market] ?? 0)) {
-      broken.push(`${at}: ${city.name} hired ${city.mercenariesHired} mercenaries with a level ${city.buildings.market} Market`);
+    if (!(Number.isInteger(city.mercenarySupply) && city.mercenarySupply >= 0 && city.mercenarySupply <= MERCENARIES.supply)) {
+      broken.push(`${at}: ${city.name} has ${city.mercenarySupply} mercenaries for hire`);
     }
     const level = city.buildings.government;
     if (!(level >= 1 && level <= 3)) broken.push(`${at}: ${city.name} is level ${level}`);

@@ -13,6 +13,7 @@ import {
 import { BUILDING_EFFECTS, LEVEL_POPULATION_LIMIT } from "@/data/buildings.js";
 import { ECONOMY, TAX_RATES } from "@/data/economy.js";
 import { GAME_SETUP } from "@/data/gameSetup.js";
+import { MERCENARIES } from "@/data/units.js";
 import { TRADE } from "@/data/trade.js";
 import { maxSupplies } from "@/systems/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
@@ -44,7 +45,7 @@ export function createCity(
     besiegedSince: null,
     siegeWorks: 0,
     recruitQueue: [],
-    mercenariesHired: 0,
+    mercenarySupply: MERCENARIES.supply,
     taxRate: "normal",
     // Every city has a council hall; a capital starts with a forum (level 2). None can train more than militia yet.
     buildings: {
@@ -601,7 +602,6 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
         // Buildings stand; whatever was being built or trained is lost.
         constructionQueue: [],
         recruitQueue: [],
-        mercenariesHired: 0,
         // The conqueror decides what becomes of it.
         unsettled: true,
         cutRoads: [],
