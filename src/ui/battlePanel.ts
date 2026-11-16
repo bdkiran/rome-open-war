@@ -1,6 +1,7 @@
 import { getFaction, type GameState, type Regiment } from "@/core/state.js";
 import { COMBAT } from "@/data/combat.js";
-import { UNIT_TYPES, UNITS } from "@/data/units.js";
+import { ALL_UNITS, UNITS } from "@/data/units.js";
+import { generalLine } from "@/ui/generalCard.js";
 import { formatNumber } from "@/render/format.js";
 import type { BattlePreview } from "@/systems/combat.js";
 import { escapeHtml } from "@/ui/html.js";
@@ -75,7 +76,7 @@ export function forceSummary(
   strength: number | null,
   notes: string[],
 ): string {
-  const rows = UNIT_TYPES.map((unit) => {
+  const rows = ALL_UNITS.map((unit) => {
     const soldiers = regiments.filter((r) => r.unit === unit).reduce((sum, r) => sum + r.soldiers, 0);
     return soldiers > 0 ? `<dt>${UNITS[unit].name}</dt><dd>${formatNumber(soldiers)}</dd>` : "";
   }).join("");
@@ -89,6 +90,7 @@ export function forceSummary(
         <dt class="total">Soldiers</dt><dd class="total">${formatNumber(regimentTotal(regiments))}</dd>
         ${strength !== null ? `<dt>Strength</dt><dd>${formatNumber(Math.round(strength))}</dd>` : ""}
       </dl>
+      ${generalLine(regiments)}
       ${notes.map((n) => `<p class="side-note">${escapeHtml(n)}</p>`).join("")}
     </section>`;
 }

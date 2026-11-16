@@ -16,11 +16,13 @@ import {
   type Regiment,
   type RegimentId,
 } from "@/core/state.js";
+import { GENERALS } from "@/data/generals.js";
 import { SCOUT } from "@/data/scouts.js";
 import { SIEGE } from "@/data/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, MERCENARIES, TIERS, UNITS, regimentSize, type Tier, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
+import { freshMovement, hasTrait, isGeneral } from "@/systems/generals.js";
 import { costToTarget, enterCost } from "@/systems/pathfinding.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
 
@@ -50,8 +52,9 @@ export function upkeepFor(unit: UnitType, soldiers: number, tier: Tier = 1, merc
   return soldiers * UNITS[unit].upkeep * TIERS[tier].cost * (mercenary ? MERCENARIES.upkeepMultiplier : 1);
 }
 
-/** Gold per turn to keep a regiment as it stands. Not rounded. */
+/** Gold per turn to keep a regiment as it stands: a general's bodyguard costs his flat wages. Not rounded. */
 export function regimentUpkeep(r: Regiment): number {
+  if (isGeneral(r)) return GENERALS.wages;
   return upkeepFor(r.unit, r.soldiers, r.tier, r.mercenary === true);
 }
 
@@ -190,14 +193,16 @@ function explore(
   if (!moving || moving.some((r) => r.pinned) || besiegedCity(state, army)) return { left: new Map(), from };
 
   const budget = Math.min(...moving.map((r) => r.movementLeft));
-  const freshTurn = moving.every((r) => r.movementLeft === UNITS[r.unit].movement);
+  const freshTurn = moving.every((r) => r.movementLeft >= UNITS[r.unit].movement);
   const zoc = zoneOfControl(ctx, state, army.owner);
 
   const enemyTiles = new Set<TileId>();
   const friendlyRoom = new Map<TileId, number>();
   for (const other of Object.values(state.armies)) {
     if (other.owner !== army.owner) enemyTiles.add(other.tile);
-    else if (other.id !== army.id) friendlyRoom.set(other.tile, ARMY_RULES.maxRegiments - other.regiments.length);
+    else if (other.id !== army.id) {
+      friendlyRoom.set(other.tile, ARMY_RULES.maxRegiments - other.regiments.length);
+    }
   }
   for (const city of Object.values(state.cities)) {
     if (city.owner !== army.owner) enemyTiles.add(city.tile);
@@ -372,13 +377,17 @@ export function zoneOfControl(ctx: GameContext, state: GameState, owner: Faction
   return zone;
 }
 
-/** Refills movement for every regiment a faction owns, including last turn's recruits. Runs at the start of its turn. */
+/**
+ * Refills movement for every regiment a faction owns, including last turn's
+ * recruits, with a Swift general's extra for his army. Runs at the start of its turn.
+ */
 export function refreshMovement(state: GameState, factionId: FactionId): GameState {
   const armies = { ...state.armies };
   for (const army of armiesOf(state, factionId)) {
+    const swift = hasTrait(army.regiments, "swift");
     armies[army.id] = {
       ...army,
-      regiments: army.regiments.map((r) => ({ ...r, movementLeft: UNITS[r.unit].movement, pinned: false })),
+      regiments: army.regiments.map((r) => ({ ...r, movementLeft: freshMovement(r, swift), pinned: false })),
     };
   }
   const scouts = { ...state.scouts };
@@ -442,10 +451,11 @@ export function march(
  * turn it starts fresh, however rough the ground.
  */
 export function marchSchedule(state: GameState, army: Army, route: readonly TileId[]): number[] {
-  const full = Math.min(...army.regiments.map((r) => UNITS[r.unit].movement));
+  const swift = hasTrait(army.regiments, "swift");
+  const full = Math.min(...army.regiments.map((r) => freshMovement(r, swift)));
   let left = Math.min(...army.regiments.map((r) => r.movementLeft));
   let turn = 0;
-  let fresh = army.regiments.every((r) => r.movementLeft === UNITS[r.unit].movement);
+  let fresh = army.regiments.every((r) => r.movementLeft >= UNITS[r.unit].movement);
   return route.map((tile) => {
     const cost = enterCost(state, tile);
     if (cost > left && !fresh) {
@@ -488,7 +498,8 @@ export function continueMarches(ctx: GameContext, state: GameState, factionId: F
     if (!step) {
       // Too little movement left this turn to take a step: it waits for the next.
       // Only if it couldn't step even with full movement is the way truly blocked.
-      const rested = { ...army, regiments: army.regiments.map((r) => ({ ...r, movementLeft: UNITS[r.unit].movement })) };
+      const swift = hasTrait(army.regiments, "swift");
+      const rested = { ...army, regiments: army.regiments.map((r) => ({ ...r, movementLeft: freshMovement(r, swift) })) };
       const blocked = enemyNear || !marchStep(ctx, next, rested, ids, destination);
       if (blocked) next = cancelMarch(next, army.id);
       continue;

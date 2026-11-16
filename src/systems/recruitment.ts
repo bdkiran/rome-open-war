@@ -138,6 +138,7 @@ export function canRetrain(state: GameState, factionId: FactionId, cityId: CityI
   if (regiments.some((r) => !r)) return { ok: false, reason: "Those regiments aren't in the city." };
   if (regiments.some((r) => r!.soldiers >= regimentSize(r!.unit))) return { ok: false, reason: "That regiment is already at full strength." };
   if (regiments.some((r) => r!.mercenary)) return { ok: false, reason: "Mercenaries are topped up with more mercenaries, not retrained." };
+  if (regiments.some((r) => r!.general)) return { ok: false, reason: "A general's bodyguard refills on its own, a little each turn." };
   // Retraining needs what training would: the unit's building, at the regiment's tier.
   const untrained = regiments.find((r) => !unitUnlocked(city, r!.unit, r!.tier));
   if (untrained) {

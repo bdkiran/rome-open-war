@@ -268,10 +268,12 @@ so.
   mostly chases of fled armies (median defender about 170 soldiers);
   cities taken 219 (was 201 with wipe-outs), factions fallen 12 (was 11),
   regiments alive at turn 100 1,382 (was 1,416).
-- **The conquest balance test was relaxed to 15% / 10%** (exterminating
+- **The conquest balance test was relaxed to 15% / 10%, then 20% / 15%** (exterminating
   best long-term at 50 / 100 turns). Fleeing armies changed the turn-50
   game it samples, and exterminating came out best for 12% / 7% of cities
   with no change to the economy. The player chose to relax the limits.
+  Generals shifted it again, to 16% / 13%, with no economic change; the
+  player chose to relax the limits to 20% / 15%.
 - **The AI looks before storming.** It used to march up to a city out of
   sight and storm it in one order, and most of its battles were such blind
   storms against hidden garrisons. Under the new combat they failed more
@@ -549,6 +551,38 @@ so.
   city refill elite regiments; the player reported it as a bug.
 - **Starting armies include militia**: two regiments in the capital, one in
   each other city, alongside the archers and cavalry (capital) or spearmen.
+
+- **Generals are regiments.** A general rides in his own bodyguard regiment
+  (`unit: "bodyguard"`, with `Regiment.general` holding his name and traits), so he
+  follows splits, marches and flight with no record of his own, the fog hides him with
+  his army, and he dies when his bodyguard is cut down. Otherwise he works like any other
+  regiment: an army can hold several, and he counts toward its 10. The bodyguard (60
+  riders, 80/40, charge 30) is better than cavalry. It isn't trained, retrained, merged
+  or topped up by mercenaries. Instead it refills 6 riders a turn, free, and costs a
+  flat 6 gold a turn in wages.
+  - **Getting one:** an army without a general that wins a battle that counts gains one
+    25% of the time, up to one general per city held. A faction starts with none. A side
+    that lost a general in a battle doesn't gain a new one from it.
+  - **Traits:** six, each held or not, with no ranks. Each is rolled once at the start,
+    and there's a 25% chance of a new one after each battle he wins that counts. Only
+    the leader's traits count: the most senior general (most traits, then most
+    experience, then longest in the army), across all armies of a side in a battle.
+  - **Death:** 5% in every battle he fights, won or lost, and his bodyguard goes with
+    him. He also dies with his army.
+  - **Dropped on purpose:** ranks, capture and ransom, any shock to his army when he
+    dies, a one-general-per-army limit, and any special way for him to escape a rout.
+    A bodyguard that took no losses while fleeing lived 21 turns instead of 7, but
+    doubled battles (1,143 vs 566) and field armies, as lone bodyguards were chased
+    again and again.
+  - **Measured** (8 seeds, 100 turns, vs master): cities changing hands, factions
+    fallen and battles within the usual spread between seeds; AI income −5%; about 62
+    generals rise and 51 fall per game; about 12 are alive at the end; a fallen one
+    lived a median of 7 turns. Most die with their armies, routed or stormed. Trait
+    stacking is rare at these rates: the median general ends with one trait.
+  - **Stats:** variants were tried with bodyguard 70/35 to 100/50, traits ±10% to ±20%
+    and grant and trait chances of 20–35%. They barely moved the game or lifetimes, so
+    the middle set was kept. Death chances of 5/10/20% gave lifetimes of 6/5/4 turns;
+    the player chose 5%.
 
 ## Cities and economy
 

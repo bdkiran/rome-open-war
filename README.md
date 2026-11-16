@@ -429,6 +429,36 @@ its box. It costs nothing to keep. Arrows ignore armor, so veterans fear archers
 most. Retraining's recruits dilute experience in proportion, and merged regiments
 share theirs out by soldiers.
 
+**Generals.** When an army without a general wins a battle that counts (the
+enemy brought at least a quarter of its soldiers), there's a 25% chance a
+**general** rises to lead it, as long as your faction has fewer generals than
+cities and the army has room for one more regiment. He rides in his own
+regiment, a **bodyguard** of 60 riders (movement 16, attack 80, armor 40,
+charge +30, mounted), shown with a star on his box and on the army's banner.
+He's never trained, hired, retrained or merged. His bodyguard gets 6 riders
+back at the start of each of your turns, free, wherever it is. He's paid a
+flat 6 gold a turn in wages. Every battle he fights in, won or lost, carries
+a 5% chance he's killed, and his bodyguard goes with him. He also dies if his
+bodyguard is wiped out, as when his whole army is destroyed. A side that loses
+a general in a battle doesn't gain a new one from it.
+
+He starts with one trait, and each battle that counts that his side wins
+gives a 25% chance of learning another, until he has all six. His traits work
+for his whole army while he leads it. An army can have several generals, like
+any other regiment, but only its leader's traits count: the most senior
+general, the one with the most traits, then the most experience, then the one
+who has been in the army longest. In a battle fought by several armies, the
+side's most senior general leads it:
+
+| Trait       | Effect |
+|-------------|--------|
+| Fierce      | His army deals 15% more in melee |
+| Stubborn    | His army takes 15% less when defending |
+| Swift       | His army moves 3 points further a turn (never above 16) |
+| Besieger    | Walls count 15% less when his army storms a city |
+| Drillmaster | His regiments gain 1 more experience point from a battle that counts |
+| Wary        | His army loses 40% fewer soldiers while fleeing |
+
 **Merging.** Damaged regiments of the same type and tier can be merged into fuller
 ones: 120 and 140 Spearmen become 180 and 80. Full regiments are left alone.
 It's free and takes no movement, but a merged regiment moves at the pace of

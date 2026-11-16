@@ -39,7 +39,8 @@ const SHADOW = "rgba(0, 0, 0, 0.22)";
  * bronze cuirass, a cloak and a taller crest at Elite.
  */
 function drawFigure(p: Painter, unit: UnitType, color: string, tier: Tier): void {
-  if (unit === "cavalry") drawRider(p, color, tier);
+  // A general's bodyguard rides in the best kit there is.
+  if (unit === "cavalry" || unit === "bodyguard") drawRider(p, color, unit === "bodyguard" ? 3 : tier);
   else drawFootSoldier(p, unit, color, unit === "militia" ? 1 : tier);
 }
 

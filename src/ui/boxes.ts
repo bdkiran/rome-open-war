@@ -19,9 +19,10 @@ export function regimentBox(
     <${tag} ${tag === "button" ? 'type="button"' : ""} class="reg-box${opts.dim ? " dim" : ""}" ${opts.attr} ${pressed} title="${escapeHtml(opts.title)}">
       ${tierMark(r.tier)}
       ${r.mercenary ? mercenaryMark() : ""}
+      ${r.general ? `<span class="general-mark" aria-hidden="true">&#10070;</span>` : ""}
       ${experiencePips(r.experience)}
       ${figureSvg(r.unit, color, r.tier)}
-      <span class="reg-count">${formatNumber(r.soldiers)}</span>
+      <span class="reg-count">${r.general ? escapeHtml(r.general.name) : formatNumber(r.soldiers)}</span>
       <span class="strength"><span style="width:${strength}%"></span></span>
       ${opts.status ? `<span class="reg-status">${escapeHtml(opts.status)}</span>` : ""}
     </${tag}>`;

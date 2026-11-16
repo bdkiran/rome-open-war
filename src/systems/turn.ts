@@ -2,6 +2,7 @@ import type { GameContext } from "@/core/context.js";
 import { currentFaction, type FactionId, type GameState } from "@/core/state.js";
 import { continueMarches, payUpkeep, refreshMovement } from "@/systems/armies.js";
 import { progressConstruction } from "@/systems/buildings.js";
+import { replenishBodyguards } from "@/systems/generals.js";
 import { refillMercenaries } from "@/systems/mercenaries.js";
 import { processRecruitment } from "@/systems/recruitment.js";
 import { processCities } from "@/systems/cities.js";
@@ -48,7 +49,7 @@ function endFactionTurn(ctx: GameContext, state: GameState, factionId: FactionId
   return trackKeyCities(payUpkeep(next, factionId), factionId);
 }
 
-/** Runs at the start of each faction's turn: its armies get their movement back. */
+/** Runs at the start of each faction's turn: its armies get their movement back, and its generals' bodyguards some riders. */
 function startFactionTurn(_ctx: GameContext, state: GameState, factionId: FactionId): GameState {
-  return refreshMovement(state, factionId);
+  return replenishBodyguards(refreshMovement(state, factionId), factionId);
 }

@@ -10,7 +10,9 @@ import type { TileId } from "@/map/topology.js";
 import { describeAttackArmor, describeSpecials } from "@/render/format.js";
 import { buildingSvg } from "@/ui/buildingArt.js";
 import { canMerge } from "@/systems/armies.js";
+import { freshMovement, generalOf, hasTrait } from "@/systems/generals.js";
 import { levelPips, regimentBox } from "@/ui/boxes.js";
+import { generalTitle } from "@/ui/generalCard.js";
 import { escapeHtml } from "@/ui/html.js";
 import type { InfoPanelInput } from "@/ui/infoPanel.js";
 
@@ -83,14 +85,15 @@ function armyCards(input: InfoPanelInput, army: Army): string {
   const mine = army.owner === humanId;
   const canOrder = mine && playerTurn;
   const color = getFaction(state, army.owner)?.color ?? "#888888";
+  const swift = hasTrait(army.regiments, "swift");
   return army.regiments
     .map((r) => {
-      const def = UNITS[r.unit];
-      const status = !mine ? "" : r.pinned ? "Held" : `${r.movementLeft}/${def.movement}`;
+      const full = freshMovement(r, swift);
+      const status = !mine ? "" : r.pinned ? "Held" : `${r.movementLeft}/${full}`;
       const specials = describeSpecials(r.unit, r.tier);
       const level = experienceLevel(r.experience);
       const veteran = level > 0 ? `, experience level ${level} of ${MAX_EXPERIENCE_LEVEL}` : "";
-      const title = `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers${veteran}, ${describeAttackArmor(r.unit, r.tier, level).toLowerCase()}${specials ? `, ${specials.toLowerCase()}` : ""}${mine ? `, ${r.movementLeft} of ${def.movement} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
+      const title = r.general ? `${generalTitle({ ...r, general: r.general }, generalOf(army.regiments)?.id === r.id)}${canOrder ? "\nClick to tick or untick him." : ""}` : `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers${veteran}, ${describeAttackArmor(r.unit, r.tier, level).toLowerCase()}${specials ? `, ${specials.toLowerCase()}` : ""}${mine ? `, ${r.movementLeft} of ${full} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
       return regimentBox(r, color, {
         status,
         title,

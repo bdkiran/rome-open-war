@@ -1092,6 +1092,16 @@ button.bar-action:hover:not(:disabled) { background: rgba(224, 181, 79, 0.18); }
   line-height: 1;
   color: #f0cd70;
 }
+.general-mark {
+  position: absolute;
+  top: 1px;
+  right: 4px;
+  font-size: 12px;
+  line-height: 1;
+  color: #f0cd70;
+  text-shadow: 0 0 4px rgba(224, 181, 79, 0.6);
+}
+.reg-box .reg-count { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
 /* While the enemy's moves play out */
 .playback-hint {

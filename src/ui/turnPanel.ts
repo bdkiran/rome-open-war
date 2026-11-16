@@ -1,3 +1,4 @@
+import { GENERALS } from "@/data/generals.js";
 import {
   armiesOf,
   armySoldiers,
@@ -116,7 +117,7 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
 /**
  * Where the player's money comes from and goes, turn by turn: each city's
  * gold (its base, people, mine, farms, fishing and trade, its trade times its market, all times its taxes), each army's
- * upkeep (and how much of it is mercenaries'), and what's left.
+ * upkeep (and how much of it is mercenaries' or a general's wages), and what's left.
  */
 function moneyBreakdown(state: GameState, factionId: FactionId): string {
   const cities = citiesOf(state, factionId).map((city) => {
@@ -136,10 +137,12 @@ function moneyBreakdown(state: GameState, factionId: FactionId): string {
     const hired = army.regiments.filter((r) => r.mercenary);
     const hiredCost = hired.reduce((sum, r) => sum + regimentUpkeep(r), 0);
     const mercenaries = hired.length ? ` (${hired.length} mercenary, −${formatNumber(Math.round(hiredCost * 10) / 10)})` : "";
+    const general = army.regiments.find((r) => r.general)?.general;
+    const wages = general ? `, ${escapeHtml(general.name)}'s wages −${GENERALS.wages}` : "";
     return `
       <tr>
         <th scope="row">${escapeHtml(where)}</th>
-        <td class="how">${formatNumber(armySoldiers(army))} soldiers, ${army.regiments.length} regiment${army.regiments.length === 1 ? "" : "s"}${mercenaries}</td>
+        <td class="how">${formatNumber(armySoldiers(army))} soldiers, ${army.regiments.length} regiment${army.regiments.length === 1 ? "" : "s"}${mercenaries}${wages}</td>
         <td class="amount negative">−${formatNumber(Math.round(cost * 10) / 10)}</td>
       </tr>`;
   }).join("");

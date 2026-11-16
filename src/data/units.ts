@@ -1,4 +1,5 @@
 import { EXPERIENCE } from "@/data/experience.js";
+import { GENERALS } from "@/data/generals.js";
 
 /**
  * Unit types, each a set of battle stats (see systems/combat.ts for how a
@@ -6,7 +7,7 @@ import { EXPERIENCE } from "@/data/experience.js";
  * archers beat spearmen and cavalry beat archers, regiment for regiment, and
  * militia are large, cheap regiments of poor fighters.
  */
-export type UnitType = "militia" | "spearmen" | "cavalry" | "archers";
+export type UnitType = "militia" | "spearmen" | "cavalry" | "archers" | "bodyguard";
 
 export interface UnitDef {
   name: string;
@@ -61,6 +62,12 @@ export const UNITS: Record<UnitType, UnitDef> = {
   cavalry: {
     name: "Cavalry", movement: 16, attack: 60, armor: 20, ranged: 0, charge: 20, antiCavalry: 0, mounted: true,
     goldPerSoldier: 1.8, upkeep: 0.85 / 30, regimentSize: 120, building: "stables",
+  },
+  // A general's own riders (see data/generals.ts): never trained or hired, and
+  // paid as a flat wage (GENERALS.wages) rather than per soldier.
+  bodyguard: {
+    name: "Bodyguard", movement: 16, attack: 80, armor: 40, ranged: 0, charge: 30, antiCavalry: 0, mounted: true,
+    goldPerSoldier: 0, upkeep: 0, regimentSize: GENERALS.bodyguardSize, building: null,
   },
 };
 
@@ -117,8 +124,11 @@ export function regimentSize(unit: UnitType): number {
   return UNITS[unit].regimentSize;
 }
 
-/** In order from cheapest to most expensive. */
-export const UNIT_TYPES = Object.keys(UNITS) as UnitType[];
+/** The units that can be trained or hired, from cheapest to most expensive. A general's bodyguard is neither. */
+export const UNIT_TYPES: UnitType[] = ["militia", "spearmen", "archers", "cavalry"];
+
+/** Every unit, a general's bodyguard included: for listing forces. */
+export const ALL_UNITS: UnitType[] = [...UNIT_TYPES, "bodyguard"];
 
 /** The trained line units, each with its own building: everything but militia. */
 export const LINE_UNITS = UNIT_TYPES.filter((t) => UNITS[t].building !== null);

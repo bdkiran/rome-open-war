@@ -1,6 +1,7 @@
 import { armiesOf, citiesOf, type GameState } from "@/core/state.js";
 import { CONSTRUCTION_QUEUE_SIZE } from "@/data/buildings.js";
 import { MAX_EXPERIENCE } from "@/data/experience.js";
+import { GENERALS } from "@/data/generals.js";
 import { SCOUT } from "@/data/scouts.js";
 import { SIEGE } from "@/data/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
@@ -38,7 +39,12 @@ export function brokenRules(state: GameState): string[] {
         broken.push(`${at}: regiment ${r.id} has ${r.experience} experience`);
       }
       if (r.mercenary && r.tier !== 1) broken.push(`${at}: mercenary regiment ${r.id} is tier ${r.tier}`);
-      if (!(r.movementLeft >= 0 && r.movementLeft <= UNITS[r.unit].movement)) {
+      if ((r.unit === "bodyguard") !== (r.general !== undefined)) broken.push(`${at}: regiment ${r.id} is ${r.unit} with general ${r.general?.name}`);
+      if (r.general && (r.general.traits.length === 0 || new Set(r.general.traits).size !== r.general.traits.length)) {
+        broken.push(`${at}: general ${r.general.name} has traits ${r.general.traits.join(",")}`);
+      }
+      // A Swift general's army may move further, up to his cap.
+      if (!(r.movementLeft >= 0 && r.movementLeft <= Math.max(UNITS[r.unit].movement, GENERALS.swiftCap))) {
         broken.push(`${at}: regiment ${r.id} has ${r.movementLeft} movement`);
       }
     }

@@ -1,5 +1,5 @@
 import { getFaction, type BattleReport, type Forces, type GameState } from "@/core/state.js";
-import { UNIT_TYPES, UNITS } from "@/data/units.js";
+import { ALL_UNITS, UNITS } from "@/data/units.js";
 import { formatNumber } from "@/render/format.js";
 import { escapeHtml } from "@/ui/html.js";
 
@@ -72,7 +72,7 @@ export function hideBattleResult(el: BattleResultElements): void {
 
 function side(heading: string, name: string, color: string, forces: Forces, losses: number, won: boolean, note: string): string {
   const total = Object.values(forces).reduce((sum, n) => sum + (n ?? 0), 0);
-  const rows = UNIT_TYPES.filter((u) => forces[u]).map((u) => `<dt>${UNITS[u].name}</dt><dd>${formatNumber(forces[u]!)}</dd>`).join("");
+  const rows = ALL_UNITS.filter((u) => forces[u]).map((u) => `<dt>${UNITS[u].name}</dt><dd>${formatNumber(forces[u]!)}</dd>`).join("");
   return `
     <section class="side ${won ? "side-won" : "side-lost"}">
       <h3>${heading}</h3>
