@@ -588,7 +588,7 @@ function retrainingTab(input: InfoPanelInput, city: City): string {
   const boxes = army.regiments
     .map((r) => {
       const choosable = damaged(r) && !queued.has(r.id) && !r.mercenary;
-      return regimentBox(r, color, {
+      return regimentBox(r, color, getFaction(state, army.owner)?.culture ?? "roman", {
         status: queued.has(r.id) ? "Queued" : r.mercenary && damaged(r) ? "Hired" : damaged(r) ? `${formatNumber(retrainCost(r))} gold` : "Full",
         title: queued.has(r.id)
           ? `${unitName(r.unit, r.tier)}: queued for retraining`

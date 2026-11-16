@@ -1,5 +1,7 @@
 import type { General, Regiment } from "@/core/state.js";
+import type { Culture } from "@/data/cultures.js";
 import { GENERALS, TRAIT_INFO } from "@/data/generals.js";
+import { portraitSvg } from "@/render/portraits.js";
 import { generalOf } from "@/systems/generals.js";
 import { escapeHtml } from "@/ui/html.js";
 
@@ -22,9 +24,10 @@ export function generalTitle(r: Regiment & { general: General }, leads: boolean)
   );
 }
 
-/** "Led by Hanno (Fierce, Swift)" for a side with a general, its leader, as a note line; nothing without one. */
-export function generalLine(regiments: readonly Regiment[]): string {
+/** "Led by Hanno (Fierce, Swift)" with his portrait, for a side with a general (its leader); nothing without one. */
+export function generalLine(regiments: readonly Regiment[], culture: Culture, color: string): string {
   const general = generalOf(regiments)?.general;
   if (!general) return "";
-  return `<p class="side-note" title="${escapeHtml(traitEffects(general))}">Led by ${escapeHtml(general.name)} (${escapeHtml(traitNames(general))})</p>`;
+  const traits = general.traits.length > 0 ? ` (${escapeHtml(traitNames(general))})` : "";
+  return `<p class="side-note general-line" title="${escapeHtml(traitEffects(general))}"><span class="general-portrait" style="border-color:${color}">${portraitSvg(general.name, culture, color)}</span><span>Led by ${escapeHtml(general.name)}${traits}</span></p>`;
 }

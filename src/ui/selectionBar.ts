@@ -94,7 +94,7 @@ function armyCards(input: InfoPanelInput, army: Army): string {
       const level = experienceLevel(r.experience);
       const veteran = level > 0 ? `, experience level ${level} of ${MAX_EXPERIENCE_LEVEL}` : "";
       const title = r.general ? `${generalTitle({ ...r, general: r.general }, generalOf(army.regiments)?.id === r.id)}${canOrder ? "\nClick to tick or untick him." : ""}` : `${unitName(r.unit, r.tier)}: ${r.soldiers} of ${regimentSize(r.unit)} soldiers${veteran}, ${describeAttackArmor(r.unit, r.tier, level).toLowerCase()}${specials ? `, ${specials.toLowerCase()}` : ""}${mine ? `, ${r.movementLeft} of ${full} movement` : ""}${canOrder ? ". Click to tick or untick it." : ""}`;
-      return regimentBox(r, color, {
+      return regimentBox(r, color, getFaction(state, army.owner)?.culture ?? "roman", {
         status,
         title,
         attr: canOrder ? `data-regiment="${r.id}"` : "",
