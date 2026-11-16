@@ -8,7 +8,7 @@
   Stances survive as the tactics (section 5), and their measured findings are kept below.
 - **Where it goes once agreed:** new entries under Combat in `docs/DECISIONS.md` with the
   measured numbers, and the Battles section of `README.md`.
-- **Related:** [Generals](generals.md) (a general's traits feed the choice of tactics),
+- **Related:** generals, now built (a general's traits could feed the choice of tactics; see `docs/DECISIONS.md`),
   [Culture traits](culture-traits.md) (a culture's default doctrine). Supply and
   attrition was rejected (`docs/DECISIONS.md`, Movement), so nothing here depends on supply.
 

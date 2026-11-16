@@ -1,5 +1,6 @@
 import type { GameContext } from "@/core/context.js";
 import { armiesOf, citiesOf, type FactionId, type GameState } from "@/core/state.js";
+import { UNITS } from "@/data/units.js";
 import { VISION } from "@/data/vision.js";
 import type { TileId } from "@/map/topology.js";
 import { tilesWithin } from "@/systems/cities.js";
@@ -28,7 +29,7 @@ export function visibleTiles(ctx: GameContext, state: GameState, factionId: Fact
     add(tilesWithin(ctx.topology, city.tile, VISION.city));
   }
   for (const army of armiesOf(state, factionId)) {
-    const range = army.regiments.some((r) => r.unit === "cavalry") ? VISION.armyWithCavalry : VISION.army;
+    const range = army.regiments.some((r) => UNITS[r.unit].mounted) ? VISION.armyWithCavalry : VISION.army;
     add(tilesWithin(ctx.topology, army.tile, range));
   }
   for (const scout of Object.values(state.scouts)) {

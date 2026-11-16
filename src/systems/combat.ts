@@ -12,6 +12,7 @@ import {
   type Forces,
   type FactionId,
   type GameState,
+  type General,
   type Regiment,
   type RegimentId,
 } from "@/core/state.js";
@@ -36,6 +37,7 @@ import {
   relocate,
 } from "@/systems/armies.js";
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
+import { leadershipOf, reportFallen, rewardVictors, strikeGenerals } from "@/systems/generals.js";
 
 // ---- Battle maths -------------------------------------------------------
 //
@@ -49,7 +51,7 @@ import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
 // spread over the enemy's regiments by their share of soldiers.
 //
 // The defender deals (1 + defense bonus) times the losses and takes that much
-// less. A side breaks once it has lost COMBAT.breakPoint of its soldiers, and
+// less. Each side's general, if it has one, adds his traits (systems/generals.ts). A side breaks once it has lost COMBAT.breakPoint of its soldiers, and
 // is routed and destroyed; the winner keeps the losses it took up to that
 // moment, which may come partway through a round.
 
@@ -60,6 +62,8 @@ export interface Troops {
   tier?: Tier;
   /** Experience points (see data/experience.ts). None if not given. */
   experience?: number;
+  /** Set on a general's bodyguard: his traits lead the side (see systems/generals.ts). */
+  general?: General;
 }
 
 /** Where a battle is fought: the defender's bonus, and whether attacking cavalry can charge. */
@@ -68,6 +72,8 @@ export interface Battlefield {
   defenseBonus: number;
   /** Open ground outside a city, where attacking cavalry can charge. */
   openGround: boolean;
+  /** The walls' share of the defense bonus, which a Besieger general cuts. None if not given. */
+  walls?: number;
 }
 
 /** One kind of troops on a side, a unit at a tier and level, with its soldiers pooled: they all fight alike. */
@@ -157,15 +163,19 @@ export function resolveBattle(
   const attackerStart = soldiersIn(a.kinds);
   const defenderStart = soldiersIn(d.kinds);
   const luck = () => (rng ? 1 + (rng.next() * 2 - 1) * COMBAT.roundRandomness : 1);
-  const edge = 1 + field.defenseBonus;
+  const attackLead = leadershipOf(attackers);
+  const defendLead = leadershipOf(defenders);
+  const edge = 1 + field.defenseBonus - Math.min(field.walls ?? 0, attackLead.wallsCut);
 
   let rounds = 0;
   let attackerWins = defenderStart === 0;
   while (attackerStart > 0 && defenderStart > 0) {
     const attackLuck = luck();
     const defendLuck = luck();
-    const toDefenders = dealt(a.kinds, d.kinds, rounds, field.openGround).map((n) => (n * attackLuck) / edge);
-    const toAttackers = dealt(d.kinds, a.kinds, rounds, false).map((n) => n * defendLuck * edge);
+    const melee = rounds >= COMBAT.volleys;
+    const toDefenders = dealt(a.kinds, d.kinds, rounds, field.openGround)
+      .map((n) => ((n * attackLuck) / edge) * (melee ? attackLead.meleeDealt : 1) * defendLead.takenWhenDefending);
+    const toAttackers = dealt(d.kinds, a.kinds, rounds, false).map((n) => n * defendLuck * edge * (melee ? defendLead.meleeDealt : 1));
     rounds++;
 
     // How far into the round each side reaches its breaking point, if it
@@ -306,9 +316,11 @@ const MAX_STRENGTH_RATIO = 10;
 
 /** The battlefield on a tile: its defense bonus, and whether it's open ground (never in a city). */
 export function battlefieldAt(state: GameState, tile: TileId): Battlefield {
+  const city = cityAt(state, tile);
   return {
     defenseBonus: defenseBonusAt(state, tile),
-    openGround: TERRAIN[state.tiles[tile].terrain].openGround && !cityAt(state, tile),
+    openGround: TERRAIN[state.tiles[tile].terrain].openGround && !city,
+    walls: city ? cityDefense(city) - COMBAT.cityDefenseBonus : 0,
   };
 }
 
@@ -342,11 +354,11 @@ export function cityDefense(city: { buildings: { walls: number }; siegeWorks?: n
 /**
  * Soldiers a routed side loses as it flees: a share of its survivors, plus
  * those cut down by the winner's surviving horsemen (better tiers count for
- * more). Never more than it has.
+ * more), times `factor` (a Wary general's). Never more than it has.
  */
-export function routLosses(fleeing: number, winners: readonly Troops[]): number {
+export function routLosses(fleeing: number, winners: readonly Troops[], factor = 1): number {
   const horsemen = winners.reduce((sum, t) => sum + (UNITS[t.unit].mounted ? t.soldiers * TIERS[t.tier ?? 1].stats : 0), 0);
-  return Math.min(fleeing, Math.round(fleeing * COMBAT.routLoss + horsemen * COMBAT.cavalryPursuit));
+  return Math.min(fleeing, Math.round((fleeing * COMBAT.routLoss + horsemen * COMBAT.cavalryPursuit) * factor));
 }
 
 /**
@@ -469,7 +481,8 @@ function rout(
   // The rout: losses on the way, spread over everyone who got away.
   const away = placed.flatMap((p) => p.regiments);
   const fleeing = away.reduce((sum, r) => sum + r.soldiers, 0);
-  const spread = spreadLosses(away.map((r) => r.soldiers), routLosses(fleeing, winners)).map((n, i) => scatter(away[i], n));
+  const lost = routLosses(fleeing, winners, leadershipOf(regiments).routFactor);
+  const spread = spreadLosses(away.map((r) => r.soldiers), lost).map((n, i) => scatter(away[i], n));
   const after = new Map(away.map((r, i) => [r.id, spread[i]]));
   const armiesAfter = { ...next.armies };
   for (const army of Object.values(next.armies)) {
@@ -687,10 +700,17 @@ export function attack(
       `${describeRegiments(fighting)}${joined} ${placeName(state, target)}, losing ${fmt(defenderLosses)}. ${flight}`;
 
   const seasoned = gainExperience(routed.state, fighting, holding, won);
-  let afterBattle = addLog({ ...seasoned, rngState: rng.state }, report, {
-    kind: "battle",
-    factions: [army.owner, defender.owner],
-  });
+  const place = placeName(state, target);
+  let afterBattle = addLog(seasoned, report, { kind: "battle", factions: [army.owner, defender.owner] });
+  // Any general who fought may fall, won or lost.
+  afterBattle = strikeGenerals(afterBattle, rng, [...fighting, ...holding]);
+  afterBattle = reportFallen(afterBattle, [...fighting, ...holding], place, [army.owner, defender.owner]);
+  // A battle that counts (not a chase of remnants) can make a general of the winners' leader, and teach their generals.
+  const [winning, losing] = won ? [fighting, holding] : [holding, fighting];
+  if (worthyFight(losing, winning)) {
+    afterBattle = rewardVictors(afterBattle, rng, won ? army.id : defender.id, winning, place);
+  }
+  afterBattle = { ...afterBattle, rngState: rng.state };
 
   // Won a siege: the garrison fought to the death, so the leading army's survivors take the city.
   const leadAfter = afterBattle.armies[army.id];
@@ -707,7 +727,7 @@ export function attack(
   return recordBattle(afterBattle, {
     turn: state.turn,
     tile: target,
-    place: placeName(state, target),
+    place,
     attacker: army.owner,
     defender: defender.owner,
     attackingArmies: sides.length,
@@ -731,11 +751,16 @@ export function attack(
  * Takes the regiments as they went into the battle.
  */
 function gainExperience(state: GameState, attackers: readonly Regiment[], defenders: readonly Regiment[], attackerWon: boolean): GameState {
-  const count = (side: readonly Regiment[]) => side.reduce((sum, r) => sum + r.soldiers, 0);
-  const worthy = (enemy: readonly Regiment[], own: readonly Regiment[]) => count(enemy) >= count(own) * EXPERIENCE.minEnemyShare;
   const points = new Map<RegimentId, number>();
-  if (worthy(defenders, attackers)) for (const r of attackers) points.set(r.id, attackerWon ? EXPERIENCE.win : EXPERIENCE.loss);
-  if (worthy(attackers, defenders)) for (const r of defenders) points.set(r.id, attackerWon ? EXPERIENCE.loss : EXPERIENCE.win);
+  // A Drillmaster general adds his points to his side's.
+  const attackDrill = leadershipOf(attackers).drill;
+  const defendDrill = leadershipOf(defenders).drill;
+  if (worthyFight(defenders, attackers)) {
+    for (const r of attackers) points.set(r.id, (attackerWon ? EXPERIENCE.win : EXPERIENCE.loss) + attackDrill);
+  }
+  if (worthyFight(attackers, defenders)) {
+    for (const r of defenders) points.set(r.id, (attackerWon ? EXPERIENCE.loss : EXPERIENCE.win) + defendDrill);
+  }
   if (points.size === 0) return state;
 
   const armies = { ...state.armies };
@@ -750,6 +775,12 @@ function gainExperience(state: GameState, attackers: readonly Regiment[], defend
     };
   }
   return { ...state, armies };
+}
+
+/** Whether a side learns from fighting `enemy`: not if the enemy brought under EXPERIENCE.minEnemyShare of its soldiers. */
+function worthyFight(enemy: readonly Regiment[], own: readonly Regiment[]): boolean {
+  const count = (side: readonly Regiment[]) => side.reduce((sum, r) => sum + r.soldiers, 0);
+  return count(enemy) >= count(own) * EXPERIENCE.minEnemyShare;
 }
 
 const MAX_BATTLE_REPORTS = 30;
@@ -840,7 +871,7 @@ export function estimateBattle(
     const fleeing = side.flatMap((_, i) => (free[i] ? [i] : []));
     const survivors = fleeing.map((i) => left[i]);
     const total = survivors.reduce((sum, n) => sum + n, 0);
-    const after = spreadLosses(survivors, routLosses(total, winners)).map((n, j) => scatter(side[fleeing[j]], n));
+    const after = spreadLosses(survivors, routLosses(total, winners, leadershipOf(side).routFactor)).map((n, j) => scatter(side[fleeing[j]], n));
     const kept = after.reduce((sum, n) => sum + n, 0);
     return side.reduce((sum, t) => sum + t.soldiers, 0) - kept;
   };

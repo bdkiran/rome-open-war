@@ -302,11 +302,13 @@ function launchAction(ctx: GameContext, real: GameState, state: GameState, facti
     const surplus = army.regiments.length - keep;
     if (surplus < AI.minLaunchRegiments) continue;
 
-    // Send the regiments best suited to the target's defenders; the rest stay home.
+    // Send the regiments best suited to the target's defenders, led by the
+    // city's general if it has one (he's wasted sitting in a garrison); the rest stay home.
     const defenders = armyAt(state, target.tile);
     const ready = army.regiments
       .filter((r) => r.movementLeft > 0)
-      .sort((a, b) => (defenders ? regimentStrengthAgainst(b, defenders) - regimentStrengthAgainst(a, defenders) : 0));
+      .sort((a, b) => Number(Boolean(b.general)) - Number(Boolean(a.general)) ||
+        (defenders ? regimentStrengthAgainst(b, defenders) - regimentStrengthAgainst(a, defenders) : 0));
     const group = ready.slice(0, surplus);
     if (group.length < AI.minLaunchRegiments) continue;
 
@@ -452,7 +454,7 @@ function trainingAction(
     if (army?.owner !== factionId) continue;
     const queued = new Set(city.recruitQueue.flatMap((o) => (o.kind === "retrain" ? [o.regimentId] : [])));
     const battered = army.regiments
-      .filter((r) => !r.mercenary && r.soldiers <= regimentSize(r.unit) / 2 && !queued.has(r.id) && unitUnlocked(city, r.unit, r.tier))
+      .filter((r) => !r.mercenary && !r.general && r.soldiers <= regimentSize(r.unit) / 2 && !queued.has(r.id) && unitUnlocked(city, r.unit, r.tier))
       .map((r) => r.id);
     if (battered.length > 0 && canRetrain(state, factionId, city.id, battered).ok) {
       return { type: "replenish", cityId: city.id, regimentIds: battered };

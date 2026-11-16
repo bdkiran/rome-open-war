@@ -1,6 +1,7 @@
 import type { BuildingType } from "@/data/buildings.js";
 import type { Culture } from "@/data/cultures.js";
 import type { VictoryPreset } from "@/data/gameSetup.js";
+import type { GeneralTrait } from "@/data/generals.js";
 import type { TaxRate } from "@/data/economy.js";
 import type { Tier, UnitType } from "@/data/units.js";
 import type { TileDataMap } from "@/map/tiles.js";
@@ -126,6 +127,18 @@ export interface Regiment {
    * trained regiments.
    */
   mercenary?: true;
+  /**
+   * The general this regiment guards: set on a bodyguard regiment only (see
+   * data/generals.ts). He dies when it does.
+   */
+  general?: General;
+}
+
+/** A named commander. His traits shape how his whole army fights and moves (see systems/generals.ts). */
+export interface General {
+  name: string;
+  /** In the order he learned them. */
+  traits: GeneralTrait[];
 }
 
 /**

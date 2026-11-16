@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { hasGeneral } from "@/systems/generals.js";
 import { armySoldiers, getFaction, type Army, type City, type CityId, type GameState } from "@/core/state.js";
 import { TERRAIN } from "@/data/terrain.js";
 import type { TileDataMap } from "@/map/tiles.js";
@@ -497,9 +498,9 @@ export class MapView3D {
       const inSight = city.owner === view.activeFaction || !view.visible || view.visible.has(city.tile);
       const holding = Object.values(state.armies).find((a) => a.tile === city.tile && a.owner === city.owner);
       const garrisoned = inSight ? holding !== undefined : true;
-      const garrison = inSight && holding ? { label: formatCompact(armySoldiers(holding)), regiments: holding.regiments.length } : null;
+      const garrison = inSight && holding ? { label: formatCompact(armySoldiers(holding)), regiments: holding.regiments.length, general: hasGeneral(holding) } : null;
       const culture = getFaction(state, city.owner)?.culture ?? "roman";
-      const key = `${color}|${culture}|${city.isCapital}|${besieger}|${city.buildings.government}|${city.buildings.walls}|${Math.floor(city.siegeWorks)}|${garrisoned}|${garrison?.label}|${garrison?.regiments}`;
+      const key = `${color}|${culture}|${city.isCapital}|${besieger}|${city.buildings.government}|${city.buildings.walls}|${Math.floor(city.siegeWorks)}|${garrisoned}|${garrison?.label}|${garrison?.regiments}|${garrison?.general}`;
       const existing = this.cities.get(city.id);
       if (existing?.key === key) continue;
       if (existing) this.scene.remove(existing.object);
@@ -656,6 +657,7 @@ export class MapView3D {
         faded: mine && isSpent(army),
         seed: hash(army.id),
         culture: getFaction(state, army.owner)?.culture ?? "roman",
+        general: hasGeneral(army),
       };
       const key = JSON.stringify(look);
       const target = this.standingPoint(army.tile, cityTiles);
@@ -793,6 +795,7 @@ export class MapView3D {
           faded: false,
           seed: hash(id),
           culture: faction?.culture ?? "roman",
+          general: false,
         }, this.library);
         figure.object.scale.setScalar(ARMY_SCALE);
         this.scene.add(figure.object);

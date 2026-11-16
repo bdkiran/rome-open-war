@@ -72,6 +72,13 @@ interface GameMetrics {
   mercenariesHired: number;
   mercenariesToppedUp: number;
   mercenariesAlive: number;
+  generalsGranted: number;
+  generalsFallen: number;
+  generalsAlive: number;
+  generalLifetime: number;
+  generalTraits: number;
+  generalArmiesWin: number;
+  wagesShare: number;
   seconds: number;
 }
 
@@ -116,6 +123,13 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "mercenariesHired", label: "Mercenary regiments hired" },
   { key: "mercenariesToppedUp", label: "...soldiers topped up" },
   { key: "mercenariesAlive", label: "...still serving at the end" },
+  { key: "generalsGranted", label: "Generals risen" },
+  { key: "generalsFallen", label: "...fallen" },
+  { key: "generalsAlive", label: "...alive at the end" },
+  { key: "generalLifetime", label: "...turns lived, fallen ones, median" },
+  { key: "generalTraits", label: "...traits each at the end, median ×10" },
+  { key: "generalArmiesWin", label: "...battles won when led, %" },
+  { key: "wagesShare", label: "Generals' wages, % of AI upkeep" },
   { key: "seconds", label: "Seconds per game" },
 ];
 
@@ -153,6 +167,11 @@ async function runWorker(): Promise<void> {
   let firstOwners: Record<string, string> | null = null;
   const started = performance.now();
   const mercenaries = { hired: 0, toppedUp: 0 };
+  // Versions before generals have none: every generals row shows 0.
+  const generals = { granted: 0, fallen: 0, lifetimes: [] as number[], born: new Map<string, number>(), ledBattles: 0, ledWins: 0 };
+  type Led = { id: string; soldiers: number; general?: { traits: string[] } };
+  const generalsIn = (s: GameState) =>
+    new Map(Object.values(s.armies).flatMap((a) => (a.regiments as Led[]).filter((r) => r.general).map((r) => [r.id, a.owner] as const)));
   const sieges = { laid: 0, abandoned: 0, storms: 0, aboveMinimum: 0, surrenders: 0, siegeTurns: [] as number[], works: [] as number[] };
   // Versions before siege works have none, so every storm counts as 0 works.
   const worksOf = (city: object) => (city as { siegeWorks?: number }).siegeWorks ?? 0;
@@ -172,6 +191,29 @@ async function runWorker(): Promise<void> {
     },
     // Versions before this option ignore it, and show 0 in the siege rows.
     onAction: (before: GameState, action: Action, factionId: string, after: GameState) => {
+      const was = generalsIn(before);
+      const now = generalsIn(after);
+      for (const id of now.keys()) {
+        if (!was.has(id)) {
+          generals.granted++;
+          generals.born.set(id, after.turn);
+        }
+      }
+      for (const id of was.keys()) {
+        if (now.has(id)) continue;
+        generals.fallen++;
+        if (generals.born.has(id)) generals.lifetimes.push(after.turn - generals.born.get(id)!);
+      }
+      if (action.type === "attack" && after.battles.length > 0 && after.nextBattleNumber > before.nextBattleNumber) {
+        const battle = after.battles[after.battles.length - 1];
+        const ledBy = (owner: string) => Object.values(before.armies).some((a) => a.owner === owner && (a.regiments as Led[]).some((r) => r.general)
+          && (a.tile === battle.tile || a.id === action.armyId));
+        for (const [owner, won] of [[battle.attacker, battle.attackerWon], [battle.defender, !battle.attackerWon]] as const) {
+          if (!ledBy(owner)) continue;
+          generals.ledBattles++;
+          if (won) generals.ledWins++;
+        }
+      }
       // Versions before mercenaries have no such action, and show 0.
       if ((action as { type: string }).type === "hireMercenaries") mercenaries.hired++;
       if ((action as { type: string }).type === "topUpMercenaries") {
@@ -215,6 +257,7 @@ async function runWorker(): Promise<void> {
   const levels = Object.values(state.armies).flatMap((a) =>
     a.regiments.map((r) => experienceLevel((r as { experience?: number }).experience ?? 0)),
   );
+  const wages: number = await load("src/data/generals.js").then((m) => m.GENERALS.wages, () => 0);
   const aiArmies = Object.values(state.armies).filter((a) => aiIds.has(a.owner));
   const aiRegiments = aiArmies.flatMap((a) => a.regiments);
   const fieldArmies = aiArmies.filter((a) => !cities.some((c) => c.tile === a.tile && c.owner === a.owner));
@@ -279,6 +322,16 @@ async function runWorker(): Promise<void> {
     mercenariesHired: mercenaries.hired,
     mercenariesToppedUp: mercenaries.toppedUp,
     mercenariesAlive: aiRegiments.filter((r) => (r as { mercenary?: boolean }).mercenary).length,
+    generalsGranted: generals.granted,
+    generalsFallen: generals.fallen,
+    generalsAlive: (aiRegiments as Led[]).filter((r) => r.general).length,
+    generalLifetime: medianExact(generals.lifetimes),
+    generalTraits: Math.round(medianExact((aiRegiments as Led[]).flatMap((r) => (r.general ? [r.general.traits.length] : []))) * 10),
+    generalArmiesWin: percent(generals.ledWins, generals.ledBattles),
+    wagesShare: percent(
+      (aiRegiments as Led[]).filter((r) => r.general).length * wages,
+      aliveAi.reduce((n, f) => n + factionUpkeep(state, f.id), 0),
+    ),
     seconds: Math.round((performance.now() - started) / 100) / 10,
   };
   process.stdout.write(JSON.stringify(metrics));

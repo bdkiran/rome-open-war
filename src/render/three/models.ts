@@ -71,8 +71,8 @@ function limb(w: number, h: number, material: THREE.Material, x: number, y: numb
 const textures = new Map<string, THREE.CanvasTexture>();
 
 /** A banner texture in a faction's colour, with text and optional pips, and a swallowtail. */
-function bannerTexture(color: string, text: string, pips: number, emblem: boolean): THREE.CanvasTexture {
-  const key = `${color}|${text}|${pips}|${emblem}`;
+function bannerTexture(color: string, text: string, pips: number, emblem: boolean, general = false): THREE.CanvasTexture {
+  const key = `${color}|${text}|${pips}|${emblem}|${general}`;
   const cached = textures.get(key);
   if (cached) return cached;
 
@@ -124,6 +124,21 @@ function bannerTexture(color: string, text: string, pips: number, emblem: boolea
       ctx.arc(56 - ((pips - 1) * gap) / 2 + i * gap, 76, 3.4, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+  if (general) {
+    // A general rides with this army: a gold star in the banner's corner.
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? 13 : 5.5;
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      ctx.lineTo(16 + Math.cos(a) * r, 16 + Math.sin(a) * r);
+    }
+    ctx.closePath();
+    ctx.fillStyle = "#f0cd70";
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "#1b252b";
+    ctx.stroke();
   }
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -280,13 +295,14 @@ function flag(
   faded: boolean,
   seed: number,
   lowered = false,
+  general = false,
 ): THREE.Group {
   const g = new THREE.Group();
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, height, 5), mat("#3b2c1e", faded));
   pole.position.y = height / 2;
   const finial = new THREE.Mesh(new THREE.SphereGeometry(1.3, 6, 4), mat("#d9b24a", faded));
   finial.position.y = height + 0.8;
-  const banner = cloth(bannerTexture(color, text, pips, emblem), lowered ? FLAG_MOTION.limp : FLAG_MOTION.idle, seed, {
+  const banner = cloth(bannerTexture(color, text, pips, emblem, general), lowered ? FLAG_MOTION.limp : FLAG_MOTION.idle, seed, {
     opacity: faded ? 0.6 : 1,
     tint: lowered ? "#9a9a9a" : "#ffffff",
   });
@@ -308,6 +324,8 @@ export interface ArmyLook {
   seed: number;
   /** Which kit the soldier carries (helmet, shield, weapon), if the army model has kits. */
   culture: Culture;
+  /** A general rides with it: a star on the banner. */
+  general: boolean;
 }
 
 /**
@@ -322,7 +340,7 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
 
   let shown = look;
   let resting = look.faded ? FLAG_MOTION.spent : FLAG_MOTION.idle;
-  const banner = cloth(bannerTexture(look.color, look.label, look.regiments, false), resting, look.seed, {
+  const banner = cloth(bannerTexture(look.color, look.label, look.regiments, false, look.general), resting, look.seed, {
     opacity: look.faded ? 0.6 : 1,
     tint: "#ffffff",
   });
@@ -358,7 +376,7 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
         pole.material = mat("#3b2c1e", next.faded);
         resting = next.faded ? FLAG_MOTION.spent : FLAG_MOTION.idle;
       }
-      banner.setFace(bannerTexture(next.color, next.label, next.regiments, false), next.faded ? 0.6 : 1);
+      banner.setFace(bannerTexture(next.color, next.label, next.regiments, false, next.general), next.faded ? 0.6 : 1);
       shown = next;
       return true;
     },
@@ -430,7 +448,7 @@ export function buildCity(
     /** Whether a garrison holds it (true for an enemy city out of sight, so the fog gives nothing away). */
     garrisoned: boolean;
     /** The garrison's strength and regiments, shown on the banner; null to show the plain laurel. */
-    garrison: { label: string; regiments: number } | null;
+    garrison: { label: string; regiments: number; general: boolean } | null;
     /** Where in its wave the banner starts (0-1); also lays out the town. */
     seed: number;
   },
@@ -445,7 +463,7 @@ export function buildCity(
   // The banner flies when the city has a garrison, showing its strength, and
   // hangs at half-mast when it's undefended.
   const banner = look.garrison
-    ? flag(color, look.garrison.label, look.garrison.regiments, look.capital ? 50 : 42, false, false, look.seed)
+    ? flag(color, look.garrison.label, look.garrison.regiments, look.capital ? 50 : 42, false, false, look.seed, false, look.garrison.general)
     : flag(color, "", 0, look.capital ? 50 : 42, true, false, look.seed, !look.garrisoned);
   banner.position.set(-1, 0, -10);
   g.add(banner);

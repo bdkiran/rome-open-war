@@ -1,4 +1,5 @@
 import type { GameContext } from "@/core/context.js";
+import { reportFallen } from "@/systems/generals.js";
 import {
   addLog,
   armiesOf,
@@ -177,7 +178,8 @@ function surrender(ctx: GameContext, state: GameState, besiegerId: FactionId, ci
     `${city.name} ran out of supplies and surrendered to ${name}.${garrison && garrison.owner !== besiegerId ? " Its garrison was destroyed." : ""}`,
     { kind: "siege", factions: [besiegerId, previousOwner], major: true },
   );
-  return eliminateIfDefeated(next, previousOwner);
+  const fallen = garrison && garrison.owner !== besiegerId ? garrison.regiments : [];
+  return eliminateIfDefeated(reportFallen(next, fallen, `at ${city.name}`, [besiegerId, previousOwner]), previousOwner);
 }
 
 /** The city goes to the besieger, and its strongest army next to the city moves in. */
