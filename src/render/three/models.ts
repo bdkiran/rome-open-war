@@ -24,6 +24,12 @@ export interface Figure {
   animate(stride: number, delta: number, attacking?: boolean): void;
   /** Strikes once, if the model has the clip for it. Returns how long the blow lasts, in seconds. */
   strike?(): number;
+  /**
+   * Shows a new strength, regiment count or spent look on the same model,
+   * without rebuilding it. False if it can't (another colour or culture, or
+   * a model built in code): build a new one instead.
+   */
+  restyle?(look: ArmyLook): boolean;
 }
 
 const SKIN = "#e3c29b";
@@ -168,6 +174,8 @@ interface Cloth {
   mesh: THREE.Mesh;
   /** Changes its motion without a jump: the wave carries on from where it is. */
   setMotion(motion: FlagMotion): void;
+  /** Swaps what the banner shows and how see-through it is. */
+  setFace(texture: THREE.Texture, opacity: number): void;
 }
 
 /**
@@ -251,6 +259,11 @@ function cloth(texture: THREE.Texture, motion: FlagMotion, seed: number, look: {
       uniforms.uFlagAmp.value = next.amplitude;
       uniforms.uFlagDroop.value = next.droop;
     },
+    setFace(texture, opacity) {
+      material.map = texture;
+      material.emissiveMap = texture;
+      material.opacity = opacity;
+    },
   };
 }
 
@@ -307,7 +320,8 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
   const custom = library.army(look.color, look.faded, look.culture);
   const figure = custom ?? standardBearer(look.color, look.faded);
 
-  const resting = look.faded ? FLAG_MOTION.spent : FLAG_MOTION.idle;
+  let shown = look;
+  let resting = look.faded ? FLAG_MOTION.spent : FLAG_MOTION.idle;
   const banner = cloth(bannerTexture(look.color, look.label, look.regiments, false), resting, look.seed, {
     opacity: look.faded ? 0.6 : 1,
     tint: "#ffffff",
@@ -321,8 +335,8 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
   banner.mesh.position.set(0.5, 0, 0);
   bannerHolder.add(banner.mesh);
   figure.object.add(bannerHolder);
-  if (custom) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 64, 5), mat("#3b2c1e", look.faded));
+  const pole = custom ? new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 64, 5), mat("#3b2c1e", look.faded)) : null;
+  if (pole) {
     pole.position.set(polePlace.x, 32, polePlace.z);
     figure.object.add(pole);
   }
@@ -336,6 +350,18 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
       bannerHolder.rotation.y = -figure.object.rotation.y;
     },
     strike: () => figure.strike?.() ?? 0,
+    restyle(next) {
+      // Only a model from a file can change its look in place: one built in code bakes it into every part.
+      if (!custom || !pole || next.color !== shown.color || next.culture !== shown.culture) return false;
+      if (next.faded !== shown.faded) {
+        custom.setFaded(next.faded);
+        pole.material = mat("#3b2c1e", next.faded);
+        resting = next.faded ? FLAG_MOTION.spent : FLAG_MOTION.idle;
+      }
+      banner.setFace(bannerTexture(next.color, next.label, next.regiments, false), next.faded ? 0.6 : 1);
+      shown = next;
+      return true;
+    },
   };
 }
 
@@ -645,7 +671,17 @@ interface ModelManifest {
 interface LoadedModel {
   scene: THREE.Object3D;
   animations: THREE.AnimationClip[];
+  /**
+   * Its scale and lift off the ground for each size it's drawn at. Every copy
+   * is the same shape, and measuring a rigged model is slow, so it's done once.
+   */
+  fits: Map<string, { scale: number; lift: number }>;
+  /** Its materials recoloured, by original, colour and faded: shared by every copy that looks the same. */
+  materials: Map<string, THREE.Material>;
 }
+
+/** A copy of a model from a file, which can be faded (spent) or brought back in place. */
+type FileFigure = Figure & { setFaded(faded: boolean): void };
 
 /**
  * Supplies army and city models: from files listed in models/models.json
@@ -675,7 +711,14 @@ export class ModelLibrary {
       entries.map(async ([key, file]) => {
         try {
           const gltf = await loader.loadAsync(`models/${file}`);
-          this.loaded.set(key, { scene: gltf.scene, animations: gltf.animations });
+          // Each rigged part's bounds, worked out once from its posed vertices:
+          // copies inherit them, where three.js would otherwise work them out
+          // again for every copy on its first draw (a stalled frame per army).
+          gltf.scene.updateMatrixWorld(true);
+          gltf.scene.traverse((node) => {
+            if ((node as THREE.SkinnedMesh).isSkinnedMesh) (node as THREE.SkinnedMesh).computeBoundingSphere();
+          });
+          this.loaded.set(key, { scene: gltf.scene, animations: gltf.animations, fits: new Map(), materials: new Map() });
         } catch (error) {
           console.warn(`Couldn't load models/${file}; using the built-in ${key} model.`, error);
         }
@@ -692,7 +735,7 @@ export class ModelLibrary {
    * The army model from a file, if one is listed, carrying `culture`'s kit
    * (or the scout's): parts named `kit_<culture>_...` show only for that one.
    */
-  army(color: string, faded: boolean, culture: Kit): Figure | null {
+  army(color: string, faded: boolean, culture: Kit): FileFigure | null {
     const model = this.loaded.get("army");
     return model ? this.fromFile(model, color, faded, this.manifest.soldierHeight ?? 36, 0, culture) : null;
   }
@@ -704,44 +747,29 @@ export class ModelLibrary {
   }
 
   /** A copy of a loaded model, recoloured, scaled to size, with its walk animation hooked up. */
-  private fromFile(model: LoadedModel, color: string | null, faded: boolean, height: number, width = 0, culture: Kit | null = null): Figure {
+  private fromFile(model: LoadedModel, color: string | null, faded: boolean, height: number, width = 0, culture: Kit | null = null): FileFigure {
     const object = cloneSkinned(model.scene);
     // Show only this culture's kit.
     object.traverse((node) => {
       const kit = KIT_PART.exec(node.name);
       if (kit) node.visible = kit[1] === culture;
     });
+    // The copy still has the file's materials: keep them, to recolour (and fade) from.
+    const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
     object.traverse((node) => {
       const mesh = node as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      const recolor = (m: THREE.Material) => {
-        const copy = m.clone() as THREE.MeshStandardMaterial;
-        if (color && /faction/i.test(m.name) && "color" in copy) copy.color.set(color);
-        if (faded) {
-          copy.transparent = true;
-          copy.opacity = 0.5;
-        }
-        return copy;
-      };
-      mesh.material = Array.isArray(mesh.material) ? mesh.material.map(recolor) : recolor(mesh.material);
+      if (mesh.isMesh) originals.set(mesh, mesh.material);
     });
-
-    // Scale to size and stand it on the ground. Measured from the posed
-    // vertices ("precise"), since a rigged mesh's stored bounds ignore its
-    // bones, and without kit parts, so a long spear doesn't shrink the soldier.
-    const measure = () => {
-      object.updateMatrixWorld(true);
-      const box = new THREE.Box3();
-      object.traverse((node) => {
-        if (!(node as THREE.Mesh).isMesh || inKit(node)) return;
-        box.expandByObject(node, true);
-      });
-      return box.isEmpty() ? new THREE.Box3().setFromObject(object, true) : box;
+    const paint = (fade: boolean) => {
+      for (const [mesh, m] of originals) {
+        mesh.material = Array.isArray(m) ? m.map((x) => recolored(model, x, color, fade)) : recolored(model, m, color, fade);
+      }
     };
-    const size = measure().getSize(new THREE.Vector3());
-    const scale = height > 0 ? height / Math.max(size.y, 0.001) : width / Math.max(size.x, size.z, 0.001);
-    object.scale.setScalar(scale);
-    object.position.y -= measure().min.y;
+    paint(faded);
+
+    const fit = fitOf(model, object, height, width);
+    object.scale.setScalar(fit.scale);
+    object.position.y += fit.lift;
     // A rigged mesh's bounds don't follow its animation, so don't let them hide it.
     object.traverse((node) => {
       if ((node as THREE.SkinnedMesh).isSkinnedMesh) node.frustumCulled = false;
@@ -807,6 +835,58 @@ export class ModelLibrary {
         }
         return strike.getClip().duration;
       },
+      setFaded: paint,
     };
   }
+}
+
+/**
+ * A material of a model from a file in an owner's colour (parts whose
+ * material is named "faction"), half see-through when faded. Made once for
+ * each look and shared, so a new copy draws without setting up its own.
+ */
+function recolored(model: LoadedModel, m: THREE.Material, color: string | null, faded: boolean): THREE.Material {
+  const key = `${m.uuid}|${color}|${faded}`;
+  let copy = model.materials.get(key);
+  if (!copy) {
+    const made = m.clone() as THREE.MeshStandardMaterial;
+    if (color && /faction/i.test(m.name) && "color" in made) made.color.set(color);
+    if (faded) {
+      made.transparent = true;
+      made.opacity = 0.5;
+    }
+    copy = made;
+    model.materials.set(key, copy);
+  }
+  return copy;
+}
+
+/**
+ * How much to scale a copy of a model so it stands `height` tall (or, with
+ * no height, `width` wide), and how far to lift it so it stands on the
+ * ground. Measured from the posed vertices ("precise"), since a rigged
+ * mesh's stored bounds ignore its bones, and without kit parts, so a long
+ * spear doesn't shrink the soldier. Found on the first copy, then reused.
+ */
+function fitOf(model: LoadedModel, object: THREE.Object3D, height: number, width: number): { scale: number; lift: number } {
+  const key = `${height}|${width}`;
+  const known = model.fits.get(key);
+  if (known) return known;
+  const measure = () => {
+    object.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    object.traverse((node) => {
+      if (!(node as THREE.Mesh).isMesh || inKit(node)) return;
+      box.expandByObject(node, true);
+    });
+    return box.isEmpty() ? new THREE.Box3().setFromObject(object, true) : box;
+  };
+  const size = measure().getSize(new THREE.Vector3());
+  const scale = height > 0 ? height / Math.max(size.y, 0.001) : width / Math.max(size.x, size.z, 0.001);
+  const startScale = object.scale.x;
+  object.scale.setScalar(scale);
+  const fit = { scale, lift: -measure().min.y };
+  object.scale.setScalar(startScale);
+  model.fits.set(key, fit);
+  return fit;
 }
