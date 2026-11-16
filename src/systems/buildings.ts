@@ -49,11 +49,15 @@ export function nextLevel(city: City, building: BuildingType): { level: number; 
 /**
  * Why a building's next level isn't open to a city at all, or null if it is.
  * Buildings go up to the city's level, which only a finished government
- * raises; the government building itself needs enough people first; a mine
+ * raises; a building already in the queue must be finished before its next
+ * level is queued; the government building itself needs enough people first; a mine
  * needs enough hills or mountains to be worth digging, roads a bordering city. Gold, a full queue and a siege only hold a
  * building up for now, so they don't count here.
  */
 function unavailableReason(state: GameState, city: City, building: BuildingType): string | null {
+  // One level at a time: the next is offered only once the queued one is built.
+  const queued = city.constructionQueue.find((c) => c.building === building);
+  if (queued) return `Finish the ${BUILDINGS[building].levels[queued.level - 1].name} first.`;
   const next = nextLevel(city, building);
   if (!next) {
     return `${BUILDINGS[building].name} ${plannedLevel(city, building) > city.buildings[building] ? "will be" : "are"} at their highest level.`;

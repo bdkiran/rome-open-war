@@ -1,4 +1,4 @@
-import { getFaction, type BattleReport, type Forces, type GameState } from "@/core/state.js";
+import { cityAt, getFaction, type BattleReport, type Forces, type GameState } from "@/core/state.js";
 import { ALL_UNITS, UNITS } from "@/data/units.js";
 import { formatNumber } from "@/render/format.js";
 import { escapeHtml } from "@/ui/html.js";
@@ -49,7 +49,9 @@ export function showBattleResult(el: BattleResultElements, state: GameState, rep
           ? `${enemy} broke your army, and it fled.`
           : `${enemy} destroyed your army: it had nowhere to flee.`;
 
-  const bonus = report.defenseBonus > 0 ? `Defending with +${Math.round(report.defenseBonus * 100)}% from terrain and walls` : "";
+  // Only a battle for a city has walls in it: a sally or a field battle is fought on open land.
+  const source = cityAt(state, report.tile) ? "the city, its walls and terrain" : "terrain";
+  const bonus = report.defenseBonus > 0 ? `Defending with +${Math.round(report.defenseBonus * 100)}% from ${source}` : "";
 
   el.body.innerHTML = `
     <p class="battle-headline">${headline} ${report.rounds === 1 ? "One round" : `${report.rounds} rounds`} of fighting.</p>

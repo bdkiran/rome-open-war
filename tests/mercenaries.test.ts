@@ -53,8 +53,25 @@ describe("hiring mercenaries", () => {
     assert.equal(roma(s).population, people);
     assert.equal(roma(s).mercenarySupply, MERCENARIES.supply - regimentSize("cavalry"));
     const hired = armyAt(s, start.army.tile)!.regiments.at(-1)!;
-    assert.deepEqual([hired.unit, hired.tier, hired.soldiers, hired.mercenary, hired.movementLeft], ["cavalry", 1, 120, true, 0]);
+    assert.deepEqual([hired.unit, hired.tier, hired.soldiers, hired.mercenary], ["cavalry", 1, 120, true]);
+    // It keeps pace with the army it joins, no faster than its own unit.
+    const lead = Math.max(...start.army.regiments.map((r) => r.movementLeft));
+    assert.equal(hired.movementLeft, Math.min(lead, UNITS.cavalry.movement));
     assert.equal(upkeepFor("cavalry", 120, 1, true), upkeepFor("cavalry", 120) * MERCENARIES.upkeepMultiplier);
+  });
+
+  it("marches on with the army it joins; hired into an empty city, it waits a turn", () => {
+    const start = fieldArmy(withGold(newGame(), 5000));
+    let s = apply(start.s, "rome", { type: "hireMercenaries", tile: start.army.tile, unit: "militia" });
+    const army = armyAt(s, start.army.tile)!;
+    const to = ctx.topology.neighbors(army.tile).find((t) => s.tiles[t].terrain !== "water" && !armyAt(s, t) && !Object.values(s.cities).some((c) => c.tile === t))!;
+    s = apply(s, "rome", { type: "moveArmy", armyId: army.id, regimentIds: army.regiments.map((r) => r.id), to });
+    assert.equal(armyAt(s, start.army.tile), undefined, "nobody left behind");
+    assert.equal(armyAt(s, to)!.regiments.length, army.regiments.length);
+
+    const empty = { ...withGold(newGame(), 5000), armies: {} };
+    const garrison = apply(empty, "rome", { type: "hireMercenaries", tile: roma(empty).tile, unit: "militia" });
+    assert.equal(armyAt(garrison, roma(empty).tile)!.regiments[0].movementLeft, 0);
   });
 
   it("needs an army there, or your own city; a besieged city can't hire", () => {

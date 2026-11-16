@@ -6,6 +6,7 @@ import type { GameContext } from "@/core/context.js";
 import { createGame } from "@/core/setup.js";
 import { armyAt, type Army, type GameState } from "@/core/state.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
+import { TERRAIN } from "@/data/terrain.js";
 import { regimentSize } from "@/data/units.js";
 import { attackOptions, reachableTiles, SHUT_IN, siegeWorksPerTurn, stormBlocked } from "@/systems/armies.js";
 import { nextAction } from "@/ai/ai.js";
@@ -176,7 +177,10 @@ describe("the end of a siege", () => {
     const ids = state.armies[garrison.id].regiments.map((r) => r.id);
     const sally = applyAction(ctx, state, "rome", { type: "attack", armyId: garrison.id, regimentIds: ids, target: besiegerTile });
     assert.ok(sally.ok);
-    assert.equal(sally.state.battles[sally.state.battles.length - 1].attackerWon, true);
+    const report = sally.state.battles[sally.state.battles.length - 1];
+    assert.equal(report.attackerWon, true);
+    // Fought on the besiegers' ground: their terrain counts, the city's walls don't.
+    assert.equal(report.defenseBonus, TERRAIN[state.tiles[besiegerTile].terrain].defenseBonus);
     assert.equal(sally.state.cities[roma.id].besiegedBy, null);
   });
 
