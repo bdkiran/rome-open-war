@@ -37,7 +37,7 @@ import {
   relocate,
 } from "@/systems/armies.js";
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
-import { leadershipOf, reportFallen, rewardVictors, strikeGenerals } from "@/systems/generals.js";
+import { leadershipOf, reportFallen, rewardChance, rewardVictors, strikeGenerals } from "@/systems/generals.js";
 
 // ---- Battle maths -------------------------------------------------------
 //
@@ -705,11 +705,10 @@ export function attack(
   // Any general who fought may fall, won or lost.
   afterBattle = strikeGenerals(afterBattle, rng, [...fighting, ...holding]);
   afterBattle = reportFallen(afterBattle, [...fighting, ...holding], place, [army.owner, defender.owner]);
-  // A battle that counts (not a chase of remnants) can make a general of the winners' leader, and teach their generals.
+  // A win can make a general of the winners' leader, and teach their generals: less likely the smaller the beaten enemy.
   const [winning, losing] = won ? [fighting, holding] : [holding, fighting];
-  if (worthyFight(losing, winning)) {
-    afterBattle = rewardVictors(afterBattle, rng, won ? army.id : defender.id, winning, place);
-  }
+  const share = rewardChance(soldierCount(losing), soldierCount(winning));
+  afterBattle = rewardVictors(afterBattle, rng, won ? army.id : defender.id, winning, place, share);
   afterBattle = { ...afterBattle, rngState: rng.state };
 
   // Won a siege: the garrison fought to the death, so the leading army's survivors take the city.
@@ -779,8 +778,12 @@ function gainExperience(state: GameState, attackers: readonly Regiment[], defend
 
 /** Whether a side learns from fighting `enemy`: not if the enemy brought under EXPERIENCE.minEnemyShare of its soldiers. */
 function worthyFight(enemy: readonly Regiment[], own: readonly Regiment[]): boolean {
-  const count = (side: readonly Regiment[]) => side.reduce((sum, r) => sum + r.soldiers, 0);
-  return count(enemy) >= count(own) * EXPERIENCE.minEnemyShare;
+  return soldierCount(enemy) >= soldierCount(own) * EXPERIENCE.minEnemyShare;
+}
+
+/** Soldiers in a side's regiments. */
+function soldierCount(side: readonly Regiment[]): number {
+  return side.reduce((sum, r) => sum + r.soldiers, 0);
 }
 
 const MAX_BATTLE_REPORTS = 30;

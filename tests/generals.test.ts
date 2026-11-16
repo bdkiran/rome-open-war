@@ -12,7 +12,7 @@ import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize, UNITS, type UnitType } from "@/data/units.js";
 import { canMove, refreshMovement, regimentUpkeep } from "@/systems/armies.js";
 import { resolveBattle, routLosses, type Battlefield } from "@/systems/combat.js";
-import { generalCap, generalCount, leadershipOf, replenishBodyguards, rewardVictors, strikeGenerals } from "@/systems/generals.js";
+import { generalCap, generalCount, leadershipOf, replenishBodyguards, rewardChance, rewardVictors, strikeGenerals } from "@/systems/generals.js";
 import { canRetrain } from "@/systems/recruitment.js";
 import { brokenRules } from "./invariants.js";
 
@@ -102,7 +102,7 @@ describe("a general's traits", () => {
 describe("gaining and losing generals", () => {
   it("a winning army without one may gain one, with a full bodyguard and a trait", () => {
     const { state } = standoff(line(), line());
-    const won = rewardVictors(state, dice(0), "a", state.armies.a.regiments, "near here");
+    const won = rewardVictors(state, dice(0), "a", state.armies.a.regiments, "near here", 1);
     const guard = won.armies.a.regiments.find((r) => r.general)!;
     assert.equal(guard.unit, "bodyguard");
     assert.equal(guard.soldiers, GENERALS.bodyguardSize);
@@ -111,24 +111,39 @@ describe("gaining and losing generals", () => {
     assert.ok(won.log.at(-1)!.major);
     assert.deepEqual(brokenRules(won), []);
     // Without the luck, no general.
-    assert.equal(rewardVictors(state, dice(0.99), "a", state.armies.a.regiments, "").armies.a.regiments.length, 3);
+    assert.equal(rewardVictors(state, dice(0.99), "a", state.armies.a.regiments, "", 1).armies.a.regiments.length, 3);
   });
 
   it("not past the cap, not into a full army, and not a second one", () => {
     const { state } = standoff(line(), line());
     const cap = generalCap(state, "rome");
     const crowded: GameState = { ...state, armies: { ...state.armies, a: { ...state.armies.a, regiments: Array.from({ length: 10 }, () => regiment("militia")) } } };
-    assert.equal(rewardVictors(crowded, dice(0), "a", [], "").armies.a.regiments.length, 10);
+    const full = rewardVictors(crowded, dice(0), "a", [], "", 1);
+    assert.equal(full.armies.a.regiments.length, 10);
+    assert.match(full.log.at(-1)!.text, /no room for a general/);
     const led = { ...state, armies: { ...state.armies, a: { ...state.armies.a, regiments: [general(["fierce"], 60), ...line()] } } };
-    assert.equal(generalCount(rewardVictors(led, dice(0.99), "a", [], ""), "rome"), 1);
+    assert.equal(generalCount(rewardVictors(led, dice(0.99), "a", [], "", 1), "rome"), 1);
     const many: Army[] = Array.from({ length: cap }, (_, i) => ({ id: `g${i}`, owner: "rome", tile: `far${i}`, regiments: [general(["wary"])], destination: null }));
     const capped: GameState = { ...state, armies: { ...state.armies, ...Object.fromEntries(many.map((a) => [a.id, a])) } };
-    assert.equal(generalCount(rewardVictors(capped, dice(0), "a", [], ""), "rome"), cap);
+    assert.equal(generalCount(rewardVictors(capped, dice(0), "a", [], "", 1), "rome"), cap);
+  });
+
+  it("the smaller the beaten enemy, the smaller the chance", () => {
+    assert.equal(rewardChance(500, 500), 1);
+    assert.equal(rewardChance(1000, 500), 1);
+    assert.equal(rewardChance(100, 1000), 0.1);
+    const { state } = standoff(line(), line());
+    // A tenth the size: a roll that wins at full odds misses here, and a lower one still lands.
+    const roll = GENERALS.grantChance * 0.5;
+    assert.equal(generalCount(rewardVictors(state, dice(roll), "a", [], "", 1), "rome"), 1);
+    assert.equal(generalCount(rewardVictors(state, dice(roll), "a", [], "", 0.1), "rome"), 0);
+    assert.equal(generalCount(rewardVictors(state, dice(roll / 10), "a", [], "", 0.1), "rome"), 1);
+    assert.equal(rewardVictors(state, dice(0), "a", [], "", 0), state);
   });
 
   it("a winning general may learn a trait he doesn't have", () => {
     const { state } = standoff([general(["fierce"]), ...line()], line());
-    const taught = rewardVictors(state, dice(0), "a", state.armies.a.regiments, "");
+    const taught = rewardVictors(state, dice(0), "a", state.armies.a.regiments, "", 1);
     const traits = taught.armies.a.regiments[0].general!.traits;
     assert.equal(traits.length, 2);
     assert.equal(new Set(traits).size, 2);
@@ -159,7 +174,7 @@ describe("gaining and losing generals", () => {
     const { state } = standoff([general(["fierce"]), ...line()], line());
     const fallen = state.armies.a.regiments;
     const without = { ...state, armies: { ...state.armies, a: { ...state.armies.a, regiments: line() } } };
-    assert.equal(generalCount(rewardVictors(without, dice(0), "a", fallen, ""), "rome"), 0);
+    assert.equal(generalCount(rewardVictors(without, dice(0), "a", fallen, "", 1), "rome"), 0);
   });
 
   it("his bodyguard refills a little each turn, free, and costs his flat wages", () => {

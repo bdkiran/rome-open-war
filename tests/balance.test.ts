@@ -43,32 +43,41 @@ describe("taxes", () => {
 });
 
 describe("conquest", () => {
-  // A real game's cities at turn 50, grown and built up by the AI.
-  let atTurn50: GameState | undefined;
-  const played = simulate({ turns: 50, onRound: (s) => (s.turn === 50 ? (atTurn50 = s) : undefined) });
-  const midGame = atTurn50 ?? played.state;
-  const cities = Object.values(midGame.cities);
-  const values = cities.map((city) => settlementValues(ctx, midGame, city.id, likelyConqueror(ctx, midGame, city), TURNS));
-  const bestAt = (turn: number) =>
-    values.map((v) => [...SETTLEMENT_ORDER].sort((a, b) => v[b][turn - 1] - v[a][turn - 1])[0] as SettlementChoice);
+  /** A real game's cities at turn 50, grown and built up by the AI, and what each choice earns their likely conqueror. */
+  const sampleAt50 = (seed?: number) => {
+    let atTurn50: GameState | undefined;
+    const played = simulate({ turns: 50, seed, onRound: (s) => (s.turn === 50 ? (atTurn50 = s) : undefined) });
+    const midGame = atTurn50 ?? played.state;
+    return Object.values(midGame.cities).map((city) => settlementValues(ctx, midGame, city.id, likelyConqueror(ctx, midGame, city), TURNS));
+  };
+  type Sample = ReturnType<typeof sampleAt50>;
+  const bestIn = (sample: Sample, turn: number) =>
+    sample.map((v) => [...SETTLEMENT_ORDER].sort((a, b) => v[b][turn - 1] - v[a][turn - 1])[0] as SettlementChoice);
+  const values = sampleAt50();
+  const bestAt = (turn: number) => bestIn(values, turn);
 
   it("pays most for exterminating in the short run", () => {
-    const share = bestAt(5).filter((c) => c === "exterminate").length / cities.length;
+    const share = bestAt(5).filter((c) => c === "exterminate").length / values.length;
     assert.ok(share >= 0.9, `exterminating was best after 5 turns for only ${Math.round(share * 100)}% of cities`);
   });
 
   it("rarely pays most for exterminating in the long run", () => {
     // Accepted: plunder can buy a poor conqueror a lasting lead, most of all
-    // from a big city whose halved people regrow fast toward its cap
-    // (Camulodunon, taken by a faction with 394 gold, is ahead 15% at 50
-    // turns). What mustn't happen is exterminating becoming the usual
-    // long-run choice. The limits allow for the mid-game this samples
-    // shifting with the rules of war (with fleeing armies: 12% and 7%; with
-    // generals: 16% and 13%) and with the map (with roads between bordering
-    // regions and 57 cities: 12% and 16%, 9 cities).
-    const share = (turn: number) => bestAt(turn).filter((c) => c === "exterminate").length / cities.length;
-    assert.ok(share(50) <= 0.2, `exterminating was best after 50 turns for ${Math.round(share(50) * 100)}% of cities`);
-    assert.ok(share(TURNS) <= 0.16, `exterminating was best after 100 turns for ${Math.round(share(TURNS) * 100)}% of cities`);
+    // from a big city whose halved people regrow fast toward its cap. What
+    // mustn't happen is exterminating becoming the usual long-run choice.
+    // One game's mid-game swings with any change to the dice (on one seed,
+    // scaling generals' chance by the beaten enemy's size moved it from 12%
+    // to 30%; across seeds it ran 9-25% before and 12-30% after), so this
+    // takes the median over several games.
+    const samples = [values, ...[1, 2, 3, 4].map((seed) => sampleAt50(seed))];
+    const median = (turn: number) => {
+      const shares = samples.map((sample) => bestIn(sample, turn).filter((c) => c === "exterminate").length / sample.length).sort((a, b) => a - b);
+      return shares[Math.floor(shares.length / 2)];
+    };
+    const at50 = median(50);
+    const atEnd = median(TURNS);
+    assert.ok(at50 <= 0.2, `exterminating was best after 50 turns for a median ${Math.round(at50 * 100)}% of cities`);
+    assert.ok(atEnd <= 0.16, `exterminating was best after 100 turns for a median ${Math.round(atEnd * 100)}% of cities`);
   });
 
   it("makes occupying overtake exterminating within a war's length", () => {

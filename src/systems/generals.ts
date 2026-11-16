@@ -93,27 +93,49 @@ export function generalCap(state: GameState, factionId: FactionId): number {
 }
 
 /**
- * After a battle that counts, the winning side may gain a general and its
- * generals may learn: its leading army, if it has none, gains one with
- * GENERALS.grantChance (while its faction is under the cap and the army has
- * room), and each surviving general of the side learns a new trait with
- * GENERALS.traitChance. Rolled with the battle's dice.
+ * How much of the grant and trait chances a win earns, 0 to 1: full against an
+ * enemy at least GENERALS.grantFullAt of the winners' size, and in proportion
+ * below that, so crushing a small band rarely makes a general.
  */
-export function rewardVictors(state: GameState, rng: Rng, leadArmyId: ArmyId, winners: readonly Regiment[], place: string): GameState {
+export function rewardChance(enemySoldiers: number, ownSoldiers: number): number {
+  if (ownSoldiers <= 0) return 1;
+  return Math.min(1, enemySoldiers / ownSoldiers / GENERALS.grantFullAt);
+}
+
+/**
+ * After a win, the winning side may gain a general and its generals may
+ * learn: its leading army, if it has none, gains one with GENERALS.grantChance
+ * (while its faction is under the cap), and each surviving general of the
+ * side learns a new trait with GENERALS.traitChance, both scaled by `share`
+ * (rewardChance). A full army can't take him: the winner is told instead.
+ * Rolled with the battle's dice.
+ */
+export function rewardVictors(
+  state: GameState,
+  rng: Rng,
+  leadArmyId: ArmyId,
+  winners: readonly Regiment[],
+  place: string,
+  share: number,
+): GameState {
+  if (share <= 0) return state;
   let next = state;
   const alive = new Set(Object.values(state.armies).flatMap((a) => a.regiments.map((r) => r.id)));
   for (const r of winners) {
     if (!r.general || !alive.has(r.id) || r.general.traits.length >= GENERAL_TRAITS.length) continue;
-    if (rng.next() >= GENERALS.traitChance) continue;
+    if (rng.next() >= GENERALS.traitChance * share) continue;
     next = learnTrait(next, rng, r.id);
   }
 
   // A side that lost a general in the battle doesn't raise a new one from it.
   if (winners.some((r) => r.general && !alive.has(r.id))) return next;
   const lead = next.armies[leadArmyId];
-  if (!lead || hasGeneral(lead) || lead.regiments.length >= ARMY_RULES.maxRegiments) return next;
+  if (!lead || hasGeneral(lead)) return next;
   if (generalCount(next, lead.owner) >= generalCap(next, lead.owner)) return next;
-  if (rng.next() >= GENERALS.grantChance) return next;
+  if (rng.next() >= GENERALS.grantChance * share) return next;
+  if (lead.regiments.length >= ARMY_RULES.maxRegiments) {
+    return addLog(next, `A leader stood out ${place}, but the army had no room for a general.`, { kind: "battle", factions: [lead.owner] });
+  }
   return grantGeneral(next, rng, leadArmyId, place);
 }
 

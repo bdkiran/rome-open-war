@@ -21,11 +21,15 @@ export const GENERALS = {
   perCity: 1,
   /**
    * Chance that an army without a general gains one when it wins a battle
-   * that counts (EXPERIENCE.minEnemyShare): not a chase of fleeing remnants.
+   * against an enemy at least `grantFullAt` of its size. Against a smaller
+   * enemy it shrinks in proportion: beating a band a tenth your size gives a
+   * tenth of the chance. See rewardChance in systems/generals.ts.
    */
-  grantChance: 0.25,
-  /** Chance that a general learns a trait he doesn't have when his side wins a battle that counts. */
+  grantChance: 0.35,
+  /** Chance that a general learns a trait he doesn't have when his side wins, scaled the same way. */
   traitChance: 0.25,
+  /** Enemy soldiers, as a share of the winners', at which the grant and trait chances are full. */
+  grantFullAt: 1,
   /**
    * Chance that a general who fights in a battle, won or lost, is killed in
    * it, and his bodyguard with him. He also dies if his bodyguard is cut down.
