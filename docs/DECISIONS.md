@@ -114,6 +114,9 @@ so.
   factions fallen unchanged, no invalid orders or AI debt, but level-3
   cities fell from 13 to 7–8 a game (gold that went on towers didn't go
   on the Senate).
+  - **Later: towers see 4 tiles** (61 tiles, was 3 and 37). The player found 3 too
+    short: one more than an infantry army. Still one less than a scout's 5, but at
+    150 gold a tower is now 0.41 tiles per gold against a scout's 0.30 over 50 turns.
 - **Per-tile resources were halved** to match (capacity of every terrain
   and the sea, mine gold 1/2/3 per tile, farms and port gold 0.25/0.5/0.75
   per tile), so a typical city's totals stay near what they were. In
@@ -476,6 +479,13 @@ so.
   no AI debt; AI net income −11% / −11% and treasuries −11% / −3% (their upkeep and
   top-ups), AI soldiers +8% / +1%, cities taken +4% / 0%, battles +3% / +3%, city levels
   unchanged. Levers within noise.
+  - **Later: hired mercenaries march on with the army they join.** Hired with no
+    movement, they made the army's own moves odd: the default selection left them
+    behind, and a march order waited a turn. Now a hire takes the movement left of the
+    army's freshest regiment (no more than its own unit's) and its pin. This drops the
+    "no surprise attack" rule above: gold can now reinforce an army just before it
+    attacks. Hired into an empty city there's no army to keep pace with, so they still
+    wait a turn.
 
 - **Archers and cavalry cost 240 a regiment, ports 150 / 250 / 450.** Measured in
   simulated battles, joining an army of 2 spearmen and 2 militia, archers added what
@@ -797,6 +807,10 @@ so.
 - **Trade traffic: smaller, slower, fewer.** Ships 1.3 → 0.9 size and 28 → 16 speed,
   carts 1.6 → 1.1 and 14 → 8, one vehicle per 10 gold of trade (was 6) and at most two
   a route (was four): the traffic cluttered the map.
+- **One level of a building in the queue at a time.** Queuing walls 1 used to offer
+  walls 2 straight away, stacked behind it. The player wanted the next level only
+  once the one before is finished, as the government already works for the others.
+  The AI was unaffected: it only builds into an empty queue.
 
 ## Economy tuning history
 

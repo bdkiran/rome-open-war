@@ -189,7 +189,7 @@ orders. Enemy scouts show only within your sight.
 
 **Watchtowers.** Select a tile of your own region (any land drawn in your
 colour, except a city) and build a watchtower there for 150 gold. It's
-finished at once, costs nothing to keep and sees 3 tiles around it. It's
+finished at once, costs nothing to keep and sees 4 tiles around it. It's
 never destroyed: an enemy army standing on it sees through it instead of
 you until it leaves, and whoever takes the city whose region it stands in
 takes the tower too. There's no limit on how many you build.
@@ -315,11 +315,11 @@ tab shows how many routes roads or a port would open and what they'd pay.
 Build from the city screen's Construction tab: click a building to queue its
 next level. The **construction queue** holds up to 5 buildings, built one
 after another and paid for when queued; work goes on at the end of each of
-your turns and stops while the city is besieged. You can queue several levels
-of the same building (walls 1, then walls 2), but only a **finished**
-government unlocks the next level of the others: a level-3 building can't be
-queued until the Senate is built. Cancelling a building (its ×) refunds it,
-along with any later levels of it queued behind it. A captured city keeps its
+your turns and stops while the city is besieged. A building's next level can
+be queued only once the level before it is **finished** (walls 2 waits until
+the palisade stands), and only a finished government unlocks the next level
+of the others: a level-3 building can't be queued until the Senate is built.
+Cancelling a building (its ×) refunds it. A captured city keeps its
 buildings but loses whatever was being built.
 
 **Tax rate.** Each city has its own tax rate, set with the arrows in its
@@ -395,9 +395,10 @@ and refunded at once.
 440 soldiers, whoever owns it. An army of yours standing anywhere in a
 territory (or your own empty city) can hire them at once, in the army's
 panel: a basic regiment of any unit, buildings or not. They join the army
-straight away and take no people, but can't move until your next turn. They
-cost twice as much as trained ones, to hire and to keep, and are marked with
-a gold dot:
+straight away, with the army's moves left, so they march on with it, and
+take no people (hired into an empty city, they can't move until your next
+turn). They cost twice as much as trained ones, to hire and to keep, and are
+marked with a gold dot:
 
 | Mercenaries | Hire     | Upkeep             |
 |-------------|----------|--------------------|

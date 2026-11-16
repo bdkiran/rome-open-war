@@ -9,5 +9,5 @@ export const VISION = {
   /** Tiles a scout sees around it (data/scouts.ts). */
   scout: 5,
   /** Tiles a watchtower sees around it (data/watchtowers.ts). */
-  watchtower: 3,
+  watchtower: 4,
 } as const;

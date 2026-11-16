@@ -15,6 +15,7 @@ import {
 import { ARMY_RULES, MERCENARIES, UNITS, regimentSize, type UnitType } from "@/data/units.js";
 import type { TileId } from "@/map/topology.js";
 import { mercenaryCost, placeNewArmy } from "@/systems/armies.js";
+import { freshMovement, hasTrait } from "@/systems/generals.js";
 
 /**
  * Mercenaries: gold turned into regiments at once, out in the land. Every
@@ -23,7 +24,8 @@ import { mercenaryCost, placeNewArmy } from "@/systems/armies.js";
  * them, and tops up its damaged mercenary regiments from them. Each hire
  * drains the territory's supply, which refills a little every round. Hired
  * regiments take no people and skip the recruitment queue, but cost twice as
- * much to hire and keep, and can't move on the turn they're hired.
+ * much to hire and keep. They march on with the army they join; hired into
+ * an empty city, they can't move until the next turn.
  */
 
 const fmt = (n: number) => n.toLocaleString("en-US");
@@ -68,12 +70,17 @@ export function canHire(state: GameState, factionId: FactionId, tile: TileId, un
 
 /**
  * Pays for a regiment of mercenaries from the territory's supply. It joins the
- * army on the tile (or forms one in our empty city) at once, with no movement
- * left. Call canHire first.
+ * army on the tile at once, with as much movement left as the army's
+ * freshest regiment (no more than its own unit's), so it can march on with
+ * it; hired into our empty city it forms a garrison that can't move until
+ * the next turn. Call canHire first.
  */
 export function hire(state: GameState, factionId: FactionId, tile: TileId, unit: UnitType): GameState {
   const territory = territoryOf(state, tile)!;
   const gold = mercenaryCost(unit);
+  const joining = armyAt(state, tile);
+  // The army's freshest regiment: the hire keeps pace with it, and is held where it is held.
+  const lead = joining?.regiments.reduce((best, r) => (r.movementLeft > best.movementLeft ? r : best));
   const regiment: Regiment = {
     id: `reg${state.nextRegimentNumber}`,
     unit,
@@ -81,9 +88,10 @@ export function hire(state: GameState, factionId: FactionId, tile: TileId, unit:
     soldiers: regimentSize(unit),
     experience: 0,
     movementLeft: 0,
-    pinned: false,
+    pinned: lead?.pinned ?? false,
     mercenary: true,
   };
+  if (lead) regiment.movementLeft = Math.min(lead.movementLeft, freshMovement(regiment, hasTrait(joining!.regiments, "swift")));
   let next: GameState = {
     ...state,
     nextRegimentNumber: state.nextRegimentNumber + 1,

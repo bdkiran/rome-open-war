@@ -61,6 +61,18 @@ describe("buildingAvailable", () => {
     assert.equal(buildingAvailable(state, ariminum.id, "government"), true);
   });
 
+  it("offers a building's next level only once the queued one is finished", () => {
+    let state = updateFaction(newGame(), "rome", (f) => ({ ...f, gold: 10000 }));
+    const roma = cityNamed(state, "Roma");
+    assert.ok(roma.buildings.government >= 2 && roma.buildings.farms === 0, "Roma can take farms 2");
+    state = withCity(state, { ...roma, constructionQueue: [{ building: "farms", level: 1, turnsLeft: 2, cost: 130 }] });
+    assert.equal(buildingAvailable(state, roma.id, "farms"), false);
+    const check = canBuild(state, "rome", roma.id, "farms");
+    assert.match(check.ok ? "" : check.reason, /Finish the Fields first/);
+    state = withCity(state, { ...roma, buildings: { ...roma.buildings, farms: 1 }, constructionQueue: [] });
+    assert.equal(buildingAvailable(state, roma.id, "farms"), true);
+  });
+
   it("still offers a building the faction can't afford, which canBuild then refuses", () => {
     const state = updateFaction(newGame(), "rome", (f) => ({ ...f, gold: 0 }));
     const roma = cityNamed(state, "Roma");
