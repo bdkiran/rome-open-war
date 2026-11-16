@@ -435,6 +435,8 @@ enemy brought at least a quarter of its soldiers), there's a 25% chance a
 cities and the army has room for one more regiment. He rides in his own
 regiment, a **bodyguard** of 60 riders (movement 16, attack 80, armor 40,
 charge +30, mounted), shown with a star on his box and on the army's banner.
+On the map his army's soldier wears a dark cloak and a white crest or a gold
+plume on his helmet, by culture (Hellenistic generals also a bronze cuirass).
 He's never trained, hired, retrained or merged. His bodyguard gets 6 riders
 back at the start of each of your turns, free, wherever it is. He's paid a
 flat 6 gold a turn in wages. Every battle he fights in, won or lost, carries

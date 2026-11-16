@@ -7,7 +7,9 @@
  * the shield to the left forearm, the weapon to the right palm. Kit parts are
  * named `kit_<culture>_<part>`, and the game shows only the parts for an
  * army's culture (src/data/cultures.ts). Scouts get `kit_scout_*` instead:
- * a dark hood, mantle and cloak, and no arms. Materials whose name starts with
+ * a dark hood, mantle and cloak, and no arms. An army led by a general also
+ * shows `kit_general_*`: a cloak and a crest or plume (data/cultures.ts
+ * GENERAL_LOOKS). Materials whose name starts with
  * `Faction` take the owner's colour. Four clips are kept: Idle and Walking,
  * and for an army besieging a city, Ready (weapon raised) and Attack (an
  * overhead strike).
@@ -21,7 +23,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import * as THREE from "three";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
-import { CULTURES, type Culture } from "@/data/cultures.js";
+import { CULTURES, GENERAL_LOOKS, type Culture } from "@/data/cultures.js";
 
 const SOURCE = "models/source/quaternius-knight";
 const OUTPUT = "models/knight.glb";
@@ -162,7 +164,7 @@ function crest(material: THREE.Material, length: number, height: number, thickne
 function romanHelmet(): THREE.Object3D {
   const helmet = packHelmet("Helmet1", 1.12, 0.16, -4);
   const plume = crest(mat("Plume", PLUME), HEAD_SIZE.z * 0.75, HEAD_SIZE.y * 0.55, 16);
-  plume.name = "crest";
+  plume.name = "crest"; // hidden under a general's crest
   plume.position.set(HEAD_CENTRE.x, HEAD.max.y + HEAD_SIZE.y * 0.12, HEAD_CENTRE.z - 6);
   return group("helmet", helmet, plume);
 }
@@ -170,7 +172,7 @@ function romanHelmet(): THREE.Object3D {
 function hellenisticHelmet(): THREE.Object3D {
   const helmet = packHelmet("Helmet2", 1.12, 0.1, 0);
   const plume = crest(mat("FactionCrest", "#c0392b"), HEAD_SIZE.z * 1.15, HEAD_SIZE.y * 0.6, 18);
-  plume.name = "crest";
+  plume.name = "crest"; // hidden under a general's crest
   plume.position.set(HEAD_CENTRE.x, HEAD.max.y + HEAD_SIZE.y * 0.1, HEAD_CENTRE.z - 8);
   return group("helmet", helmet, plume);
 }
@@ -385,13 +387,14 @@ for (const culture of CULTURES) {
   attach(cloakGroup, bone("Torso"), new THREE.Vector3(0, 365, -52), new THREE.Euler());
 }
 
-// The general's kit (design prototype): a cloak in the owner's colour, and two
-// plume styles to compare, a white crest across the helmet or a tall gold plume,
-// each placed on top of every culture's helmet. Named kit_general_*.
+// The general's kit, worn over his culture's: a long cloak and mantle
+// (kit_general_all_*, FactionCloak: the game shades it darker than the owner's
+// colour) and his culture's headdress from GENERAL_LOOKS, on top of its helmet
+// (kit_general_<culture>_headdress): a white crest across it or a gold plume.
 {
   const cloth = mat("FactionCloak", "#c0392b");
   const mantle = part(new THREE.CylinderGeometry(HEAD_SIZE.x * 0.55, 112, 100, 12, 1, true), cloth);
-  attach(group("kit_general_mantle", mantle), bone("Torso"), new THREE.Vector3(0, 350, -4), new THREE.Euler());
+  attach(group("kit_general_all_mantle", mantle), bone("Torso"), new THREE.Vector3(0, 350, -4), new THREE.Euler());
   const shape = new THREE.Shape();
   shape.moveTo(-100, 0);
   shape.quadraticCurveTo(0, 14, 100, 0);
@@ -400,7 +403,7 @@ for (const culture of CULTURES) {
   shape.closePath();
   const back = part(new THREE.ExtrudeGeometry(shape, { depth: 6, bevelEnabled: false }), cloth);
   back.rotation.x = -0.16;
-  attach(group("kit_general_cloak", back), bone("Torso"), new THREE.Vector3(0, 372, -54), new THREE.Euler());
+  attach(group("kit_general_all_cloak", back), bone("Torso"), new THREE.Vector3(0, 372, -54), new THREE.Euler());
 
   /** Where the top of each culture's headgear is: height above the head, and how far forward. */
   const tops: Record<Culture, { lift: number; forward: number }> = {
@@ -413,19 +416,24 @@ for (const culture of CULTURES) {
   for (const culture of CULTURES) {
     const top = tops[culture];
     const at = new THREE.Vector3(HEAD_CENTRE.x, HEAD.max.y + HEAD_SIZE.y * top.lift, HEAD_CENTRE.z + top.forward);
-    const across = crest(mat("PlumeWhite", "#efe9dc"), HEAD_SIZE.x * 1.35, HEAD_SIZE.y * 0.62, 18);
-    across.rotation.y = Math.PI / 2;
-    across.position.copy(at);
-    attach(group(`kit_general_crest_${culture}`, across), head, new THREE.Vector3(), new THREE.Euler());
-    // A horsehair plume: narrow at the helmet, spreading upward and falling back.
-    const plumeShape = new THREE.SphereGeometry(HEAD_SIZE.x * 0.3, 8, 6);
-    plumeShape.scale(0.7, 1.7, 1.2);
-    const spray = part(plumeShape, mat("PlumeGold", "#d6ac4a"));
-    spray.rotation.x = -0.45;
-    spray.position.copy(at).add(new THREE.Vector3(0, HEAD_SIZE.y * 0.42, -HEAD_SIZE.y * 0.18));
-    const knob = part(new THREE.SphereGeometry(HEAD_SIZE.x * 0.1, 7, 5), mat("Bronze", BRONZE));
-    knob.position.copy(at);
-    attach(group(`kit_general_plume_${culture}`, spray, knob), head, new THREE.Vector3(), new THREE.Euler());
+    let headdress: THREE.Object3D;
+    if (GENERAL_LOOKS[culture].headdress === "crest") {
+      const across = crest(mat("PlumeWhite", "#efe9dc"), HEAD_SIZE.x * 1.35, HEAD_SIZE.y * 0.62, 18);
+      across.rotation.y = Math.PI / 2;
+      across.position.copy(at);
+      headdress = across;
+    } else {
+      // A horsehair plume: narrow at the helmet, spreading upward and falling back.
+      const plumeShape = new THREE.SphereGeometry(HEAD_SIZE.x * 0.3, 8, 6);
+      plumeShape.scale(0.7, 1.7, 1.2);
+      const spray = part(plumeShape, mat("PlumeGold", "#d6ac4a"));
+      spray.rotation.x = -0.45;
+      spray.position.copy(at).add(new THREE.Vector3(0, HEAD_SIZE.y * 0.42, -HEAD_SIZE.y * 0.18));
+      const knob = part(new THREE.SphereGeometry(HEAD_SIZE.x * 0.1, 7, 5), mat("Bronze", BRONZE));
+      knob.position.copy(at);
+      headdress = group("plume", spray, knob);
+    }
+    attach(group(`kit_general_${culture}_headdress`, headdress), head, new THREE.Vector3(), new THREE.Euler());
   }
 }
 

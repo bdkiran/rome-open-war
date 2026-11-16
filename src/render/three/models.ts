@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Culture } from "@/data/cultures.js";
+import { GENERAL_LOOKS, type Culture } from "@/data/cultures.js";
 import { buildTown } from "@/render/three/town.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
@@ -324,7 +324,7 @@ export interface ArmyLook {
   seed: number;
   /** Which kit the soldier carries (helmet, shield, weapon), if the army model has kits. */
   culture: Culture;
-  /** A general rides with it: a star on the banner. */
+  /** A general rides with it: a star on the banner, and (on a model from a file) his cloak and crest or plume. */
   general: boolean;
 }
 
@@ -335,7 +335,7 @@ export interface ArmyLook {
  * flutters faster while it marches.
  */
 export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
-  const custom = library.army(look.color, look.faded, look.culture);
+  const custom = library.army(look.color, look.faded, look.culture, look.general);
   const figure = custom ?? standardBearer(look.color, look.faded);
 
   let shown = look;
@@ -370,7 +370,7 @@ export function buildArmy(look: ArmyLook, library: ModelLibrary): Figure {
     strike: () => figure.strike?.() ?? 0,
     restyle(next) {
       // Only a model from a file can change its look in place: one built in code bakes it into every part.
-      if (!custom || !pole || next.color !== shown.color || next.culture !== shown.culture) return false;
+      if (!custom || !pole || next.color !== shown.color || next.culture !== shown.culture || next.general !== shown.general) return false;
       if (next.faded !== shown.faded) {
         custom.setFaded(next.faded);
         pole.material = mat("#3b2c1e", next.faded);
@@ -658,8 +658,22 @@ export function buildScout(color: string, _culture: Culture, library: ModelLibra
 /** Which kit an army model carries: a culture's arms, or the scout's hooded cloak. */
 type Kit = Culture | "scout";
 
-/** Names of kit parts in an army model: kit_<culture>_<part> (or kit_scout_<part>). */
+/**
+ * Names of kit parts in an army model: kit_<culture>_<part> (or kit_scout_<part>).
+ * A general's parts are kit_general_all_<part> (on every general) and
+ * kit_general_<culture>_<part>.
+ */
 const KIT_PART = /^kit_([a-z]+)_/;
+
+/** A general's breastplate where his culture wears bronze (GENERAL_LOOKS), and how much darker his cloak is than his colour. */
+const GENERAL_BRONZE = "#b08a4a";
+const GENERAL_CLOAK_SHADE = -0.16;
+
+/** Whether a kit part is shown on an army model of `kit`, led by a general or not. */
+function showsKitPart(name: string, owner: string, kit: Kit | null, general: boolean): boolean {
+  if (owner !== "general") return owner === kit;
+  return general && (name.startsWith("kit_general_all_") || name.startsWith(`kit_general_${kit}_`));
+}
 
 /** Whether a node is, or hangs from, a kit part. */
 function inKit(node: THREE.Object3D): boolean {
@@ -752,10 +766,11 @@ export class ModelLibrary {
   /**
    * The army model from a file, if one is listed, carrying `culture`'s kit
    * (or the scout's): parts named `kit_<culture>_...` show only for that one.
+   * Led by a general, it adds his kit (`kit_general_...`).
    */
-  army(color: string, faded: boolean, culture: Kit): FileFigure | null {
+  army(color: string, faded: boolean, culture: Kit, general = false): FileFigure | null {
     const model = this.loaded.get("army");
-    return model ? this.fromFile(model, color, faded, this.manifest.soldierHeight ?? 36, 0, culture) : null;
+    return model ? this.fromFile(model, color, faded, this.manifest.soldierHeight ?? 36, 0, culture, general) : null;
   }
 
   city(capital: boolean): THREE.Object3D | null {
@@ -765,13 +780,22 @@ export class ModelLibrary {
   }
 
   /** A copy of a loaded model, recoloured, scaled to size, with its walk animation hooked up. */
-  private fromFile(model: LoadedModel, color: string | null, faded: boolean, height: number, width = 0, culture: Kit | null = null): FileFigure {
+  private fromFile(model: LoadedModel, color: string | null, faded: boolean, height: number, width = 0, culture: Kit | null = null, general = false): FileFigure {
     const object = cloneSkinned(model.scene);
-    // Show only this culture's kit.
+    const look = general && culture && culture !== "scout" ? GENERAL_LOOKS[culture] : null;
+    // Show only this culture's kit (and a general's), hiding the helmet's own crest under a general's.
     object.traverse((node) => {
       const kit = KIT_PART.exec(node.name);
-      if (kit) node.visible = kit[1] === culture;
+      if (kit) node.visible = showsKitPart(node.name, kit[1], culture, general);
+      else if (look?.headdress === "crest" && node.name.startsWith("crest")) node.visible = false;
     });
+    // A general's cloak a shade darker than his colour; his armour bronze where his culture wears it.
+    const colorOf = (m: THREE.Material): string | null => {
+      if (!color) return null;
+      if (/FactionCloak/.test(m.name)) return `#${new THREE.Color(color).offsetHSL(0, -0.05, GENERAL_CLOAK_SHADE).getHexString()}`;
+      if (look?.bronze && /FactionArmor/.test(m.name)) return GENERAL_BRONZE;
+      return color;
+    };
     // The copy still has the file's materials: keep them, to recolour (and fade) from.
     const originals = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
     object.traverse((node) => {
@@ -780,7 +804,7 @@ export class ModelLibrary {
     });
     const paint = (fade: boolean) => {
       for (const [mesh, m] of originals) {
-        mesh.material = Array.isArray(m) ? m.map((x) => recolored(model, x, color, fade)) : recolored(model, m, color, fade);
+        mesh.material = Array.isArray(m) ? m.map((x) => recolored(model, x, colorOf(x), fade)) : recolored(model, m, colorOf(m), fade);
       }
     };
     paint(faded);
