@@ -540,6 +540,8 @@ button.unit-box:hover:not(:disabled) { background: rgba(224, 181, 79, 0.14); bor
 }
 .reg-box.dim { opacity: 0.5; }
 .reg-box .figure { width: 100%; max-width: 46px; aspect-ratio: 64 / 68; }
+/* A general's portrait in his bodyguard's box: a parchment card, a little wider than a soldier. */
+.reg-box .portrait { max-width: 48px; aspect-ratio: 54 / 61; border-radius: 6px; background: #d8ccb3; }
 .reg-count { font-size: 12px; font-weight: 600; line-height: 1.2; }
 .reg-status { font-size: 10.5px; color: var(--bone-dim); line-height: 1.2; white-space: nowrap; }
 .strength {
@@ -963,6 +965,17 @@ button.settle-card:focus-visible { background: rgba(224, 181, 79, 0.12); border-
 .side dd { margin: 0; text-align: right; }
 .side .total { padding-top: 4px; border-top: 1px solid rgba(236, 228, 208, 0.15); color: var(--bone); font-weight: 600; }
 .side-note { margin: 10px 0 0; font-size: 13px; color: var(--brass); }
+.general-line { display: flex; align-items: center; gap: 10px; }
+.general-portrait {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 2px solid;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #d8ccb3;
+}
+.general-portrait svg { display: block; width: 100%; height: 100%; }
 .battle-outcome {
   margin: 18px 0 18px;
   color: var(--bone-dim);

@@ -76,7 +76,7 @@ src/
                models, town (cities and walls), camera3d), cityPlate.ts
                (city name plates),
                mapView.ts (ViewState, MapCamera), input.ts, figures.ts (SVG
-               unit art for panels), colors.ts, format.ts
+               unit art for panels), portraits.ts (generals' faces), colors.ts, format.ts
   ui/          panels as HTML strings: infoPanel (side panel: facts + city
                tabs), selectionBar (bottom bar: Army / Town cards), turnPanel
                (scoreboard, money breakdown), battlePanel, battleResult,

@@ -3,13 +3,16 @@ import { MAX_CITY_LEVEL } from "@/data/buildings.js";
 import { experienceLevel, MAX_EXPERIENCE_LEVEL } from "@/data/experience.js";
 import { regimentSize, TIERS, type Tier } from "@/data/units.js";
 import { formatNumber } from "@/render/format.js";
+import type { Culture } from "@/data/cultures.js";
 import { figureSvg } from "@/render/figures.js";
+import { portraitSvg } from "@/render/portraits.js";
 import { escapeHtml } from "@/ui/html.js";
 
-/** A regiment as a box: its figure, soldiers, a strength bar, and a status line. */
+/** A regiment as a box: its figure (a general's portrait for his bodyguard), soldiers, a strength bar, and a status line. */
 export function regimentBox(
   r: Regiment,
   color: string,
+  culture: Culture,
   opts: { status: string; title: string; attr: string; pressed: boolean | null; dim: boolean },
 ): string {
   const strength = Math.round((r.soldiers / regimentSize(r.unit)) * 100);
@@ -21,7 +24,7 @@ export function regimentBox(
       ${r.mercenary ? mercenaryMark() : ""}
       ${r.general ? `<span class="general-mark" aria-hidden="true">&#10070;</span>` : ""}
       ${experiencePips(r.experience)}
-      ${figureSvg(r.unit, color, r.tier)}
+      ${r.general ? portraitSvg(r.general.name, culture, color, "figure portrait") : figureSvg(r.unit, color, r.tier)}
       <span class="reg-count">${r.general ? escapeHtml(r.general.name) : formatNumber(r.soldiers)}</span>
       <span class="strength"><span style="width:${strength}%"></span></span>
       ${opts.status ? `<span class="reg-status">${escapeHtml(opts.status)}</span>` : ""}

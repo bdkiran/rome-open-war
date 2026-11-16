@@ -39,6 +39,12 @@ Every entry is optional; anything not listed keeps the built-in model.
   are left out when the model is measured for size, so a long spear doesn't
   shrink the soldier. Scouts show the `kit_scout_*` parts instead of a
   culture's (in `knight.glb`, a dark hood, mantle and cloak).
+- **Generals.** An army led by a general also shows `kit_general_all_*`
+  and `kit_general_<culture>_*` (in `knight.glb`, a cloak and mantle, and a
+  crest or plume as `GENERAL_LOOKS` in `src/data/cultures.ts` says). Under a
+  general's crest, the helmet's own (a node named `crest…`) is hidden. A
+  material named `FactionCloak` is drawn a shade darker than the owner's
+  colour, and where his culture wears bronze, `FactionArmor` turns bronze.
 
 Good free sources of low-poly, public-domain (CC0) models include Quaternius
 and Kenney.

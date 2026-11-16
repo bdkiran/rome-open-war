@@ -56,7 +56,7 @@ export function showSiegePanel(el: SiegePanelElements, input: SiegePanelInput): 
     ? `<section class="side"><h3>The garrison</h3><p class="owner">${escapeHtml(owner?.name ?? "")}</p>
          <p class="side-note">Your scouts can't see inside the walls.</p></section>`
     : garrison
-      ? forceSummary("The garrison", owner?.name ?? "", owner?.color ?? "#000", garrison.regiments, storm?.strength.defender ?? null,
+      ? forceSummary("The garrison", owner, garrison.regiments, storm?.strength.defender ?? null,
           storm && storm.terrainBonus + storm.cityBonus > 0
             ? [`Walls and terrain +${Math.round((storm.terrainBonus + storm.cityBonus) * 100)}%`]
             : [])
@@ -69,7 +69,7 @@ export function showSiegePanel(el: SiegePanelElements, input: SiegePanelInput): 
     : "";
 
   const you = getFaction(state, city.besiegedBy ?? "");
-  const yours = forceSummary("Your besieging forces", you?.name ?? "", you?.color ?? "#000", input.besiegers,
+  const yours = forceSummary("Your besieging forces", you, input.besiegers,
     storm?.strength.attacker ?? null, []);
 
   const odds = storm

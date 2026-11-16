@@ -1,4 +1,4 @@
-import { getFaction, type GameState, type Regiment } from "@/core/state.js";
+import { getFaction, type Faction, type GameState, type Regiment } from "@/core/state.js";
 import { COMBAT } from "@/data/combat.js";
 import { ALL_UNITS, UNITS } from "@/data/units.js";
 import { generalLine } from "@/ui/generalCard.js";
@@ -54,8 +54,8 @@ export function showBattlePanel(
       <span title="Estimated by fighting the battle out ${COMBAT.previewBattles} times">estimated chance of victory</span>
     </div>
     <div class="sides">
-      ${forceSummary("Your forces", attacker?.name ?? "", attacker?.color ?? "#000", preview.attackers, preview.strength.attacker, yourNotes)}
-      ${forceSummary(preview.cityAtStake ? "The garrison" : "Their forces", defender?.name ?? "", defender?.color ?? "#000", preview.defenders, preview.strength.defender, theirNotes)}
+      ${forceSummary("Your forces", attacker, preview.attackers, preview.strength.attacker, yourNotes)}
+      ${forceSummary(preview.cityAtStake ? "The garrison" : "Their forces", defender, preview.defenders, preview.strength.defender, theirNotes)}
     </div>
     <p class="battle-outcome">${win} ${lose}</p>`;
 
@@ -67,15 +67,16 @@ export function hideBattlePanel(el: BattlePanelElements): void {
   el.root.hidden = true;
 }
 
-/** One side of a fight: its soldiers by unit type, strength if known, and any notes. */
+/** One side of a fight: its soldiers by unit type, strength if known, its general, and any notes. */
 export function forceSummary(
   heading: string,
-  name: string,
-  color: string,
+  side: Pick<Faction, "name" | "color" | "culture"> | undefined,
   regiments: readonly Regiment[],
   strength: number | null,
   notes: string[],
 ): string {
+  const name = side?.name ?? "";
+  const color = side?.color ?? "#000";
   const rows = ALL_UNITS.map((unit) => {
     const soldiers = regiments.filter((r) => r.unit === unit).reduce((sum, r) => sum + r.soldiers, 0);
     return soldiers > 0 ? `<dt>${UNITS[unit].name}</dt><dd>${formatNumber(soldiers)}</dd>` : "";
@@ -90,7 +91,7 @@ export function forceSummary(
         <dt class="total">Soldiers</dt><dd class="total">${formatNumber(regimentTotal(regiments))}</dd>
         ${strength !== null ? `<dt>Strength</dt><dd>${formatNumber(Math.round(strength))}</dd>` : ""}
       </dl>
-      ${generalLine(regiments)}
+      ${side ? generalLine(regiments, side.culture, color) : ""}
       ${notes.map((n) => `<p class="side-note">${escapeHtml(n)}</p>`).join("")}
     </section>`;
 }
