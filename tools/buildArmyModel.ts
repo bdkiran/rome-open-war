@@ -162,6 +162,7 @@ function crest(material: THREE.Material, length: number, height: number, thickne
 function romanHelmet(): THREE.Object3D {
   const helmet = packHelmet("Helmet1", 1.12, 0.16, -4);
   const plume = crest(mat("Plume", PLUME), HEAD_SIZE.z * 0.75, HEAD_SIZE.y * 0.55, 16);
+  plume.name = "crest";
   plume.position.set(HEAD_CENTRE.x, HEAD.max.y + HEAD_SIZE.y * 0.12, HEAD_CENTRE.z - 6);
   return group("helmet", helmet, plume);
 }
@@ -169,6 +170,7 @@ function romanHelmet(): THREE.Object3D {
 function hellenisticHelmet(): THREE.Object3D {
   const helmet = packHelmet("Helmet2", 1.12, 0.1, 0);
   const plume = crest(mat("FactionCrest", "#c0392b"), HEAD_SIZE.z * 1.15, HEAD_SIZE.y * 0.6, 18);
+  plume.name = "crest";
   plume.position.set(HEAD_CENTRE.x, HEAD.max.y + HEAD_SIZE.y * 0.1, HEAD_CENTRE.z - 8);
   return group("helmet", helmet, plume);
 }
@@ -381,6 +383,50 @@ for (const culture of CULTURES) {
   back.rotation.x = -0.12; // hanging slightly out from his back
   const cloakGroup = group("kit_scout_cloak", back);
   attach(cloakGroup, bone("Torso"), new THREE.Vector3(0, 365, -52), new THREE.Euler());
+}
+
+// The general's kit (design prototype): a cloak in the owner's colour, and two
+// plume styles to compare, a white crest across the helmet or a tall gold plume,
+// each placed on top of every culture's helmet. Named kit_general_*.
+{
+  const cloth = mat("FactionCloak", "#c0392b");
+  const mantle = part(new THREE.CylinderGeometry(HEAD_SIZE.x * 0.55, 112, 100, 12, 1, true), cloth);
+  attach(group("kit_general_mantle", mantle), bone("Torso"), new THREE.Vector3(0, 350, -4), new THREE.Euler());
+  const shape = new THREE.Shape();
+  shape.moveTo(-100, 0);
+  shape.quadraticCurveTo(0, 14, 100, 0);
+  shape.lineTo(150, -320);
+  shape.quadraticCurveTo(0, -345, -150, -320);
+  shape.closePath();
+  const back = part(new THREE.ExtrudeGeometry(shape, { depth: 6, bevelEnabled: false }), cloth);
+  back.rotation.x = -0.16;
+  attach(group("kit_general_cloak", back), bone("Torso"), new THREE.Vector3(0, 372, -54), new THREE.Euler());
+
+  /** Where the top of each culture's headgear is: height above the head, and how far forward. */
+  const tops: Record<Culture, { lift: number; forward: number }> = {
+    roman: { lift: 0.12, forward: -6 },
+    hellenistic: { lift: 0.1, forward: -8 },
+    punic: { lift: 0.36, forward: 4 },
+    celtic: { lift: 0.06, forward: -8 },
+    thracian: { lift: 0.36, forward: HEAD_SIZE.x * 0.35 },
+  };
+  for (const culture of CULTURES) {
+    const top = tops[culture];
+    const at = new THREE.Vector3(HEAD_CENTRE.x, HEAD.max.y + HEAD_SIZE.y * top.lift, HEAD_CENTRE.z + top.forward);
+    const across = crest(mat("PlumeWhite", "#efe9dc"), HEAD_SIZE.x * 1.35, HEAD_SIZE.y * 0.62, 18);
+    across.rotation.y = Math.PI / 2;
+    across.position.copy(at);
+    attach(group(`kit_general_crest_${culture}`, across), head, new THREE.Vector3(), new THREE.Euler());
+    // A horsehair plume: narrow at the helmet, spreading upward and falling back.
+    const plumeShape = new THREE.SphereGeometry(HEAD_SIZE.x * 0.3, 8, 6);
+    plumeShape.scale(0.7, 1.7, 1.2);
+    const spray = part(plumeShape, mat("PlumeGold", "#d6ac4a"));
+    spray.rotation.x = -0.45;
+    spray.position.copy(at).add(new THREE.Vector3(0, HEAD_SIZE.y * 0.42, -HEAD_SIZE.y * 0.18));
+    const knob = part(new THREE.SphereGeometry(HEAD_SIZE.x * 0.1, 7, 5), mat("Bronze", BRONZE));
+    knob.position.copy(at);
+    attach(group(`kit_general_plume_${culture}`, spray, knob), head, new THREE.Vector3(), new THREE.Euler());
+  }
 }
 
 // The pack's own materials become the same matte kind as the kits', and the
