@@ -675,11 +675,15 @@ export class MapView3D {
         justPlaced.add(army.id);
         this.scene.add(figure.object);
       } else if (entry.key !== key) {
-        // Its look changed (strength, colour, spent): swap the model, keeping where it stands.
-        this.scene.remove(entry.figure.object);
-        entry.figure = buildArmy(look, this.library);
+        // Its look changed: a new strength or spent look is shown on the same
+        // model (rebuilding a rigged one stalls a frame); a new colour or culture
+        // swaps the model, keeping where it stands.
+        if (!entry.figure.restyle?.(look)) {
+          this.scene.remove(entry.figure.object);
+          entry.figure = buildArmy(look, this.library);
+          this.scene.add(entry.figure.object);
+        }
         entry.key = key;
-        this.scene.add(entry.figure.object);
       }
 
       // An attacker walks up beside its battle and holds; it strikes first, then walks in (or flees).

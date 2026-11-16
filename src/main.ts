@@ -1173,7 +1173,12 @@ async function showAiStep(step: AiStep): Promise<void> {
     resultsHeld = false;
   }
   showNextResult();
-  await waitForFrames(() => resultQueue.length === 0 && Boolean(battleResult.root.hidden), Infinity);
+  const resultsDone = () => resultQueue.length === 0 && Boolean(battleResult.root.hidden);
+  // A step with nothing to watch or read goes straight on: waiting for frames
+  // on every unseen step made a round seconds longer. A zero pause still lets
+  // the map draw between steps.
+  if (resultsDone()) await pause(0);
+  else await waitForFrames(resultsDone, Infinity);
 }
 
 /** The camera, the walks, the clash and the banner of one AI step. */
