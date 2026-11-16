@@ -16,6 +16,10 @@ export function brokenRules(state: GameState): string[] {
   const at = `turn ${state.turn}`;
   const alive = new Set(state.factions.filter((f) => f.alive).map((f) => f.id));
 
+  for (const road of state.roads) {
+    if (road.tiles.some((t) => !road.cities.includes(state.regions[t]))) broken.push(`${at}: road ${road.cities.join("–")} leaves its cities' regions`);
+  }
+
   const armyOnTile = new Map<string, string>();
   for (const army of Object.values(state.armies)) {
     const other = armyOnTile.get(army.tile);

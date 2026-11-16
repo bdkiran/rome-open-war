@@ -256,7 +256,7 @@ export class MapView3D {
   }
 
   /**
-   * Built roads: each city's half of a road (the tiles in its land) once it
+   * Built roads: each city's half of a road (the tiles in its region) once it
    * has roads, from a dirt track to a pale paved road. The player's own roads
    * are drawn dashed red while an enemy army cuts them. Dimmed in the fog.
    */
@@ -270,7 +270,7 @@ export class MapView3D {
       const cut = !!view.player && owners.every((o) => o === view.player) && roadCut(state, road, view.player);
       for (let i = 0; i < road.tiles.length; i++) {
         const tile = road.tiles[i];
-        const city = state.cities[state.territory[tile]?.cityId ?? ""];
+        const city = state.cities[state.regions[tile] ?? ""];
         const level = city?.buildings.roads ?? 0;
         if (level === 0) continue;
         const fogged = !!view.visible && !view.visible.has(tile);

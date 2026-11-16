@@ -48,7 +48,7 @@ export function createGame(
     victory: { preset: options.victory ?? VICTORY.defaultPreset, keyCities: [], holding: null, winner: null },
   };
 
-  state = drawRegions(ctx, mapTradeRoutes(ctx, measureCoasts(ctx, claimTerritory(ctx, placeCities(ctx, state, map, factions)))));
+  state = mapTradeRoutes(ctx, drawRegions(ctx, measureCoasts(ctx, claimTerritory(ctx, placeCities(ctx, state, map, factions)))));
   const cities = Object.values(state.cities);
   const keyCities = (scenario.keyCities ?? []).map((name) => {
     const city = cities.find((c) => c.name === name);

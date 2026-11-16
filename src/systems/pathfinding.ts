@@ -19,14 +19,15 @@ export function isRoadTile(state: GameState, tile: TileId): boolean {
 
 /**
  * Movement points to enter a tile: its terrain's cost, or less on a road in
- * the land of a city that has built its roads. Roads serve every army,
+ * the region of a city that has built its roads. Roads serve every army,
  * whoever owns them.
  */
 export function enterCost(state: GameState, tile: TileId): number {
   const terrain = TERRAIN[state.tiles[tile].terrain].moveCost;
   if (!isRoadTile(state, tile)) return terrain;
-  const claim = state.territory[tile];
-  const roads = claim ? (state.cities[claim.cityId]?.buildings.roads ?? 0) : 0;
+  // Each city paves the road through its region, outer land included.
+  const cityId = state.regions[tile];
+  const roads = cityId ? (state.cities[cityId]?.buildings.roads ?? 0) : 0;
   return Math.min(terrain, ROAD_MOVE_COST[roads] ?? Infinity);
 }
 

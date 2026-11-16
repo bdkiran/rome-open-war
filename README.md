@@ -38,13 +38,13 @@ AI powers share the map with you, some with many cities and some with few:
 | Seleucid Empire | Antiochia, Seleucia, Damascus, Sardis, Tarsus, Sidon |
 | Ptolemaic Egypt | Alexandria, Memphis, Cyrene |
 | Gallic Tribes | Alesia, Lemonum, Mediolanum, Patavium, Narbo Martius, Numantia |
-| Kingdom of Numidia | Cirta, Tingis |
-| Germanic Tribes | Batavodurum, Damme, Marcomannia |
+| Kingdom of Numidia | Cirta, Tingis, Siga |
+| Germanic Tribes | Batavodurum, Gutones, Marcomannia |
 | Scythian Kingdom | Tanais, Alania, Sarmatia |
 | Odrysian Thrace | Tylis, Getae, Byzantion |
 | Iberian Tribes | Asturica, Carthago Nova, Osca |
 | Britons | Londinium, Eburacum, Deva, Samarobriva |
-| Dacian Kingdom | Porolissum, Iazyges |
+| Dacian Kingdom | Porolissum, Iazyges, Bastarnia |
 | Kingdom of Pontus | Amaseia, Sinope, Trapezus |
 
 The map runs from Iberia to Syria and from Egypt to the North Sea; Seleucia,
@@ -207,9 +207,10 @@ others.
 
 The map leaves no gaps between territories: every other land tile is drawn,
 in a fainter tint, in the region of the nearest territory, and borders run
-around whole regions. That outer land is for the map only. It earns nothing
-and adds no people, mines, farms, roads or sight; only a city's territory
-does. Islands with no city belong to no one.
+around whole regions. Two cities whose regions touch are neighbours, and a
+road joins them (see Movement). Otherwise the outer land earns nothing and
+adds no people, mines, farms or sight; only a city's territory does. Islands
+with no city belong to no one.
 
 Population grows every turn using a carrying capacity:
 
@@ -302,7 +303,7 @@ gold a turn it pays (both ends together), up to two.
 
 A route runs at the lower of the two cities' levels and pays each end, for
 every 1,000 people at the other end, 0.4 / 0.7 / 1 gold by road or
-0.5 / 0.875 / 1.25 by sea, so trading with a big city pays more. Two cities joined by a road (their land borders) trade only
+0.5 / 0.875 / 1.25 by sea, so trading with a big city pays more. Two cities joined by a road (their regions border) trade only
 by land, even when both have ports: the sea is for cities no road joins. The
 market multiplies trade gold (+100% / +200% / +300%), and nothing else, and
 taxes apply as usual. A siege at either end shuts the route, and **an enemy
@@ -470,10 +471,11 @@ ground, 4 of rough ground or 3 of mountains a turn, and cavalry 8, 5 or 4. An
 army may enter a tile only if it has the points, except that it can always
 take one step at the start of its turn.
 
-**Roads** run between every two cities whose land borders: the cheapest way
-from one city to the other through their own land, laid out when the game
-starts. A city's Roads building builds the half that runs through its own
-land, and the map draws it, from a dirt track to a paved road. On a built
+**Roads** run between every two cities whose regions border on the map,
+however far apart they stand: the cheapest way from one city to the other
+through their two regions, laid out when the game starts. A city's Roads
+building builds the half that runs through its own region, and the map draws
+it, from a dirt track to a paved road. On a built
 road, every tile costs the same whatever the terrain, for every army that
 marches on it, enemies included; off the road, land costs what its terrain
 does:
@@ -485,7 +487,7 @@ does:
 | Roads (2)         | 1                  |
 | Paved roads (3)   | 0.5                |
 
-A city whose land borders no other city's has no roads to build.
+A city whose region borders no other city's (an island's) has no roads to build.
 
 **Zone of control.** Every army controls the tiles next to it. An enemy army
 that moves into one of those tiles must stop there for the rest of the turn:
