@@ -268,10 +268,12 @@ so.
   mostly chases of fled armies (median defender about 170 soldiers);
   cities taken 219 (was 201 with wipe-outs), factions fallen 12 (was 11),
   regiments alive at turn 100 1,382 (was 1,416).
-- **The conquest balance test was relaxed to 15% / 10%** (exterminating
+- **The conquest balance test was relaxed to 15% / 10%, then 20% / 15%** (exterminating
   best long-term at 50 / 100 turns). Fleeing armies changed the turn-50
   game it samples, and exterminating came out best for 12% / 7% of cities
   with no change to the economy. The player chose to relax the limits.
+  Generals shifted it again, to 16% / 13%, with no economic change; the
+  player chose to relax the limits to 20% / 15%.
 - **The AI looks before storming.** It used to march up to a city out of
   sight and storm it in one order, and most of its battles were such blind
   storms against hidden garrisons. Under the new combat they failed more
