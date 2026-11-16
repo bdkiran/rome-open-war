@@ -430,10 +430,12 @@ its box. It costs nothing to keep. Arrows ignore armor, so veterans fear archers
 most. Retraining's recruits dilute experience in proportion, and merged regiments
 share theirs out by soldiers.
 
-**Generals.** When an army without a general wins a battle that counts (the
-enemy brought at least a quarter of its soldiers), there's a 25% chance a
-**general** rises to lead it, as long as your faction has fewer generals than
-cities and the army has room for one more regiment. He rides in his own
+**Generals.** When an army without a general wins a battle, there's a 35%
+chance a **general** rises to lead it if the enemy was at least its size, and
+less against a smaller enemy, in proportion: a tenth your size, a tenth the
+chance (3.5%). It needs your faction to have fewer generals than cities, and
+the army room for one more regiment; if a full army would have gained one,
+you're told it had no room. He rides in his own
 regiment, a **bodyguard** of 60 riders (movement 16, attack 80, armor 40,
 charge +30, mounted), shown by his portrait in his box (a face of his own,
 from his name and culture) and a star on the army's banner.
@@ -446,8 +448,8 @@ a 5% chance he's killed, and his bodyguard goes with him. He also dies if his
 bodyguard is wiped out, as when his whole army is destroyed. A side that loses
 a general in a battle doesn't gain a new one from it.
 
-He starts with one trait, and each battle that counts that his side wins
-gives a 25% chance of learning another, until he has all six. His traits work
+He starts with one trait, and each battle his side wins gives a 25% chance
+of learning another (scaled down the same way against a smaller enemy), until he has all six. His traits work
 for his whole army while he leads it. An army can have several generals, like
 any other regiment, but only its leader's traits count: the most senior
 general, the one with the most traits, then the most experience, then the one

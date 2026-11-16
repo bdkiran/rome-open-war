@@ -576,13 +576,23 @@ so.
   riders, 80/40, charge 30) is better than cavalry. It isn't trained, retrained, merged
   or topped up by mercenaries. Instead it refills 6 riders a turn, free, and costs a
   flat 6 gold a turn in wages.
-  - **Getting one:** an army without a general that wins a battle that counts gains one
-    25% of the time, up to one general per city held. A faction starts with none. A side
-    that lost a general in a battle doesn't gain a new one from it.
+  - **Getting one:** an army without a general that wins a battle gains one 35% of the
+    time against an enemy at least its size, scaled down in proportion against a smaller
+    one (a tenth the size, 3.5%), up to one general per city held. A faction starts with
+    none. A side that lost a general in a battle doesn't gain a new one from it. A full
+    army can't take him, and its owner is told so.
+    - It used to be a flat 25%, and nothing below a quarter of the winner's size (the
+      experience rule). A player's big army beat smaller bands for 28 turns and never
+      got a roll. Scaling at 25% cut generals risen by a third (75 to 48 a game), because
+      most came from fights between 1:4 and 1:1, which now roll lower. 15/25/35% gave
+      33/48/67 risen and 5/8/13 alive at the end (8 seeds, 100 turns; master 75 and 11).
+      35% was picked, with no change to conquest, battles or factions fallen beyond the
+      spread between seeds.
   - **Traits:** six, each held or not, with no ranks. Each is rolled once at the start,
-    and there's a 25% chance of a new one after each battle he wins that counts. Only
-    the leader's traits count: the most senior general (most traits, then most
-    experience, then longest in the army), across all armies of a side in a battle.
+    and there's a 25% chance of a new one after each battle he wins, scaled by the
+    beaten enemy's size the same way. Only the leader's traits count: the most senior
+    general (most traits, then most experience, then longest in the army), across all
+    armies of a side in a battle.
   - **Death:** 5% in every battle he fights, won or lost, and his bodyguard goes with
     him. He also dies with his army.
   - **Dropped on purpose:** ranks, capture and ransom, any shock to his army when he
