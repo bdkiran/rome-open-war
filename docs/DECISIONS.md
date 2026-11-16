@@ -72,8 +72,8 @@ so.
   Germani 4x, Numidia 3x, Rome and the Greeks 1.07x), with whole-map sight
   and road networks for them. The player chose to draw regions (every land
   tile walkable from a territory, `state.regions`) with borders and a faint
-  tint, while income, growth, buildings, roads and sight still count the
-  3-tile territory alone. Battles there are named after the region's city.
+  tint, while income, growth, buildings and sight still count the
+  3-tile territory alone (roads now follow regions: see Roads). Battles there are named after the region's city.
 - **Scouts are a separate kind of unit, not regiments.** The player wanted a
   single rider who doesn't block armies, moves faster than cavalry and never
   dies, trained in a level 2 city, at 100 gold and 2 a turn. Keeping them out
@@ -125,10 +125,14 @@ so.
   (merged alongside): cities taken 304, factions fallen 15, level-3 cities
   23, median AI income 391 a turn. Whole games are slower to simulate
   (`npm test` about 3.5 minutes, was 1).
-- **The city list is the player's**: 15 factions with 2 to 7 cities each (55 cities)
+- **The city list is the player's**: 15 factions with 2 to 6 cities each (57 cities)
   (Rome held 7 in Italy and Sicily, until it was split: see Factions). Parthia and Armenia were left out:
   their cities are beyond the map's eastern edge; Seleucia sits on the edge.
   The player chose plain historical names for factions and regions.
+  Two empty stretches were filled: Numidia gained Siga between Tingis and Cirta, and
+  Dacia gained Bastarnia to its north-east. Germania's Damme moved east to the
+  Vistula (renamed Gutones) and Scythia's Sarmatia moved north into the forest-steppe,
+  so the north-east isn't empty; the player chose moving those over adding cities.
 - **Crowded cities were moved or dropped** so every city can still reach
   level 3 (the player chose that over letting small cities top out at 2).
   With halved capacity, ten crowded or edge cities had too little land.
@@ -181,13 +185,25 @@ so.
   speed a city's whole land (Tracks: rough ground like plains; Roads: mountains too;
   Paved: every tile 1). Now each pair of cities whose land borders gets a road, the
   cheapest path between them through their own land, laid out at the start
-  (`GameState.roads`, 46 roads of 5–9 tiles). A city's Roads building opens the half in
+  (`GameState.roads`, 45 roads of 5–9 tiles). A city's Roads building opens the half in
   its own land: every tile of it costs 1.5 / 1 / 0.5, whatever the terrain; off the
   road, terrain costs as usual. The player chose movement on roads only, over keeping
   the whole-land bonus or having both. Halves stay exact, so costs needn't be whole
-  any more. Roads still help every army, enemies included. Six cities border no other
-  city's land and can't build Roads (Seleucia, Lemonum, Tingis, Cyrene, Marcomannia,
-  Carales). All tile costs go through `enterCost` (systems/pathfinding.ts).
+  any more. Roads still help every army, enemies included. All tile costs go through
+  `enterCost` (systems/pathfinding.ts).
+- **Cities border when their regions touch, not their claimed land.** Roads used to join
+  only cities whose 3-tile territories touched, so neighbours had to stand exactly 7
+  tiles apart, and cities the map showed side by side weren't linked (9 had no
+  neighbour once the empty north-east and Algeria were filled). The player called that
+  rule arbitrary: what the map draws is what counts. A road now runs through the two
+  cities' regions, and each city paves the half in its region, outer land included.
+  Only island Carales has no neighbour. 93 roads (was 45), 5–30 tiles, median 9; 27%
+  of road tiles are outer land. The rule that cities joined by a road trade only by
+  land stayed. In 4 AI games each, against before both changes (and with
+  `--garrison`): land routes at the end 28 (was 16) / 30 (16), sea routes 11 (15) /
+  13 (22), trade 22% (23%) / 26% (27%) of AI city gold, median AI income 347 (334) /
+  510 (401), cities with roads 43 (35) / 43 (37), factions fallen 4 (3) / 4 (3); no
+  invalid orders or debt.
 - **Zone of control:** entering a tile next to an enemy army ends the move;
   the army can still attack. Armies can't slip past each other.
 - **A move runs into what it couldn't see.** A move is checked against what

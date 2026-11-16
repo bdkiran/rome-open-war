@@ -104,11 +104,11 @@ export function claimTerritory(ctx: GameContext, state: GameState): GameState {
 }
 
 /**
- * Draws each city's region for the map: its claimed land, plus every
- * unclaimed land tile, given to the nearest claimed land by steps over land
- * (ties go the same way every game). Only the map uses it, so filling the
- * gaps between territories changes how the map looks and nothing else.
- * Land no claimed tile can walk to (an island with no city) stays empty.
+ * Draws each city's region: its claimed land, plus every unclaimed land
+ * tile, given to the nearest claimed land by steps over land (ties go the
+ * same way every game). Regions decide which cities border each other, and
+ * so where roads run (mapTradeRoutes); the outer land earns and adds nothing
+ * else. Land no claimed tile can walk to (an island with no city) stays empty.
  */
 export function drawRegions(ctx: GameContext, state: GameState): GameState {
   const regions: Record<TileId, CityId> = {};
@@ -334,8 +334,8 @@ export function portTile(ctx: GameContext, state: GameState, city: City): TileId
 
 /**
  * Lays out where roads and trade can run, whoever owns the cities: a road
- * between every pair of cities with claimed land next to each other (the
- * cheapest path between them through their own land), and, for coastal
+ * between every pair of cities whose regions, as the map draws them, touch
+ * (the cheapest path between them through their two regions), and, for coastal
  * cities, the steps over the sea to every other coastal city. Territory
  * never changes, so this runs once, after every city has claimed its land.
  * Who owns a city and what it has built decide which routes are open
@@ -343,12 +343,12 @@ export function portTile(ctx: GameContext, state: GameState, city: City): TileId
  */
 export function mapTradeRoutes(ctx: GameContext, state: GameState): GameState {
   const bordering = new Map<CityId, Set<CityId>>();
-  for (const [tile, claim] of Object.entries(state.territory)) {
+  for (const [tile, cityId] of Object.entries(state.regions)) {
     for (const n of ctx.topology.neighbors(tile)) {
-      const other = state.territory[n];
-      if (!other || other.cityId === claim.cityId || ctx.topology.distance(tile, n) !== 1) continue;
-      if (!bordering.has(claim.cityId)) bordering.set(claim.cityId, new Set());
-      bordering.get(claim.cityId)!.add(other.cityId);
+      const other = state.regions[n];
+      if (!other || other === cityId || ctx.topology.distance(tile, n) !== 1) continue;
+      if (!bordering.has(cityId)) bordering.set(cityId, new Set());
+      bordering.get(cityId)!.add(other);
     }
   }
 
@@ -360,8 +360,8 @@ export function mapTradeRoutes(ctx: GameContext, state: GameState): GameState {
       const b = state.cities[bId];
       if (cityNumber(b.id) < cityNumber(a.id)) continue; // each pair once
       const tiles = cheapestPath(ctx, state, a.tile, b.tile, (t) => {
-        const claim = state.territory[t];
-        return !!claim && (claim.cityId === a.id || claim.cityId === b.id) && TERRAIN[state.tiles[t].terrain].passable;
+        const region = state.regions[t];
+        return (region === a.id || region === b.id) && TERRAIN[state.tiles[t].terrain].passable;
       });
       if (!tiles) continue;
       const watch = new Set(tiles);

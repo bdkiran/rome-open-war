@@ -64,23 +64,26 @@ describe("enterCost", () => {
     }
   });
 
-  it("leaves land outside the territory alone", () => {
+  it("paves the road through the city's outer land too, not another city's", () => {
     const state = newGame();
-    const { city } = cityWith(state, "hills");
-    const outside = map.topology.allTiles().find((t) => state.tiles[t].terrain === "hills" && !state.territory[t])!;
-    assert.equal(enterCost(withRoads(state, city, 3), outside), TERRAIN.hills.moveCost);
+    const outer = state.roads.flatMap((r) => r.tiles).find((t) => !state.territory[t] && state.tiles[t].terrain === "plains")!;
+    assert.ok(outer, "no road crosses outer land");
+    const city = state.cities[state.regions[outer]];
+    assert.equal(enterCost(withRoads(state, city, 3), outer), Math.min(TERRAIN.plains.moveCost, ROAD_MOVE_COST[3]));
+    const other = Object.values(state.cities).find((c) => c.id !== city.id)!;
+    assert.equal(enterCost(withRoads(state, other, 3), outer), TERRAIN.plains.moveCost);
   });
 });
 
 describe("the road network", () => {
-  it("joins bordering cities by a path through their own land, from one city to the other", () => {
+  it("joins cities whose regions border by a path through their two regions, from one city to the other", () => {
     const state = newGame();
     assert.ok(state.roads.length > 0);
     for (const road of state.roads) {
       const [a, b] = road.cities.map((id) => state.cities[id]);
       assert.equal(road.tiles[0], a.tile);
       assert.equal(road.tiles[road.tiles.length - 1], b.tile);
-      for (const t of road.tiles) assert.ok([a.id, b.id].includes(state.territory[t]?.cityId), `${a.name}–${b.name} leaves their land`);
+      for (const t of road.tiles) assert.ok([a.id, b.id].includes(state.regions[t]), `${a.name}–${b.name} leaves their regions`);
       for (let i = 1; i < road.tiles.length; i++) assert.equal(map.topology.distance(road.tiles[i - 1], road.tiles[i]), 1);
       assert.ok(a.landNeighbours.includes(b.id) && b.landNeighbours.includes(a.id));
     }

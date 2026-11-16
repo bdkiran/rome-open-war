@@ -106,13 +106,16 @@ export const ROMAN_WORLD: Scenario = {
       cities: [
         { name: "Cirta", lon: 6.61, lat: 36.37, capital: true },
         { name: "Tingis", lon: -5.81, lat: 35.78 },
+        // Syphax's capital: fills the coast and Atlas between Tingis and Cirta.
+        { name: "Siga", lon: -1.47, lat: 35.27 },
       ],
     },
     {
       id: "germani", name: "Germanic Tribes", shortName: "Germania", color: "#43b35a", culture: "celtic", controller: "ai",
       cities: [
         { name: "Batavodurum", lon: 5.86, lat: 51.84, capital: true },
-        { name: "Damme", lon: 8.2, lat: 52.5 },
+        // At the mouth of the Vistula, so the Germans reach east along the Baltic.
+        { name: "Gutones", lon: 18.7, lat: 54.1 },
         { name: "Marcomannia", lon: 14.4, lat: 50.0 },
       ],
     },
@@ -121,7 +124,9 @@ export const ROMAN_WORLD: Scenario = {
       cities: [
         { name: "Tanais", lon: 39.33, lat: 47.27, capital: true },
         { name: "Alania", lon: 40.3, lat: 45.3 },
-        { name: "Sarmatia", lon: 35.8, lat: 47.6 },
+        // North into the forest-steppe, toward the empty east, rather than on
+        // the steppe between Tanais and Dacia.
+        { name: "Sarmatia", lon: 34.0, lat: 50.0 },
       ],
     },
     {
@@ -156,6 +161,8 @@ export const ROMAN_WORLD: Scenario = {
       cities: [
         { name: "Porolissum", lon: 23.16, lat: 47.17, capital: true },
         { name: "Iazyges", lon: 20.2, lat: 46.6 },
+        // North-east of the Carpathians, toward the steppe.
+        { name: "Bastarnia", lon: 27.8, lat: 48.6 },
       ],
     },
     {
