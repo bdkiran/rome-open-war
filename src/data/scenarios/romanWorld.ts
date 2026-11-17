@@ -106,8 +106,9 @@ export const ROMAN_WORLD: Scenario = {
       cities: [
         { name: "Cirta", lon: 6.61, lat: 36.37, capital: true },
         { name: "Tingis", lon: -5.81, lat: 35.78 },
-        // Syphax's capital: fills the coast and Atlas between Tingis and Cirta.
-        { name: "Siga", lon: -1.47, lat: 35.27 },
+        // The Gaetuli of the high plateaus, south of the Atlas: fills Numidia's
+        // empty south (the coast between Tingis and Cirta is left to them).
+        { name: "Gaetulia", lon: 3.0, lat: 34.4 },
       ],
     },
     {

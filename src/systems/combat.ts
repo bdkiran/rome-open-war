@@ -37,7 +37,7 @@ import {
   relocate,
 } from "@/systems/armies.js";
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
-import { leadershipOf, reportFallen, rewardChance, rewardVictors, strikeGenerals } from "@/systems/generals.js";
+import { leadershipOf, reportFallen, rewardVictors, strikeGenerals } from "@/systems/generals.js";
 
 // ---- Battle maths -------------------------------------------------------
 //
@@ -657,7 +657,10 @@ export function attack(
   const holding = defending.flatMap((s) => s.regiments);
 
   const rng = createRng(state.rngState);
-  const result = resolveBattle(fighting, holding, battlefieldAt(state, target), rng);
+  const field = battlefieldAt(state, target);
+  // The odds before the dice, so a win against them can be rewarded.
+  const before = battleStrength(fighting, holding, field);
+  const result = resolveBattle(fighting, holding, field, rng);
 
   // The winners' survivors go back to their own armies.
   const armies = { ...state.armies };
@@ -705,10 +708,10 @@ export function attack(
   // Any general who fought may fall, won or lost.
   afterBattle = strikeGenerals(afterBattle, rng, [...fighting, ...holding]);
   afterBattle = reportFallen(afterBattle, [...fighting, ...holding], place, [army.owner, defender.owner]);
-  // A win can make a general of the winners' leader, and teach their generals: less likely the smaller the beaten enemy.
-  const [winning, losing] = won ? [fighting, holding] : [holding, fighting];
-  const share = rewardChance(soldierCount(losing), soldierCount(winning));
-  afterBattle = rewardVictors(afterBattle, rng, won ? army.id : defender.id, winning, place, share);
+  // A win can make a general of the winners' leader, and teach their generals: likelier the stronger the beaten enemy was.
+  const winning = won ? fighting : holding;
+  const odds = won ? before.defender / before.attacker : before.attacker / before.defender;
+  afterBattle = rewardVictors(afterBattle, rng, won ? army.id : defender.id, winning, place, odds);
   afterBattle = { ...afterBattle, rngState: rng.state };
 
   // Won a siege: the garrison fought to the death, so the leading army's survivors take the city.

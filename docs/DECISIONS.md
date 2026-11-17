@@ -132,8 +132,10 @@ so.
   (Rome held 7 in Italy and Sicily, until it was split: see Factions). Parthia and Armenia were left out:
   their cities are beyond the map's eastern edge; Seleucia sits on the edge.
   The player chose plain historical names for factions and regions.
-  Two empty stretches were filled: Numidia gained Siga between Tingis and Cirta, and
-  Dacia gained Bastarnia to its north-east. Germania's Damme moved east to the
+  Two empty stretches were filled: Numidia gained a third city and Dacia gained
+  Bastarnia to its north-east. Numidia's was first Siga, on the coast between Tingis and
+  Cirta, which left the south empty; it became Gaetulia, on the high plateaus south of
+  the Atlas (land for 25,000 people; no other city moved). Germania's Damme moved east to the
   Vistula (renamed Gutones) and Scythia's Sarmatia moved north into the forest-steppe,
   so the north-east isn't empty; the player chose moving those over adding cities.
 - **Crowded cities were moved or dropped** so every city can still reach
@@ -586,21 +588,34 @@ so.
   riders, 80/40, charge 30) is better than cavalry. It isn't trained, retrained, merged
   or topped up by mercenaries. Instead it refills 6 riders a turn, free, and costs a
   flat 6 gold a turn in wages.
-  - **Getting one:** an army without a general that wins a battle gains one 35% of the
-    time against an enemy at least its size, scaled down in proportion against a smaller
-    one (a tenth the size, 3.5%), up to one general per city held. A faction starts with
-    none. A side that lost a general in a battle doesn't gain a new one from it. A full
-    army can't take him, and its owner is told so.
-    - It used to be a flat 25%, and nothing below a quarter of the winner's size (the
-      experience rule). A player's big army beat smaller bands for 28 turns and never
-      got a roll. Scaling at 25% cut generals risen by a third (75 to 48 a game), because
-      most came from fights between 1:4 and 1:1, which now roll lower. 15/25/35% gave
-      33/48/67 risen and 5/8/13 alive at the end (8 seeds, 100 turns; master 75 and 11).
-      35% was picked, with no change to conquest, battles or factions fallen beyond the
-      spread between seeds.
+  - **Getting one:** an army without a general that wins a battle may gain one, up to
+    one general per city held. A faction starts with none. A side that lost a general in
+    a battle doesn't gain a new one from it. A full army can't take him, and its owner is
+    told so. The chance (`grantChance` in `systems/generals.ts`):
+    - **Free places:** 70% × the share of the faction's general places (cities) still
+      free, at even odds. It's high while a faction has few generals for its cities.
+    - **Odds, not heads:** scaled by the beaten side's pre-battle strength over the
+      winners' (`battleStrength`). A weaker foe earns half to all of it (floor 0.5); a
+      win against the odds climbs to a certainty at 1.5×; a foe under 0.15 (stragglers)
+      earns nothing (strengths are capped at 10:1, so the cut-off sits above 0.1).
+    - **Why:** it was 35% × enemy soldiers ÷ own, and the player "couldn't get one". Wins
+      are mostly over weaker forces (41% under a quarter of the winner's strength, 1,148
+      wins over 3 games), so a win averaged about 14%: about 7 wins to a first general.
+      Now about 49% with no generals yet, about 2 wins. The AI attacks only when favoured
+      (2% of wins were underdog wins), so the underdog rule mostly rewards the player.
+    - **Measured** (8 seeds, garrisoned, vs master): grant chances of 0.5/0.7/0.9 gave
+      92/105/121 generals risen a game (was 64) and 15/15/18 alive at the end (was 11),
+      wages 11/11/13% of AI upkeep (was 8%), fallen generals living a median 5–6 turns;
+      cities changing hands and factions fallen within the spread between seeds, AI
+      income −12/−22/−25% (wide ranges, mostly games going differently: wages are about
+      1% of income). The player chose 0.7. The conquest balance test's extermination
+      limits went to 30% / 25% with this change and Gaetulia (the player cares little
+      about that rule).
+    - Before: a flat 25% with nothing below a quarter of the winner's size, then 35% ×
+      the soldier ratio (15/25/35% gave 33/48/67 risen).
   - **Traits:** six, each held or not, with no ranks. Each is rolled once at the start,
-    and there's a 25% chance of a new one after each battle he wins, scaled by the
-    beaten enemy's size the same way. Only the leader's traits count: the most senior
+    and there's a 25% chance of a new one after each battle he wins, times the odds
+    (the beaten side's strength over his side's, at most 1; nothing for stragglers). Only the leader's traits count: the most senior
     general (most traits, then most experience, then longest in the army), across all
     armies of a side in a battle.
   - **Death:** 5% in every battle he fights, won or lost, and his bodyguard goes with
@@ -650,8 +665,8 @@ so.
   a queued one doesn't. Several levels of the *same* building may be queued.
 - **Taking a city**: occupy / enslave / exterminate, with plunder from the
   city's population and level at the time (so re-sacking pays little).
-  Enslaving loses 5% of the people on the march (it was 10%, which left it
-  the best choice in only ~1 city in 3 at any horizon). Now each choice has
+  Enslaving loses 4% of the people on the march. It was 10% at first, which left it
+  the best choice in only ~1 city in 3 at any horizon, then 5%; the player asked for 4%. Now each choice has
   its own horizon: exterminate for quick cash (~10 turns), enslave for the
   medium term (~25), occupy for the long game. The enslaved always found
   room in their new cities, so the losses were the only drag; more plunder
