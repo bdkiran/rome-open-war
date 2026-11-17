@@ -89,13 +89,17 @@ describe("a general's traits", () => {
     assert.equal(refreshed[0].movementLeft, GENERALS.swiftCap);
   });
 
-  it("Drillmaster: his regiments earn more from a battle that counts", () => {
-    const spear = regiment("spearmen");
-    const { state, attacker, target } = standoff([general(["drillmaster"]), spear, regiment("spearmen")], [regiment("militia")]);
-    const result = applyAction(ctx, state, "rome", { type: "attack", armyId: attacker.id, regimentIds: attacker.regiments.map((r) => r.id), target });
-    assert.ok(result.ok);
-    const after = Object.values(result.state.armies).flatMap((a) => a.regiments).find((r) => r.id === spear.id)!;
-    assert.equal(after.experience, EXPERIENCE.win + GENERALS.drillmaster);
+  it("Drillmaster: his regiments that earn experience earn more", () => {
+    const earned = (trait: GeneralTrait) => {
+      const spear = regiment("spearmen");
+      const { state, attacker, target } = standoff([general([trait]), spear, regiment("spearmen")], [regiment("spearmen"), regiment("militia")]);
+      const result = applyAction(ctx, state, "rome", { type: "attack", armyId: attacker.id, regimentIds: attacker.regiments.map((r) => r.id), target });
+      assert.ok(result.ok);
+      return Object.values(result.state.armies).flatMap((a) => a.regiments).find((r) => r.id === spear.id)!.experience;
+    };
+    // Swift changes nothing in a battle, so the same fight is fought both times.
+    assert.ok(earned("swift") > 0);
+    assert.equal(earned("drillmaster"), earned("swift") + GENERALS.drillmaster);
   });
 });
 
