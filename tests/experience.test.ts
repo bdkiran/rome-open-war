@@ -69,22 +69,43 @@ describe("experience levels", () => {
 });
 
 describe("earning experience", () => {
-  it("gives the winners more than the survivors who flee, and the dead nothing", () => {
+  it("shares out the enemy's battle losses as kills, by what each regiment dealt", () => {
+    const mine = [regiment("spearmen"), regiment("archers"), regiment("militia")];
+    const theirs = [regiment("spearmen"), regiment("spearmen")];
+    const result = resolveBattle(mine, theirs, { defenseBonus: 0, openGround: true }, null);
+    const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+    assert.ok(Math.abs(sum(result.attackerKills) - result.defenderLosses) < 1e-6);
+    assert.ok(Math.abs(sum(result.defenderKills) - result.attackerLosses) < 1e-6);
+    // Archers loose volleys before the melee: per soldier they kill more than militia.
+    assert.ok(result.attackerKills[1] / mine[1].soldiers > result.attackerKills[2] / mine[2].soldiers);
+  });
+
+  it("gives each survivor a point per so many kills, won or lost, and the dead nothing", () => {
     const mine = [regiment("spearmen"), regiment("spearmen"), regiment("spearmen")];
     const theirs = [regiment("spearmen"), regiment("spearmen")];
     const after = fight(mine, theirs);
-    for (const r of mine) assert.equal(found(after, r)?.experience, EXPERIENCE.win);
+    const earned = mine.map((r) => found(after, r)?.experience ?? 0);
+    assert.ok(earned.every((p) => p > 0), `winners earned ${earned}`);
     for (const r of theirs) {
       const left = found(after, r);
-      if (left) assert.equal(left.experience, EXPERIENCE.loss);
+      if (left) assert.ok(left.experience > 0, "the beaten survivors earn from what they killed");
     }
   });
 
-  it("gives the bigger side nothing for beating a tiny enemy, though the tiny enemy learns", () => {
+  it("gives little for beating a tiny enemy: there's little to kill", () => {
     const mine = [regiment("spearmen"), regiment("spearmen")];
-    const theirs = [regiment("spearmen", 50)];
+    const theirs = [regiment("spearmen", 20)];
     const after = fight(mine, theirs);
-    for (const r of mine) assert.equal(found(after, r)?.experience, 0);
+    const total = mine.reduce((sum, r) => sum + (found(after, r)?.experience ?? 0), 0);
+    assert.ok(total <= Math.ceil(20 / EXPERIENCE.killsPerPoint) + 1, `earned ${total}`);
+  });
+
+  it("lets horsemen earn from riding down the routed", () => {
+    const cavalry = regiment("cavalry");
+    const spear = regiment("spearmen");
+    const after = fight([cavalry, spear, regiment("spearmen")], [regiment("militia"), regiment("militia")]);
+    const perSoldier = (r: Regiment) => (found(after, r)?.experience ?? 0) / r.soldiers;
+    assert.ok(perSoldier(cavalry) > perSoldier(spear), `${perSoldier(cavalry)} vs ${perSoldier(spear)}`);
   });
 
   it("stops at the cap", () => {

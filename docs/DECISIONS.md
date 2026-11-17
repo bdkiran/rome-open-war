@@ -534,6 +534,23 @@ so.
   buildings widely but still trains mostly militia (most training happens
   early, before they exist), and no city reached level 3 in 100 turns: the
   gold goes into unit buildings. That's for the military AI balancing.
+- **Experience comes from kills** (`EXPERIENCE.killsPerPoint`): a point per 15 enemy
+  soldiers a regiment kills, won or lost, if it survives. It was a flat 2 points a win and
+  1 a loss (nothing against under a quarter of your soldiers), so a regiment that never
+  struck a blow rose as fast as the one that broke the line. The player chose a
+  regiment's **own** kills over the army's shared, **kills only** (no win bonus) and the
+  faster pace.
+  - **Whose kills:** `resolveBattle` totals what each pooled kind dealt and shares the
+    enemy's battle losses out by it, then by soldiers within a kind, so the kills add up
+    to the losses. Archers' volleys count. The winners also get the rout: what their
+    horsemen ride down (`cavalryPursuit`) goes to the mounted regiments, the rest by
+    battle kills. The quarter rule went: chasing a small band yields little to kill.
+  - **Measured** (8 seeds, garrisoned, vs master): 1 point per 20 / 15 / 10 kills gave
+    regiments at level 1–2 36 / 32 / 24 (was 67), at 3–5 38 / 39 / 37 (was 33), at
+    level 6 15 / 21 / 33 (was 1). Experience now gathers in the regiments that fight:
+    fewer middling veterans and many more at the top. Battles, cities changing hands,
+    factions fallen and AI income moved within the spread between seeds; no invalid
+    orders or debt. The player chose 15.
 - **Experience levels come 30% sooner**: 2 / 3 / 6 / 8 / 13 / 17 points, from
   2 / 4 / 8 / 12 / 18 / 24. Almost no regiment reached level 6, and few reached level 3.
   The first level stays at 2 points, one win, so that surviving a single lost battle

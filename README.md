@@ -463,9 +463,12 @@ in it, so a stack moves at the pace of its slowest regiment. Leave some out
 (click their boxes) to send the rest on alone, which splits the army.
 Stopping on a friendly army merges into it, if the combined stack has room.
 
-**Experience.** Regiments that survive a battle gain experience: 2 points on
-the winning side, 1 on the losing side, and none if the enemy brought under a
-quarter of your side's soldiers. At 2, 3, 6, 8, 13 and 17 points a regiment
+**Experience.** Regiments earn experience from the enemy soldiers they kill:
+a point for every 15, won or lost, if they survive. A regiment's kills are its
+own: the enemy's losses in the battle are shared out by what each regiment dealt
+(archers' volleys count), and the winners also share the rout, the horsemen
+taking those they ride down. A regiment that barely fought earns little, and
+chasing a small band earns little, since there's little to kill. At 2, 3, 6, 8, 13 and 17 points a regiment
 reaches levels 1 to 6, each adding +5 attack and +5 armor, shown as pips on
 its box. It costs nothing to keep. Arrows ignore armor, so veterans fear archers
 most. Retraining's recruits dilute experience in proportion, and merged regiments
@@ -515,7 +518,7 @@ side's most senior general leads it:
 | Stubborn    | His army takes 15% less when defending |
 | Swift       | His army moves 3 points further a turn (never above 16) |
 | Besieger    | Walls count 15% less when his army storms a city |
-| Drillmaster | His regiments gain 1 more experience point from a battle that counts |
+| Drillmaster | His regiments gain 1 more experience point from a battle in which they earn any |
 | Wary        | His army loses 40% fewer soldiers while fleeing |
 
 **Merging.** Damaged regiments of the same type and tier can be merged into fuller

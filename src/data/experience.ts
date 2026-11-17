@@ -1,5 +1,6 @@
 /**
- * Regiments that survive battles gain experience, which raises their level.
+ * Regiments gain experience from the enemy soldiers they kill, which raises
+ * their level.
  * Each level adds the same flat bonus to attack and armor for every unit, so
  * it's worth most to the weakest soldiers. See systems/combat.ts.
  */
@@ -9,15 +10,12 @@ export const EXPERIENCE = {
   armorPerLevel: 5,
   /** Points needed for levels 1, 2, 3...; the last is the top level and the most a regiment can hold. */
   levels: [2, 3, 6, 8, 13, 17],
-  /** Points for each surviving regiment on the side that won. */
-  win: 2,
-  /** Points for each surviving regiment on the side that lost. */
-  loss: 1,
   /**
-   * No points if the enemy brought fewer than this share of your side's
-   * soldiers: most battles are chases of fleeing remnants, which teach nothing.
+   * Enemy soldiers a regiment must kill for each point, won or lost, rounded:
+   * its own kills in the battle, plus its share of the rout if its side won
+   * (horsemen ride down the fleeing). See gainExperience in systems/combat.ts.
    */
-  minEnemyShare: 0.25,
+  killsPerPoint: 15,
 } as const;
 
 /** The top level a regiment can reach. */
