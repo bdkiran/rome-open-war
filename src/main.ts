@@ -152,6 +152,10 @@ let cityTab: CityTab = "construction";
 let cityScreenOpen = false;
 /** The selection bar's tab, and the tile it was chosen for: a new selection starts on Army. */
 let barTab: BarTab = "army";
+/** Whether the player's scout on the selected tile is ticked to take orders (its card in the Agents tab). */
+let scoutPicked = true;
+/** Dismiss was clicked once for the selected scout: the side panel asks to confirm it. */
+let confirmDismiss = false;
 let barTabFor: TileId | null = null;
 /** Regiments queued for retraining, and the city they're queued in. */
 let retrainQueue = new Set<RegimentId>();
@@ -211,15 +215,15 @@ function selectedArmy(state: GameState): Army | undefined {
 }
 
 /**
- * The player's scout on the selected tile, if orders go to it: when it's
- * alone there, or the bar's Scout tab is open. An army or city sharing its
- * tile comes first otherwise.
+ * The player's scout on the selected tile, if orders go to it: while its card
+ * is ticked, and it's alone there or the bar's Agents tab is open. Inside an
+ * army or a town, the army or town comes first otherwise.
  */
 function selectedScout(state: GameState): Scout | undefined {
-  if (!humanId || !view.selected) return undefined;
+  if (!humanId || !view.selected || !scoutPicked) return undefined;
   const scout = scoutAt(state, view.selected, humanId);
   if (!scout) return undefined;
-  return barTab === "scout" || (!armyAt(state, view.selected) && !cityAt(state, view.selected)) ? scout : undefined;
+  return barTab === "agents" || (!armyAt(state, view.selected) && !cityAt(state, view.selected)) ? scout : undefined;
 }
 
 /**
@@ -607,7 +611,7 @@ function handleRightClick(tile: TileId | null): void {
   if (scout) {
     if (tile && isPlayerTurn() && view.reachable.has(tile) && dispatch({ type: "moveScout", scoutId: scout.id, to: tile })) {
       view.selected = tile;
-      barTab = "scout";
+      barTab = "agents";
       barTabFor = tile;
       refreshAll(controller.getState());
     }
@@ -793,12 +797,28 @@ function handlePanelClick(e: MouseEvent): void {
 
   if (target.dataset.barTab) {
     barTab = target.dataset.barTab as BarTab;
+    // Opening the Agents tab picks the scout up for orders, as selecting an army ticks its regiments.
+    if (barTab === "agents") scoutPicked = true;
+    confirmDismiss = false;
     refreshHighlights(state);
     renderInfo(state);
     requestRedraw();
   } else if (target.dataset.trainScout) {
     dispatch({ type: "trainScout", cityId: target.dataset.trainScout });
+  } else if (target.dataset.pickScout) {
+    scoutPicked = !scoutPicked;
+    confirmDismiss = false;
+    refreshHighlights(state);
+    renderInfo(state);
+    requestRedraw();
+  } else if (target.dataset.askDismiss !== undefined) {
+    confirmDismiss = true;
+    renderInfo(state);
+  } else if (target.dataset.keepScout !== undefined) {
+    confirmDismiss = false;
+    renderInfo(state);
   } else if (target.dataset.dismissScout) {
+    confirmDismiss = false;
     dispatch({ type: "dismissScout", scoutId: target.dataset.dismissScout });
   } else if (target.dataset.cityTab) {
     const tab = target.dataset.cityTab as CityTab;
@@ -891,6 +911,9 @@ function infoInput(state: GameState) {
     cityTab,
     retrainQueue,
     chosenRegiments: chosen,
+    scoutPicked,
+    orderedScout: selectedScout(state)?.id ?? null,
+    confirmDismiss,
   };
 }
 
@@ -899,6 +922,8 @@ function syncBarTab(): void {
   if (view.selected !== barTabFor) {
     barTab = "army";
     barTabFor = view.selected;
+    scoutPicked = true;
+    confirmDismiss = false;
   }
 }
 

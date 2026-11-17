@@ -181,15 +181,18 @@ gold and 4 gold a turn: a lone spy, not a regiment, shown in a dark hooded
 cloak with no weapons. It moves 20 points a turn
 (cavalry move 16), sees 5 tiles, ignores zones of control, and rides through
 armies and cities, enemy ones too. It never fights, blocks nothing, and can't be
-killed; it only goes if its faction falls, or if you click Dismiss in the
-bottom bar (no refund). It can't share a tile with another of your scouts. Select
-it (with an army or city on its tile, open the bar's Scout tab) and right-click
-a highlighted tile to move it: within one turn's reach, as it can't take march
-orders. Enemy scouts show only within your sight.
+killed; it only goes if its faction falls, or if you dismiss it (no refund).
+It stands in the middle of its tile; on a tile with an army or a city it's inside
+it and isn't drawn. It can't share a tile with another of your scouts. Select its
+tile (with an army or city there, open the bottom bar's **Agents** tab) and its
+card is ticked: right-click a highlighted tile to move it, within one turn's
+reach, as it can't take march orders. Click the card to untick it. With the scout
+selected, the side panel shows **Dismiss…**, which asks before it sends the scout
+home. Enemy scouts show only within your sight, and not inside armies or cities.
 
 **Watchtowers.** Select a tile of your own region (any land drawn in your
-colour, except a city) and build a watchtower there for 150 gold. It's
-finished at once, costs nothing to keep and sees 4 tiles around it. It's
+colour, except a city) and build a watchtower there for 150 gold. It stands in
+the middle of the tile (an army there stands in front of it). It's finished at once, costs nothing to keep and sees 4 tiles around it. It's
 never destroyed: an enemy army standing on it sees through it instead of
 you until it leaves, and whoever takes the city whose region it stands in
 takes the tower too. There's no limit on how many you build.
