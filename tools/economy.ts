@@ -1,8 +1,8 @@
 /**
  * A peacetime economy model for tuning the economic levers: tax rates, and
  * what to do with a conquered city. It runs one faction's cities forward
- * with the real rules (income, growth, construction) and nothing else: no
- * wars, no armies, no upkeep. Cities build the way the AI builds in
+ * with the real rules (income, growth, construction, public order) and
+ * nothing else: no wars, no armies, no upkeep, no revolts. Cities build the way the AI builds in
  * peacetime, so extra people turn into higher levels and better buildings,
  * which is where growth pays back.
  *
@@ -18,9 +18,17 @@ import { aiBuildOrder, aiTaxRate } from "@/ai/ai.js";
 import { canBuild, nextLevel, progressConstruction, queueConstruction } from "@/systems/buildings.js";
 import { captureCity, factionPopulation, processCities } from "@/systems/cities.js";
 import { settleCity } from "@/systems/conquest.js";
+import { moveOrder } from "@/systems/order.js";
+import { regimentSize } from "@/data/units.js";
 
 /** Picks a city's tax rate each turn. */
-export type TaxPolicy = (state: GameState, city: City) => TaxRate;
+export type TaxPolicy = (ctx: GameContext, state: GameState, city: City) => TaxRate;
+
+/**
+ * The model has no armies, so for public order every city counts as holding
+ * the AI's usual garrison: AI.baseGarrison regiments of militia.
+ */
+const MODEL_GARRISON = AI.baseGarrison * regimentSize("militia");
 
 /** Whether a city has the people its next government needs (or is already at the top level). */
 function readyToAdvance(city: City): boolean {
@@ -35,15 +43,15 @@ export const TAX_POLICIES: Record<string, { description: string; policy: TaxPoli
   "all high": { description: "High taxes everywhere.", policy: () => "high" },
   "grow, then tax": {
     description: "Low taxes until a city has the people for its next level, high after.",
-    policy: (_state, city) => (readyToAdvance(city) ? "high" : "low"),
+    policy: (_ctx, _state, city) => (readyToAdvance(city) ? "high" : "low"),
   },
   "grow, then normal": {
     description: "Low taxes until a city has the people for its next level, normal after.",
-    policy: (_state, city) => (readyToAdvance(city) ? "normal" : "low"),
+    policy: (_ctx, _state, city) => (readyToAdvance(city) ? "normal" : "low"),
   },
   "the AI": {
     description: "The AI's own choice in peacetime: normal taxes, high in a city at its capacity (it can't grow anyway).",
-    policy: (state, city) => aiTaxRate(state, city, getFaction(state, city.owner)?.gold ?? 0, false) ?? city.taxRate,
+    policy: (ctx, state, city) => aiTaxRate(ctx, state, city, getFaction(state, city.owner)?.gold ?? 0, false, MODEL_GARRISON) ?? city.taxRate,
   },
 };
 
@@ -68,7 +76,7 @@ export function runEconomy(ctx: GameContext, state: GameState, factionId: Factio
   const track: EconomyTurn[] = [];
   for (let turn = 0; turn < turns; turn++) {
     const cities = { ...s.cities };
-    for (const city of citiesOf(s, factionId)) cities[city.id] = { ...city, taxRate: policy(s, city) };
+    for (const city of citiesOf(s, factionId)) cities[city.id] = { ...city, taxRate: policy(ctx, s, city) };
     s = { ...s, cities };
 
     for (const { id } of citiesOf(s, factionId)) {
@@ -88,6 +96,9 @@ export function runEconomy(ctx: GameContext, state: GameState, factionId: Factio
     s = processCities(ctx, s, factionId);
     earned += (getFaction(s, factionId)?.gold ?? 0) - before;
     s = progressConstruction(s, factionId);
+    s = moveOrder(ctx, s, factionId, MODEL_GARRISON);
+    // The turn moves on, so a conquered city's unrest fades.
+    s = { ...s, turn: s.turn + 1 };
     track.push({
       earned,
       treasury: getFaction(s, factionId)?.gold ?? 0,

@@ -1,8 +1,11 @@
+import type { GameContext } from "@/core/context.js";
 import type { City, GameState } from "@/core/state.js";
+import { ORDER } from "@/data/order.js";
 import { SETTLEMENT, SETTLEMENT_ORDER } from "@/data/conquest.js";
 import { formatNumber } from "@/render/format.js";
 import { cityLevel } from "@/systems/buildings.js";
-import { settlementOutcome } from "@/systems/conquest.js";
+import { settleCity, settlementOutcome } from "@/systems/conquest.js";
+import { soldiersForOrder } from "@/systems/order.js";
 import { escapeHtml } from "@/ui/html.js";
 
 export interface SettlementElements {
@@ -13,10 +16,10 @@ export interface SettlementElements {
 
 /**
  * Asks the player what becomes of a city they've taken: occupy, enslave or
- * exterminate, each with what it would bring for this city. It can't be
- * dismissed without choosing.
+ * exterminate, each with what it would bring for this city and the garrison
+ * it would need to be content. It can't be dismissed without choosing.
  */
-export function showSettlement(el: SettlementElements, state: GameState, city: City): void {
+export function showSettlement(el: SettlementElements, ctx: GameContext, state: GameState, city: City): void {
   el.title.textContent = `${city.name} has fallen`;
 
   const cards = SETTLEMENT_ORDER.map((choice) => {
@@ -30,11 +33,16 @@ export function showSettlement(el: SettlementElements, state: GameState, city: C
             ? `${formatNumber(outcome.moved)} people sent to your other cities, ${formatNumber(outcome.lost)} lost`
             : `${formatNumber(outcome.lost)} people lost (you have no other city to send them to)`
           : `${formatNumber(outcome.lost)} people killed`;
+    // Fewer people need fewer soldiers to keep down.
+    const settled = settleCity(state, city.owner, city.id, choice);
+    const soldiers = soldiersForOrder(ctx, settled, settled.cities[city.id], ORDER.bands.content);
+    const hold = soldiers > 0 ? `Content with ${formatNumber(soldiers)} soldiers in it` : "Content with no garrison";
     return `
       <button type="button" class="settle-card settle-${choice}" data-settle="${choice}">
         <strong class="settle-name">${def.name}</strong>
         <span class="settle-gold">+${formatNumber(outcome.gold)} gold</span>
         <span class="settle-people">${people}</span>
+        <span class="settle-hold" title="Order after the conquest, on normal taxes. The unrest fades over ${-ORDER.conquered} turns.">${hold}</span>
         <span class="settle-text">${escapeHtml(def.description)}</span>
       </button>`;
   }).join("");

@@ -656,6 +656,45 @@ so.
   medium term (~25), occupy for the long game. The enslaved always found
   room in their new cities, so the losses were the only drag; more plunder
   on top made enslaving best even short-term, so it wasn't raised.
+- **Public order** (`data/order.ts`, `systems/order.ts`): a conquered city used to be as
+  loyal as the capital the turn after it fell. Order moves 10 a turn toward a *target*
+  (60, taxes ±, capital +10, conquest −30, siege −15, distance, garrison), not a running
+  score, so it can't run away and a tooltip can show why. Bands: Content ≥50, Restless
+  (gold ×0.8, growth ×0.75), Unrest <30 (gold ×0.5, no growth, no training), revolt under
+  10 at the end of the owner's turn (a fixed line, no dice, warned the turn before).
+  - **The garrison counts against the city's size** (+4 per 1% of the people under
+    arms, no cap): a flat +5 a regiment capped at +15 could never offset a conquest. One
+    army per tile is the natural cap, so the largest cities can't be held by soldiers
+    alone, and enslaving or exterminating, by shrinking the people, makes a garrison go
+    further. The fate cards show the soldiers each fate needs.
+  - **The conquest malus is the same for every fate** (−30, fading over 20 turns): a
+    harsher malus for exterminating would cancel the smaller garrison it buys. 30 turns
+    was too long a wait; at 20 the conquest balance test passes unchanged (occupied cities
+    recover sooner, so exterminating's long-run edge shrinks).
+  - **Distance from the capital, not the number of cities,** is the brake on big
+    empires, and soft: −1 per 2 tiles beyond 10, at most −20. Some factions pay from
+    turn 1 (Corduba is 26 tiles from Carthago, −8); accepted.
+  - **No foreign-culture malus** (it would make cultures more than a look).
+  - **A fallen capital passes to the largest remaining city**, which gets a capital's
+    stores and order; before, a faction that lost its capital had none. Moving it by
+    choice is in the backlog.
+  - **Revolt:** rebel militia (1 regiment per 2,000 people, 1–5) attack the garrison. If
+    they win, the city goes back to its former owner if alive (no fate to choose),
+    otherwise the owner keeps an empty city. No rebel faction: victory and elimination
+    stay unchanged, and a fallen faction never returns.
+  - **The AI** never taxes a city into unrest, taxes low where normal taxes would cause
+    it, and keeps up to 4 regiments for order (`AI.orderGarrisonMax`): past that it
+    lowers taxes rather than parking an army.
+  - **Measured** (8 seeds against the code before, garrisoned / open): AI cities Restless
+    3% / 2% of city-turns, never in Unrest, no revolts, capitals moved 9 / 10 a game, AI
+    income +23% / +1% (noise; the treasury moved the other way), cities not with their
+    first owner −7% / −3%, factions fallen unchanged, garrisons in cities taken in the
+    last 30 turns about 3 regiments as before; no invalid orders or debt. Holding a
+    conquest takes a few regiments, never a full army: the AI takes cities while they're
+    small (median ~5,500 people) and already keeps ~3 regiments in each, which is also
+    why revolts don't happen. A garrison weight of +2 per 1% (fade 40) made cities
+    Restless 10% of the time but needed ~5 regiments for a 10,000-person capture; +6
+    (fade 20, distance per 3 tiles) barely registered (2%).
 
 - **Growth floor: a small city grows as if it had 1,000 people.** Growth is
   a share of the people already there, so a city drained to a few hundred
@@ -989,7 +1028,10 @@ in detail, and `npm run levers` covers the economy.
 - Territory can straddle a sea crossing (cosmetic).
 - The test suite plays whole games and checks invariants; there are no unit
   tests of single rules yet, and no automated browser checks.
-- Public order / unrest was discussed, not built.
+- **Moving the capital** (not started). A faction chooses to move its capital to another of
+  its cities: the capital's bonuses (supplies, order, the centre that distance is measured
+  from) go with it. Needs a cost or a wait so it isn't moved every turn, and an AI rule for
+  when to do it.
 - A faction whose last city is besieged earns nothing but still pays upkeep, and can fall
   in debt (Thrace, −8, in one compare game at the 1.25 growth curve). `npm test` would
   fail on it as an AI in debt. Fix: skip fallen factions in the debt check, or keep upkeep

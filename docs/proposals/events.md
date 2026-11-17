@@ -131,9 +131,8 @@ Expected per game: about 30 plagues, 55 harvests, 3–6 offers and at most 2 hor
   the cause.
 - **The player can be hurt by luck.** No event before turn 10, and no plague under 3,000
   people.
-- **It works with public order.** If that proposal is built, offers come from cities in
-  Unrest instead of "taken in the last 30 turns", and plague lowers order. Each proposal
-  can be built without the other.
+- **It works with public order** (built: `systems/order.ts`). Offers come from cities in
+  Unrest instead of "taken in the last 30 turns", and plague lowers order.
 - **Fits DECISIONS.** Reports still last one turn: an offer is a pending choice, not a
   report.
 

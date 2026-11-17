@@ -70,6 +70,16 @@ export function brokenRules(state: GameState): string[] {
     }
     const level = city.buildings.government;
     if (!(level >= 1 && level <= 3)) broken.push(`${at}: ${city.name} is level ${level}`);
+    if (!(Number.isInteger(city.order) && city.order >= 0 && city.order <= 100)) broken.push(`${at}: ${city.name} has order ${city.order}`);
+    if (city.formerOwner === city.owner) broken.push(`${at}: ${city.name}'s former owner is its owner`);
+    if (city.conqueredOn !== null && (city.formerOwner === null || city.conqueredOn > state.turn)) {
+      broken.push(`${at}: ${city.name} was conquered on turn ${city.conqueredOn} from ${city.formerOwner}`);
+    }
+  }
+
+  for (const faction of state.factions) {
+    const capitals = citiesOf(state, faction.id).filter((c) => c.isCapital).length;
+    if (faction.alive && capitals !== 1) broken.push(`${at}: ${faction.id} has ${capitals} capitals`);
   }
 
   const scoutSpots = new Set<string>();

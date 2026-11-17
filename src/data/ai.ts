@@ -48,6 +48,17 @@ export const AI = {
   recoveredGold: 300,
   /** A city with this share of its capacity is full: it pays high taxes, since it can't grow anyway. */
   fullCity: 0.95,
+  /**
+   * Public order the AI holds its cities above: it never taxes a city high
+   * if that would put its target below this; a city that would be below it
+   * on normal taxes gets low taxes, and more garrison (see data/order.ts).
+   */
+  orderFloor: 30,
+  /**
+   * Most regiments the AI adds to a city's garrison for its order: past
+   * this, it lowers the taxes instead of parking an army there.
+   */
+  orderGarrisonMax: 4,
   /** Gold kept back for emergencies before anything is built. */
   buildReserve: 100,
   /**
