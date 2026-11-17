@@ -1027,7 +1027,7 @@ function showNextSettlement(): void {
   if (resultQueue.length > 0 || !battleResult.root.hidden || !battlePanel.root.hidden || !siegePanel.root.hidden) return;
   const state = controller.getState();
   const city = unsettledCities(state, humanId)[0];
-  if (city) showSettlement(settlement, state, city);
+  if (city) showSettlement(settlement, ctx, state, city);
 }
 
 settlement.body.addEventListener("click", (e) => {

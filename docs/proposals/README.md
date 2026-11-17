@@ -18,7 +18,6 @@ and its doc is deleted. This folder only holds open proposals.
 | Proposal | Status | In short |
 |---|---|---|
 | [Culture traits](culture-traits.md) | Proposed | Each culture gets a unit edge, an economic edge and a drawback |
-| [Public order](public-order.md) | Proposed | Unrest from taxes, conquest and sieges; revolts; a brake on snowballing |
 | [Diplomacy](diplomacy.md) | Proposed | Peace, truces and tribute, or deliberately none |
 | [Naval transport](naval-transport.md) | Proposed | Transports along the coast, and blockades of port cities |
 | [Battles](battles.md) | Proposed | Morale that carries over, frontage by terrain with reserves, and formation, doctrine and orders that decide the tactics (replaces battle stances) |

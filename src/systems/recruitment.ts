@@ -14,6 +14,7 @@ import {
   type RegimentId,
 } from "@/core/state.js";
 import { BUILDINGS } from "@/data/buildings.js";
+import { orderBand } from "@/data/order.js";
 import { SCOUT } from "@/data/scouts.js";
 import { ARMY_RULES, UNIT_TYPES, UNITS, regimentSize, unitName, type Tier, type UnitType } from "@/data/units.js";
 import { placeNewArmy, regimentCost, trainingCost } from "@/systems/armies.js";
@@ -87,6 +88,7 @@ export function canTrain(state: GameState, factionId: FactionId, cityId: CityId,
   if (!check.ok) return check;
   const city = state.cities[cityId];
   if (!unitUnlocked(city, unit, tier)) return { ok: false, reason: unlockReason(unit, tier) };
+  if (orderBand(city.order) === "unrest") return { ok: false, reason: `${city.name} is in unrest: no one will enlist.` };
 
   // Room in the army there, counting regiments already queued for training.
   const stationed = armyAt(state, city.tile);
@@ -249,6 +251,8 @@ function trainNext(state: GameState, factionId: FactionId, cityId: CityId): Game
   const order = city.recruitQueue[index];
   if (order.kind === "scout") return trainScout(next, factionId, cityId, index);
   if (order.kind !== "train") return next;
+  // In unrest no one enlists: the order waits.
+  if (orderBand(city.order) === "unrest") return next;
 
   const army = armyAt(next, city.tile);
   const own = army && army.owner === factionId ? army : undefined;

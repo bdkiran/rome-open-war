@@ -34,6 +34,8 @@ import { canHire, canTopUp, territoryOf, topUpPlan } from "@/systems/mercenaries
 import { canRetrain, canTrain, canTrainScout, retrainCost, trainableOptions, unitUnlocked } from "@/systems/recruitment.js";
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
+import { ORDER, ORDER_BAND_NAMES, orderBand } from "@/data/order.js";
+import { orderTarget } from "@/systems/order.js";
 import { cityStats, mineableTiles, plainsTiles, tradeRoutes, type CityStats, type TradeRoute } from "@/systems/cities.js";
 import { canBuildWatchtower, towerOwner, towerSighter } from "@/systems/watchtowers.js";
 import { SCOUT } from "@/data/scouts.js";
@@ -264,12 +266,39 @@ function cityDetails(input: InfoPanelInput, city: City): string {
         <dt>Capacity</dt><dd${stats.limitedByLevel ? ` class="limited" title="Its ${escapeHtml(BUILDINGS.government.levels[city.buildings.government - 1].name)} limits it to ${formatNumber(stats.capacity)}; its land could hold ${formatNumber(stats.landCapacity)}. Raise its government to let it grow."` : ""}>${formatNumber(stats.capacity)}${stats.limitedByLevel ? " &#9888;" : ""}</dd>
         <dt>Supplies</dt><dd>${city.supplies}/${maxSupplies(city)} turns</dd>
         <dt>Taxes</dt><dd>${TAX_RATES[city.taxRate].name}</dd>
+        ${mine ? orderFact(input, city) : ""}
         <dt>Defense</dt><dd>+${Math.round(cityDefense(city) * 100)}%</dd>
         <dt>Walls</dt><dd>${city.buildings.walls ? escapeHtml(BUILDINGS.walls.levels[city.buildings.walls - 1].name) : "None"}</dd>
       </dl>
       ${mine ? incomeTable(stats, besieged) : ""}
       ${!mine && input.visible && !input.visible.has(city.tile) ? `<p class="hint">Garrison out of sight.</p>` : ""}
       ${siegeStatus(state, city)}`;
+}
+
+/**
+ * The city's public order and its band, with the target and what makes it
+ * up in the tooltip. Only the owner sees it.
+ */
+function orderFact(input: InfoPanelInput, city: City): string {
+  const t = orderTarget(input.ctx, input.state, city);
+  const band = orderBand(city.order);
+  const parts: string[] = [];
+  const part = (label: string, n: number) => {
+    const points = Math.round(n);
+    if (points !== 0) parts.push(`${label} ${points > 0 ? "+" : "−"}${Math.abs(points)}`);
+  };
+  parts.push(`Base ${t.base}`);
+  part(`${TAX_RATES[city.taxRate].name} taxes`, t.taxes);
+  part("Capital", t.capital);
+  part("Conquered", t.conquered);
+  part("Siege", t.siege);
+  part(`${t.tilesFromCapital} tiles from the capital`, t.distance);
+  part(`Garrison of ${formatNumber(t.soldiers)}`, t.garrison);
+  const heading = t.total > city.order ? "rising" : t.total < city.order ? "falling" : "steady";
+  const revolt = t.total < ORDER.revoltBelow ? " Below 10, it revolts." : "";
+  const title = `Heading for ${t.total} (${heading}): ${parts.join(", ")}.${revolt}`;
+  const warn = band === "unrest" ? " &#9888;" : "";
+  return `<dt>Order</dt><dd class="order-${band}" title="${escapeHtml(title)}">${city.order} · ${ORDER_BAND_NAMES[band]}${warn}</dd>`;
 }
 
 /**
@@ -296,6 +325,7 @@ function incomeTable(stats: CityStats, besieged: boolean): string {
   if (i.trade) row("Trade", running + i.trade);
   if (i.trade && i.tradeMarket !== 1) row("Market on trade", running + i.trade * (i.tradeMarket - 1), i.tradeMarket);
   if (i.taxes !== 1) row("Taxes", running * i.taxes, i.taxes);
+  if (i.order !== 1) row("Order", running * i.order, i.order);
   return `
     <table class="income-table">
       <tbody>${rows.join("")}</tbody>

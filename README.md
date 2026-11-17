@@ -107,7 +107,7 @@ to look at the map, but no more orders go through, or play again.
 - The top-right panel lists every faction with its people, soldiers and gold;
   click the income line under your treasury for a breakdown of where your
   money comes from (each city's base, people, mine, farm and fishing gold and
-  its trade times its market, all times its taxes) and where it goes (each
+  its trade times its market, all times its taxes and its order) and where it goes (each
   army's upkeep)
 - **Reports** (right, under the faction list): at the start of each turn, what happened since
   your last one arrives as notifications: battles, sieges and cities involving
@@ -331,8 +331,48 @@ panel. It trades gold for growth:
 | Normal   | ×1          | ×1                |
 | High     | ×1.5        | ×0.5              |
 
-High taxes slow a city's growth but never make it shrink. A captured city
-goes back to normal taxes.
+High taxes slow a city's growth but never make it shrink, and they lower its
+public order. A captured city goes back to normal taxes.
+
+**Public order.** Each city's order runs from 0 to 100 and moves 10 points a
+turn toward a target. The target starts at 60, and its situation moves it:
+
+| Cause | Change to the target |
+|---|---|
+| Taxes | Low +15, normal 0, high −20 |
+| Capital | +10 |
+| Conquered | −30 the turn it's taken, fading evenly to nothing over 20 turns, whatever its fate |
+| Under siege | −15 |
+| Distance from the capital | −1 per 2 tiles beyond 10, at most −20 |
+| Garrison | +4 for each 1% of its people who are soldiers in the army standing in it |
+
+The garrison counts against the city's size: 200 soldiers are worth +8 in a
+city of 10,000 but +4 in one of 20,000. A city taken from a rival starts at
+order 30.
+
+| Order | | Effect |
+|---|---|---|
+| 50–100 | Content | None |
+| 30–49 | Restless | Gold ×0.8, growth ×0.75 |
+| 10–29 | Unrest | Gold ×0.5, no growth, no training |
+| Under 10 at the end of your turn | Revolt | See below |
+
+A city still under 10 at the end of its owner's turn **revolts**: rebel
+militia rise, one regiment per 2,000 people (at least 1, at most 5), and
+attack the garrison, which keeps the city's defense bonus. If the garrison
+holds, the rebels who fell are gone from the city and order is back at 30. If
+it's beaten (or there's none), it's destroyed, and the city goes back to its
+former owner if that faction still stands, at order 50 and with no fate to
+choose; otherwise you keep an empty city at order 30. You're warned the turn
+before ("close to revolt").
+
+Only the owner sees a city's order. The city panel shows it ("Order 42 ·
+Restless", the target and its causes in the tooltip), the money breakdown
+shows its effect on gold, and a raised fist on the name plate marks a city
+that's Restless (yellow) or in Unrest (red).
+
+**A fallen capital.** When a faction's capital is taken, its largest
+remaining city becomes its capital, with a capital's stores and order.
 
 ## Armies
 
@@ -633,7 +673,14 @@ surrender), you choose its fate:
 Plunder grows by 50% for each city level above 1, and is always worked out
 from the city's population when it falls, so a city that's already been
 sacked yields much less. A 10,000-person level-2 city gives 75, 225 or 450
-gold. You must decide before ending your turn; a city that surrenders at the
+gold.
+
+Every fate leaves the people restless for a while (see Public order), and
+fewer people need fewer soldiers to keep down: each card shows the garrison
+the city would need to be content. A 10,000-person city just taken near your
+capital needs 500 soldiers in it to be content after occupying, 350 after
+enslaving and 300 after exterminating. With none it's Restless on normal
+taxes, and after 20 turns it's content with none. You must decide before ending your turn; a city that surrenders at the
 end of your turn is decided at the start of your next. A faction with no
 cities left is eliminated.
 
@@ -677,7 +724,11 @@ to expect from them:
   no new regiments once they have 3 per city. Armies still march and fight,
   regiments still retrain, and a besieged city ends the saving.
 - They raise taxes when in debt and lower them once recovered, and tax a
-  city high once it's full (it can't grow anyway). When they
+  city high once it's full (it can't grow anyway), but never so high that
+  its order would fall into unrest: a city that would sink into unrest even
+  on normal taxes gets low taxes. They keep enough soldiers in a city to
+  hold it out of unrest, up to 4 regiments, and lower its taxes past that.
+  When they
   take a city, they exterminate only when nearly out of gold, enslave it if enemy
   armies are near, and otherwise occupy.
 

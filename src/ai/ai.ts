@@ -47,6 +47,7 @@ import { battlefieldAt, battleSides, battleStrength } from "@/systems/combat.js"
 import { canBesiege } from "@/systems/siege.js";
 import { buildingAvailable, canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
+import { orderTarget } from "@/systems/order.js";
 import { bestTier, canRetrain, canTrain, canTrainScout, trainableUnits, unitUnlocked } from "@/systems/recruitment.js";
 import { BUILDING_EFFECTS, type BuildingType } from "@/data/buildings.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
@@ -94,7 +95,7 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
   const plan = assess(ctx, seen, factionId);
   return (
     settleAction(ctx, seen, factionId) ??
-    taxAction(seen, factionId, plan) ??
+    taxAction(ctx, seen, factionId, plan) ??
     mergeAction(seen, factionId) ??
     attackAction(ctx, real, seen, factionId, plan, visible) ??
     retreatAction(ctx, real, seen, factionId) ??
@@ -134,19 +135,33 @@ function settleAction(ctx: GameContext, state: GameState, factionId: FactionId):
  * debt, or at war for a besieged city, every city pays high taxes. A city at
  * its capacity pays high taxes too: it can't grow anyway, so slower growth
  * costs nothing. Otherwise taxes come back to normal, once the treasury has
- * recovered from any debt.
+ * recovered from any debt. Order comes first: a city whose order would sink
+ * below AI.orderFloor (into unrest) on normal taxes gets low taxes, and no
+ * city is taxed high if that would push its order below the floor.
+ * `soldiers`, if given, stands in for the garrison (the peacetime economy
+ * model has no armies).
  */
-export function aiTaxRate(state: GameState, city: City, gold: number, atWar: boolean): TaxRate | null {
-  if (gold < 0 || atWar) return "high";
-  if (city.population >= cityStats(state, city).capacity * AI.fullCity) return "high";
+export function aiTaxRate(
+  ctx: GameContext,
+  state: GameState,
+  city: City,
+  gold: number,
+  atWar: boolean,
+  soldiers?: number,
+): TaxRate | null {
+  if (orderTarget(ctx, state, city, { taxRate: "normal", soldiers }).total < AI.orderFloor) return "low";
+  const wanted = gold < 0 || atWar || city.population >= cityStats(state, city).capacity * AI.fullCity ? "high" : null;
+  const highHolds = orderTarget(ctx, state, city, { taxRate: "high", soldiers }).total >= AI.orderFloor;
+  if (wanted === "high") return highHolds ? "high" : "normal";
+  if (city.taxRate === "low" || (city.taxRate === "high" && !highHolds)) return "normal";
   return gold > AI.recoveredGold ? "normal" : null;
 }
 
 /** Sets one city's taxes to what the AI wants for it (see aiTaxRate). */
-function taxAction(state: GameState, factionId: FactionId, plan: Assessment): Action | null {
+function taxAction(ctx: GameContext, state: GameState, factionId: FactionId, plan: Assessment): Action | null {
   const gold = getFaction(state, factionId)?.gold ?? 0;
   for (const city of citiesOf(state, factionId)) {
-    const wanted = aiTaxRate(state, city, gold, plan.relief !== null);
+    const wanted = aiTaxRate(ctx, state, city, gold, plan.relief !== null);
     if (wanted && wanted !== city.taxRate) return { type: "setTaxRate", cityId: city.id, rate: wanted };
   }
   return null;

@@ -71,5 +71,6 @@ export function describeIncome(i: IncomeBreakdown, taxName: string): string {
   const parts = [sources.join(" + ")];
   if (i.trade) parts.push(`${i.trade} trade${i.tradeMarket !== 1 ? ` ${x(i.tradeMarket)} market` : ""}`);
   if (i.taxes !== 1) parts.push(`${x(i.taxes)} ${taxName}`);
+  if (i.order !== 1) parts.push(`${x(i.order)} order`);
   return `${parts.join(", ")} = ${i.total}`;
 }

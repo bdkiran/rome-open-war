@@ -1,4 +1,5 @@
 import type { City, GameState } from "@/core/state.js";
+import { ORDER_BAND_NAMES, orderBand } from "@/data/order.js";
 import { formatCompact } from "@/render/format.js";
 import { cityStats } from "@/systems/cities.js";
 import { escapeHtml } from "@/ui/html.js";
@@ -8,7 +9,8 @@ import { isKeyCity, keyCitiesCount } from "@/systems/victory.js";
  * A city's name plate on the map, as HTML: its name and its people. On the
  * player's own cities a small figure beside the people shows how they're
  * moving (green rising fast, yellow slow or not at all, red falling), and a
- * hammer or crossed swords show that something is being built or trained.
+ * hammer or crossed swords show that something is being built or trained,
+ * and a raised fist that its people are restless (yellow) or in unrest (red).
  * A star before the name marks a key city, when they can win the game.
  * Icons only, no words: the city panel has the detail.
  */
@@ -20,6 +22,8 @@ const ICONS = {
   people: '<circle cx="8" cy="4.5" r="3"/><path d="M2.5 15c0-3.6 2.5-6 5.5-6s5.5 2.4 5.5 6z"/>',
   build: '<path d="M3 13.5 9 7.5"/><path d="M7 4.5 10 1.5l4.5 4.5-3 3z"/>',
   train: '<path d="M3 3l10 10M13 3 3 13"/><path d="M4 10.5l1.5 1.5M12 10.5 10.5 12"/>',
+  // A raised fist: the people are restless.
+  unrest: '<path d="M5 14V8.5M5 8.5V5.5a1 1 0 0 1 2 0V8M7 8V4.5a1 1 0 0 1 2 0V8M9 8V5a1 1 0 0 1 2 0v4.5c0 2.5-1.5 4.5-3.5 4.5H5"/>',
 };
 
 function icon(name: keyof typeof ICONS): string {
@@ -45,7 +49,9 @@ export function cityPlate(state: GameState, city: City, mine: boolean): string {
 
   const trend = growthTrend(state, city);
   const pop = `<span class="pop ${trend}">${icon("people")}${people}</span>`;
+  const band = orderBand(city.order);
   const work = [
+    band !== "content" ? `<span class="order ${band}" aria-label="${ORDER_BAND_NAMES[band]}">${icon("unrest")}</span>` : "",
     city.constructionQueue.length > 0 ? icon("build") : "",
     city.recruitQueue.length > 0 ? icon("train") : "",
   ].join("");

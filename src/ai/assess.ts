@@ -13,6 +13,7 @@ import { ARMY_RULES, LINE_UNITS, regimentSize, UNIT_TYPES, type UnitType, UNITS 
 import { sideStrength, type Troops } from "@/systems/combat.js";
 import { bestTier, trainableUnits } from "@/systems/recruitment.js";
 import { landmasses } from "@/systems/pathfinding.js";
+import { soldiersForOrder } from "@/systems/order.js";
 
 /** What an AI faction makes of its situation right now. */
 export interface Assessment {
@@ -42,7 +43,13 @@ export function assess(ctx: GameContext, state: GameState, factionId: FactionId)
   for (const city of citiesOf(state, factionId)) {
     const threat = enemyRegimentsNear(ctx, state, factionId, city.tile);
     const base = city.isCapital ? AI.capitalGarrison : AI.baseGarrison;
-    garrisonNeed.set(city.id, Math.min(ARMY_RULES.maxRegiments, Math.max(base, Math.ceil(threat * AI.garrisonPerThreat))));
+    // Enough soldiers to keep it out of unrest on normal taxes, up to a few regiments: past that, low taxes do the rest.
+    const forOrder = Math.min(
+      AI.orderGarrisonMax,
+      Math.ceil(soldiersForOrder(ctx, state, city, AI.orderFloor, "normal") / regimentSize("militia")),
+    );
+    const need = Math.max(base, forOrder, Math.ceil(threat * AI.garrisonPerThreat));
+    garrisonNeed.set(city.id, Math.min(ARMY_RULES.maxRegiments, need));
   }
   const { target, muster } = chooseTarget(ctx, state, factionId);
   return { garrisonNeed, target, muster, relief: findRelief(ctx, state, factionId) };

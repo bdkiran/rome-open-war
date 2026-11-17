@@ -79,6 +79,16 @@ interface GameMetrics {
   generalTraits: number;
   generalArmiesWin: number;
   wagesShare: number;
+  revolts: number;
+  revoltsPutDown: number;
+  revoltsReturned: number;
+  capitalsMoved: number;
+  restlessTurns: number;
+  unrestTurns: number;
+  highTaxTurns: number;
+  lowTaxTurns: number;
+  garrisonRegiments: number;
+  conqueredGarrison: number;
   seconds: number;
 }
 
@@ -130,6 +140,16 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "generalTraits", label: "...traits each at the end, median ×10" },
   { key: "generalArmiesWin", label: "...battles won when led, %" },
   { key: "wagesShare", label: "Generals' wages, % of AI upkeep" },
+  { key: "revolts", label: "Revolts" },
+  { key: "revoltsPutDown", label: "...put down by the garrison" },
+  { key: "revoltsReturned", label: "...handing the city back" },
+  { key: "capitalsMoved", label: "Capitals moved after a fall" },
+  { key: "restlessTurns", label: "AI city-turns Restless, %" },
+  { key: "unrestTurns", label: "AI city-turns in Unrest, %" },
+  { key: "highTaxTurns", label: "AI city-turns on high taxes, %" },
+  { key: "lowTaxTurns", label: "AI city-turns on low taxes, %" },
+  { key: "garrisonRegiments", label: "AI garrison regiments, median ×10" },
+  { key: "conqueredGarrison", label: "...in cities taken in the last 30 turns ×10" },
   { key: "seconds", label: "Seconds per game" },
 ];
 
@@ -162,6 +182,11 @@ async function runWorker(): Promise<void> {
   type Route = { by: string; cut?: boolean };
   const tradeRoutes: (s: GameState, city: object) => Route[] = (await load("src/systems/cities.js")).tradeRoutes ?? (() => []);
   const routeTurns = { all: 0, cut: 0 };
+  // Versions before public order have no order: those rows show 0.
+  const order = { revolts: 0, putDown: 0, returned: 0, capitals: 0, cityTurns: 0, restless: 0, unrest: 0, high: 0, low: 0 };
+  const garrisons: number[] = [];
+  const conqueredGarrisons: number[] = [];
+  const takenOn = new Map<string, number>();
 
   const seed = Number(option("seed"));
   let firstOwners: Record<string, string> | null = null;
@@ -182,6 +207,20 @@ async function runWorker(): Promise<void> {
     onRound: (s: GameState) => {
       firstOwners ??= Object.fromEntries(Object.values(s.cities).map((c) => [c.id, c.owner]));
       for (const city of Object.values(s.cities)) {
+        if (city.owner === "rome") continue;
+        order.cityTurns++;
+        const level = (city as { order?: number }).order;
+        if (level !== undefined && level < 50 && level >= 30) order.restless++;
+        if (level !== undefined && level < 30) order.unrest++;
+        if (city.taxRate === "high") order.high++;
+        if (city.taxRate === "low") order.low++;
+        const army = Object.values(s.armies).find((a) => a.tile === city.tile && a.owner === city.owner);
+        const regiments = army ? army.regiments.length : 0;
+        garrisons.push(regiments);
+        const taken = takenOn.get(city.id);
+        if (taken !== undefined && s.turn - taken < 30) conqueredGarrisons.push(regiments);
+      }
+      for (const city of Object.values(s.cities)) {
         for (const r of tradeRoutes(s, city)) {
           if (r.by !== "land") continue;
           routeTurns.all++;
@@ -191,6 +230,14 @@ async function runWorker(): Promise<void> {
     },
     // Versions before this option ignore it, and show 0 in the siege rows.
     onAction: (before: GameState, action: Action, factionId: string, after: GameState) => {
+      if (action.type === "settleCity") takenOn.set(action.cityId, after.turn);
+      for (const entry of after.log) {
+        if (entry.id < before.nextLogNumber) continue;
+        if (entry.text.includes(" revolted against ")) order.revolts++;
+        if (entry.text.includes("The garrison put it down")) order.putDown++;
+        if (entry.text.includes(" and returned to ")) order.returned++;
+        if (entry.text.includes(" capital moves to ")) order.capitals++;
+      }
       const was = generalsIn(before);
       const now = generalsIn(after);
       for (const id of now.keys()) {
@@ -328,6 +375,16 @@ async function runWorker(): Promise<void> {
     generalLifetime: medianExact(generals.lifetimes),
     generalTraits: Math.round(medianExact((aiRegiments as Led[]).flatMap((r) => (r.general ? [r.general.traits.length] : []))) * 10),
     generalArmiesWin: percent(generals.ledWins, generals.ledBattles),
+    revolts: order.revolts,
+    revoltsPutDown: order.putDown,
+    revoltsReturned: order.returned,
+    capitalsMoved: order.capitals,
+    restlessTurns: percent(order.restless, order.cityTurns),
+    unrestTurns: percent(order.unrest, order.cityTurns),
+    highTaxTurns: percent(order.high, order.cityTurns),
+    lowTaxTurns: percent(order.low, order.cityTurns),
+    garrisonRegiments: Math.round(medianExact(garrisons) * 10),
+    conqueredGarrison: Math.round(medianExact(conqueredGarrisons) * 10),
     wagesShare: percent(
       (aiRegiments as Led[]).filter((r) => r.general).length * wages,
       aliveAi.reduce((n, f) => n + factionUpkeep(state, f.id), 0),

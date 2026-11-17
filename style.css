@@ -85,6 +85,11 @@ html, body {
   color: var(--bone);
   background: rgba(20, 30, 36, 0.82);
 }
+.city-plate .work .order { display: inline-flex; }
+.settlement-details .order-restless { color: #f0c36f; }
+.settlement-details .order-unrest { color: #f0806f; }
+.city-plate .work .order.restless { color: #f0c36f; }
+.city-plate .work .order.unrest { color: #f0806f; }
 .city-plate .work svg {
   width: 12px;
   height: 12px;
@@ -910,6 +915,7 @@ button.settle-card:focus-visible { background: rgba(224, 181, 79, 0.12); border-
 .settle-name { font-family: var(--serif); font-size: 21px; font-weight: 600; }
 .settle-gold { font-size: 18px; font-weight: 700; color: var(--brass); font-variant-numeric: tabular-nums; }
 .settle-people { font-size: 13px; font-weight: 600; }
+.settle-hold { font-size: 12px; }
 .settle-text { font-size: 13px; line-height: 1.45; color: var(--bone-dim); }
 @media (max-width: 600px) { .settle-cards { grid-template-columns: 1fr; } }
 

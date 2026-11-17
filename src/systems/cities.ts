@@ -14,6 +14,7 @@ import { BUILDING_EFFECTS, LEVEL_POPULATION_LIMIT } from "@/data/buildings.js";
 import { ECONOMY, TAX_RATES } from "@/data/economy.js";
 import { GAME_SETUP } from "@/data/gameSetup.js";
 import { MERCENARIES } from "@/data/units.js";
+import { ORDER, orderBand } from "@/data/order.js";
 import { TRADE } from "@/data/trade.js";
 import { maxSupplies } from "@/systems/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
@@ -62,6 +63,9 @@ export function createCity(
     },
     constructionQueue: [],
     unsettled: false,
+    order: ORDER.base,
+    formerOwner: null,
+    conqueredOn: null,
     fishingGrounds: tilesWithin(ctx.topology, tile, GAME_SETUP.territoryRadius).filter(
       (t) => state.tiles[t].terrain === "water",
     ).length,
@@ -243,7 +247,9 @@ export interface IncomeBreakdown {
   taxes: number;
   /** The market's multiplier on trade, e.g. 2 with a market square. It touches nothing else. */
   tradeMarket: number;
-  /** (subtotal + trade × tradeMarket) × taxes, rounded. */
+  /** Public order's multiplier, e.g. 0.8 while the city is Restless. */
+  order: number;
+  /** (subtotal + trade × tradeMarket) × taxes × order, rounded. */
   total: number;
 }
 
@@ -266,7 +272,8 @@ export function cityStats(state: GameState, city: City): CityStats {
   const tax = TAX_RATES[city.taxRate];
   const farms = BUILDING_EFFECTS.farmsGrowth[city.buildings.farms];
   const port = BUILDING_EFFECTS.portGrowth[city.buildings.port] * seaShare(state, city);
-  const growthRate = baseGrowthRate * tax.growth * (1 + farms + port);
+  const orderEffect = ORDER.effects[orderBand(city.order)];
+  const growthRate = baseGrowthRate * tax.growth * orderEffect.growth * (1 + farms + port);
   const levelLimit = LEVEL_POPULATION_LIMIT[city.buildings.government];
   const fedCapacity = Math.min(capacity, levelLimit);
   const base = ECONOMY.cityBaseGold;
@@ -277,7 +284,7 @@ export function cityStats(state: GameState, city: City): CityStats {
   const subtotal = base + people + mine + farmGold + portGold;
   const trade = Math.round(tradeRoutes(state, city).reduce((sum, r) => sum + r.gold, 0));
   const tradeMarket = 1 + TRADE.marketTrade[city.buildings.market];
-  const total = Math.round((subtotal + trade * tradeMarket) * tax.gold);
+  const total = Math.round((subtotal + trade * tradeMarket) * tax.gold * orderEffect.gold);
 
   return {
     capacity: fedCapacity,
@@ -287,7 +294,7 @@ export function cityStats(state: GameState, city: City): CityStats {
     growthRate,
     growth: populationGrowth(city.population, fedCapacity, growthRate),
     gold: total,
-    income: { base, people, mine, farms: farmGold, port: portGold, subtotal, trade, taxes: tax.gold, tradeMarket, total },
+    income: { base, people, mine, farms: farmGold, port: portGold, subtotal, trade, taxes: tax.gold, tradeMarket, order: orderEffect.gold, total },
   };
 }
 
@@ -577,14 +584,19 @@ function reportCutRoads(state: GameState, factionId: FactionId): GameState {
 
 // ---- Conquest -----------------------------------------------------------
 
-/** Hands a city, and all the land it claims, to a new owner. A captured capital stops being a capital, and any siege ends. */
+/**
+ * Hands a city, and all the land it claims, to a new owner. Any siege ends,
+ * and its people are restless under the new owner (see systems/order.ts). A
+ * captured capital stops being a capital: the old owner's largest remaining
+ * city becomes its capital instead.
+ */
 export function captureCity(state: GameState, cityId: CityId, newOwner: FactionId): GameState {
   const city = state.cities[cityId];
   const territory = { ...state.territory };
   for (const [tile, claim] of Object.entries(state.territory)) {
     if (claim.cityId === cityId) territory[tile] = { ...claim, owner: newOwner };
   }
-  return {
+  const captured: GameState = {
     ...state,
     territory,
     cities: {
@@ -605,9 +617,33 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
         // The conqueror decides what becomes of it.
         unsettled: true,
         cutRoads: [],
+        order: ORDER.afterCapture,
+        formerOwner: city.owner,
+        conqueredOn: state.turn,
       },
     },
   };
+  return city.isCapital ? moveCapital(captured, city.owner) : captured;
+}
+
+/**
+ * Makes a faction's largest city its capital, when it has none (its capital
+ * has just fallen). The new capital gets a capital's stores, unless it's
+ * besieged: they're filled when the siege ends.
+ */
+function moveCapital(state: GameState, factionId: FactionId): GameState {
+  const cities = citiesOf(state, factionId);
+  if (cities.length === 0 || cities.some((c) => c.isCapital)) return state;
+  const seat = [...cities].sort((a, b) => b.population - a.population || cityNumber(a.id) - cityNumber(b.id))[0];
+  const supplies = seat.besiegedBy ? seat.supplies : maxSupplies({ isCapital: true, buildings: seat.buildings });
+  const next = { ...state, cities: { ...state.cities, [seat.id]: { ...seat, isCapital: true, supplies } } };
+  const name = getFaction(state, factionId)?.shortName ?? "Unknown";
+  return addLog(next, `${possessiveName(name)} capital moves to ${seat.name}.`, { kind: "city", factions: [factionId], major: true });
+}
+
+/** "Rome" → "Rome's", "Samnites" → "Samnites'". */
+function possessiveName(name: string): string {
+  return name.endsWith("s") ? `${name}'` : `${name}'s`;
 }
 
 /**

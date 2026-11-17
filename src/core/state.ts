@@ -56,6 +56,12 @@ export interface City {
   constructionQueue: Construction[];
   /** Just captured, and its conqueror hasn't yet chosen its fate (occupy, enslave or exterminate). */
   unsettled: boolean;
+  /** Public order, 0 to 100: moves each turn toward its target (see systems/order.ts). */
+  order: number;
+  /** Who held the city before it was last captured, if anyone: a revolt hands it back to them. */
+  formerOwner: FactionId | null;
+  /** The turn it was last conquered, if ever: the conquest malus fades from then. */
+  conqueredOn: number | null;
   /** Sea tiles within its reach: fishing grounds that add to its capacity and growth. Set when it's founded. */
   fishingGrounds: number;
   /**
