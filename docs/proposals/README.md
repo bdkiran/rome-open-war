@@ -23,3 +23,6 @@ and its doc is deleted. This folder only holds open proposals.
 | [Battles](battles.md) | Proposed | Morale that carries over, frontage by terrain with reserves, and formation, doctrine and orders that decide the tactics (replaces battle stances) |
 | [Events](events.md) | Proposed | Seeded events: plague, harvests, revolts, migrations |
 | [Region specialties](region-specialties.md) | Proposed | Resources on the land that make some cities worth more |
+| [Rebels](rebels.md) | Proposed | A rebel faction that takes revolted cities and holds them until retaken |
+| [Swordsmen](swordsmen.md) | Proposed | A heavy infantry line: swords beat spears, cavalry beats swords, shields blunt arrows |
+| [Moving the capital](moving-the-capital.md) | Proposed | Move the capital by choice, for gold and a cooldown, with an AI rule |
