@@ -116,7 +116,11 @@ export class MapView3D {
   /** Where each regiment was last shown, so an army split off from another walks out from it. */
   private regimentSpots = new Map<string, { tile: TileId; position: THREE.Vector3 }>();
   private readonly cities = new Map<string, { key: string; object: THREE.Object3D }>();
-  /** Scouts on the map: they walk as armies do, but stand aside so both can be seen. */
+  /**
+   * Scouts on the map: they walk as armies do and stand in the middle of their
+   * tile. A scout on a tile with an army or a city is inside it and isn't drawn
+   * (the selection bar's Agents tab shows it).
+   */
   private readonly scouts = new Map<string, { key: string; figure: Figure; tile: TileId; position: THREE.Vector3; walk: Walk | null }>();
   /** Battle clashes playing on the map. */
   private readonly clashes: { object: THREE.Object3D; update(progress: number): void; start: number }[] = [];
@@ -937,15 +941,16 @@ export class MapView3D {
     this.clashes.push({ ...burst, start: this.lastTime });
   }
 
-  /** A figure for every scout in sight, walking to where it now stands. */
+  /** A figure for every scout in sight, walking to where it now stands, hidden once it's inside an army or a city. */
   private syncScouts(state: GameState, view: ViewState, time: number, delta: number): void {
+    const occupied = new Set([...Object.values(state.armies).map((a) => a.tile), ...Object.values(state.cities).map((c) => c.tile)]);
     const shown = new Set<string>();
     for (const scout of Object.values(state.scouts)) {
       const mine = scout.owner === view.activeFaction;
       if (view.visible && !mine && !view.visible.has(scout.tile)) continue;
       shown.add(scout.id);
       const faction = getFaction(state, scout.owner);
-      const target = this.terrain.top(scout.tile).add(new THREE.Vector3(-20, 0, 14));
+      const target = this.terrain.top(scout.tile);
       let entry = this.scouts.get(scout.id);
       if (!entry) {
         const figure = buildScout(faction?.color ?? "#888888", faction?.culture ?? "roman", this.library);
@@ -970,6 +975,8 @@ export class MapView3D {
         entry.figure.animate(0, delta);
       }
       entry.figure.object.position.copy(entry.position);
+      // Seen on its way in or out, gone while it's inside.
+      entry.figure.object.visible = entry.walk !== null || !occupied.has(scout.tile);
     }
     for (const [id, entry] of this.scouts) {
       if (shown.has(id)) continue;

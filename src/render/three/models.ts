@@ -470,13 +470,16 @@ export function buildCity(
   return g;
 }
 
-/** Where a watchtower stands on its tile (model units from the centre), and how much room it takes. */
-export const WATCHTOWER_SPOT = { x: 16, z: -8, radius: 8 };
+/**
+ * Where a watchtower stands on its tile (model units from the centre), and
+ * how much room it takes: in the middle, so it's plain which tile it's on.
+ * An army on its tile stands in front of it.
+ */
+export const WATCHTOWER_SPOT = { x: 0, z: 0, radius: 8 };
 
 /**
  * A watchtower: a timber tower on a stone footing with a lookout platform,
- * a roof, and a pennant in its owner's colours. It stands to one side of
- * its tile, so an army there is still seen.
+ * a roof, and a pennant in its owner's colours, in the middle of its tile.
  */
 export function buildWatchtower(color: string): THREE.Object3D {
   const g = new THREE.Group();

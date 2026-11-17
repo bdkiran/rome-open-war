@@ -164,6 +164,8 @@ button.secondary {
 }
 button.secondary:hover:not(:disabled) { background: rgba(224, 181, 79, 0.18); }
 :is(#tile-info, #city-screen) .siege-note { margin: 10px 0 0; color: var(--brass); }
+#tile-info .confirm-row { display: flex; gap: 8px; }
+#tile-info .confirm-row .action { flex: 1; }
 :is(#tile-info, #city-screen) .siege-warning {
   margin: 12px 0 0;
   padding: 8px 10px;

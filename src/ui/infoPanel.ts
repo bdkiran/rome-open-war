@@ -9,6 +9,8 @@ import {
   type GameState,
   type Regiment,
   type RegimentId,
+  type Scout,
+  type ScoutId,
 } from "@/core/state.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, LINE_UNITS, MERCENARIES, TIERS, UNIT_TYPES, UNITS, type UnitType, regimentSize, unitName } from "@/data/units.js";
@@ -61,6 +63,12 @@ export interface InfoPanelInput {
   retrainQueue: ReadonlySet<RegimentId>;
   /** Regiments of the selected army that will move or attack together. */
   chosenRegiments: ReadonlySet<RegimentId>;
+  /** Whether the player's scout on the tile is ticked to take orders (its card in the Agents tab). */
+  scoutPicked: boolean;
+  /** The player's scout taking orders, if one is: the side panel shows it, with Dismiss. */
+  orderedScout: ScoutId | null;
+  /** Dismiss was clicked once: the panel asks to confirm it. */
+  confirmDismiss: boolean;
 }
 
 /**
@@ -74,7 +82,9 @@ export function renderInfoPanel(input: InfoPanelInput): string {
   const army = armyAt(state, tile);
   const city = cityAt(state, tile);
   const sections: string[] = [];
-  const orders = army ? armySection(input, army) : "";
+  const scout = input.orderedScout ? state.scouts[input.orderedScout] : undefined;
+  if (scout) sections.push(scoutSection(input, scout));
+  const orders = army && !scout ? armySection(input, army) : "";
   if (orders) sections.push(orders);
   if (city) sections.push(citySection(input, city));
   const mercenaries = mercenarySection(input, tile);
@@ -90,6 +100,23 @@ export function renderInfoPanel(input: InfoPanelInput): string {
     sections.push(`<p class="terrain-line">Sea crossing.</p>`);
   }
   return sections.join(`<hr>`);
+}
+
+/**
+ * The scout taking orders: what it can do, and Dismiss, which asks first
+ * (a dismissed scout is gone for good, with no refund).
+ */
+function scoutSection(input: InfoPanelInput, scout: Scout): string {
+  const facts = `<p class="siege-note">Scout: ${scout.movementLeft} of ${SCOUT.movement} movement. Right-click a highlighted tile to move it.</p>`;
+  if (!input.playerTurn) return facts;
+  const dismiss = input.confirmDismiss
+    ? `<p class="hint">Dismiss this scout for good? No refund.</p>
+       <div class="confirm-row">
+         <button type="button" class="action secondary" data-dismiss-scout="${scout.id}">Dismiss</button>
+         <button type="button" class="action secondary" data-keep-scout>Keep</button>
+       </div>`
+    : `<button type="button" class="action secondary" data-ask-dismiss title="Send this scout home for good, ending its ${SCOUT.upkeep} gold upkeep. No refund.">Dismiss…</button>`;
+  return facts + dismiss;
 }
 
 /**
