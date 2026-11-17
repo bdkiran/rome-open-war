@@ -20,16 +20,25 @@ export const GENERALS = {
   /** The most generals a faction can have, for each city it holds. */
   perCity: 1,
   /**
-   * Chance that an army without a general gains one when it wins a battle
-   * against an enemy at least `grantFullAt` of its size. Against a smaller
-   * enemy it shrinks in proportion: beating a band a tenth your size gives a
-   * tenth of the chance. See rewardChance in systems/generals.ts.
+   * Chance that a winning army without a general gains one in an even fight,
+   * while every general slot its faction has is free. It's scaled by the
+   * share of slots still free, then by the odds (see grantChance in
+   * systems/generals.ts): beating a weaker enemy gives `grantFloor` of it up
+   * to all of it, and winning against the odds climbs to a certainty.
    */
-  grantChance: 0.35,
-  /** Chance that a general learns a trait he doesn't have when his side wins, scaled the same way. */
+  grantChance: 0.7,
+  /** The share of the grant chance even a win over a much weaker enemy earns. */
+  grantFloor: 0.5,
+  /**
+   * A beaten enemy weaker than this share of the winners' strength earns
+   * nothing: stragglers don't make generals. Above 0.1, since battle strengths
+   * are capped at ten to one.
+   */
+  minFoe: 0.15,
+  /** Winning against an enemy this many times your strength makes a general for certain (while a slot is free). */
+  underdogFullAt: 1.5,
+  /** Chance that a general learns a trait he doesn't have when his side wins, times the odds (at most 1). */
   traitChance: 0.25,
-  /** Enemy soldiers, as a share of the winners', at which the grant and trait chances are full. */
-  grantFullAt: 1,
   /**
    * Chance that a general who fights in a battle, won or lost, is killed in
    * it, and his bodyguard with him. He also dies if his bodyguard is cut down.

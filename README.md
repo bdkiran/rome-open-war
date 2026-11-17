@@ -38,7 +38,7 @@ AI powers share the map with you, some with many cities and some with few:
 | Seleucid Empire | Antiochia, Seleucia, Damascus, Sardis, Tarsus, Sidon |
 | Ptolemaic Egypt | Alexandria, Memphis, Cyrene |
 | Gallic Tribes | Alesia, Lemonum, Mediolanum, Patavium, Narbo Martius, Numantia |
-| Kingdom of Numidia | Cirta, Tingis, Siga |
+| Kingdom of Numidia | Cirta, Tingis, Gaetulia |
 | Germanic Tribes | Batavodurum, Gutones, Marcomannia |
 | Scythian Kingdom | Tanais, Alania, Sarmatia |
 | Odrysian Thrace | Tylis, Getae, Byzantion |
@@ -471,12 +471,23 @@ its box. It costs nothing to keep. Arrows ignore armor, so veterans fear archers
 most. Retraining's recruits dilute experience in proportion, and merged regiments
 share theirs out by soldiers.
 
-**Generals.** When an army without a general wins a battle, there's a 35%
-chance a **general** rises to lead it if the enemy was at least its size, and
-less against a smaller enemy, in proportion: a tenth your size, a tenth the
-chance (3.5%). It needs your faction to have fewer generals than cities, and
-the army room for one more regiment; if a full army would have gained one,
-you're told it had no room. He rides in his own
+**Generals.** When an army without a general wins a battle, a **general** may
+rise to lead it. Your faction can have one general per city it holds, and the
+chance is highest while few of those places are filled: 70% after an even
+fight with no generals yet, 35% with half your places filled, none once
+they're all filled. It's then scaled by the odds before the battle (each
+side's strength, as in the battle preview):
+
+- **Against a weaker enemy** you get between half the chance and all of it:
+  beating a force a quarter your strength gives 5/8 of it (44% with no
+  generals yet). An enemy under about a seventh of your strength gives
+  nothing: chasing down stragglers makes no general.
+- **Against the odds** the chance climbs to a certainty: a win against an
+  enemy 1.5 times your strength or more always brings a general while you
+  have a place free.
+
+The army needs room for one more regiment; if a full army would have gained
+one, you're told it had no room. He rides in his own
 regiment, a **bodyguard** of 60 riders (movement 16, attack 80, armor 40,
 charge +30, mounted), shown by his portrait in his box (a face of his own,
 from his name and culture) and a star on the army's banner.
@@ -490,7 +501,8 @@ bodyguard is wiped out, as when his whole army is destroyed. A side that loses
 a general in a battle doesn't gain a new one from it.
 
 He starts with one trait, and each battle his side wins gives a 25% chance
-of learning another (scaled down the same way against a smaller enemy), until he has all six. His traits work
+of learning another (scaled by the beaten enemy's strength against his side's, at
+most 25%, and nothing for stragglers), until he has all six. His traits work
 for his whole army while he leads it. An army can have several generals, like
 any other regiment, but only its leader's traits count: the most senior
 general, the one with the most traits, then the most experience, then the one
@@ -667,7 +679,7 @@ surrender), you choose its fate:
 | Choice          | Its people                                              | Plunder            |
 |-----------------|---------------------------------------------------------|--------------------|
 | **Occupy**      | Kept as they are                                        | 5 gold per 1,000   |
-| **Enslave**     | 25% sent to your other cities (shared evenly), 5% lost  | 15 gold per 1,000  |
+| **Enslave**     | 25% sent to your other cities (shared evenly), 4% lost  | 15 gold per 1,000  |
 | **Exterminate** | 40% killed                                              | 30 gold per 1,000  |
 
 Plunder grows by 50% for each city level above 1, and is always worked out

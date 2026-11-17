@@ -93,22 +93,39 @@ export function generalCap(state: GameState, factionId: FactionId): number {
 }
 
 /**
- * How much of the grant and trait chances a win earns, 0 to 1: full against an
- * enemy at least GENERALS.grantFullAt of the winners' size, and in proportion
- * below that, so crushing a small band rarely makes a general.
+ * How much of the trait chance a win earns, 0 to 1, from `odds`: the beaten
+ * side's strength before the battle as a share of the winners'
+ * (battleStrength). Full against an equal or stronger enemy, in proportion
+ * below that, and nothing against stragglers under GENERALS.minFoe.
  */
-export function rewardChance(enemySoldiers: number, ownSoldiers: number): number {
-  if (ownSoldiers <= 0) return 1;
-  return Math.min(1, enemySoldiers / ownSoldiers / GENERALS.grantFullAt);
+export function rewardChance(odds: number): number {
+  return odds < GENERALS.minFoe ? 0 : Math.min(1, odds);
+}
+
+/**
+ * The chance that a win makes a general for a faction's leading army.
+ * GENERALS.grantChance is scaled by the share of the faction's general slots
+ * still free, so it's high while it has few generals for its cities. Beating
+ * a weaker enemy earns GENERALS.grantFloor of that up to all of it at even
+ * odds; winning against the odds climbs from there to a certainty at
+ * GENERALS.underdogFullAt. Stragglers under GENERALS.minFoe earn nothing.
+ */
+export function grantChance(state: GameState, factionId: FactionId, odds: number): number {
+  const cap = generalCap(state, factionId);
+  const free = cap - generalCount(state, factionId);
+  if (cap <= 0 || free <= 0 || odds < GENERALS.minFoe) return 0;
+  const base = GENERALS.grantChance * (free / cap);
+  if (odds <= 1) return base * (GENERALS.grantFloor + (1 - GENERALS.grantFloor) * odds);
+  return base + (1 - base) * Math.min(1, (odds - 1) / (GENERALS.underdogFullAt - 1));
 }
 
 /**
  * After a win, the winning side may gain a general and its generals may
- * learn: its leading army, if it has none, gains one with GENERALS.grantChance
- * (while its faction is under the cap), and each surviving general of the
- * side learns a new trait with GENERALS.traitChance, both scaled by `share`
- * (rewardChance). A full army can't take him: the winner is told instead.
- * Rolled with the battle's dice.
+ * learn: its leading army, if it has none, gains one with grantChance, and
+ * each surviving general of the side learns a new trait with
+ * GENERALS.traitChance × rewardChance. `odds` is the beaten side's strength
+ * before the battle as a share of the winners'. A full army can't take the
+ * general: the winner is told instead. Rolled with the battle's dice.
  */
 export function rewardVictors(
   state: GameState,
@@ -116,8 +133,9 @@ export function rewardVictors(
   leadArmyId: ArmyId,
   winners: readonly Regiment[],
   place: string,
-  share: number,
+  odds: number,
 ): GameState {
+  const share = rewardChance(odds);
   if (share <= 0) return state;
   let next = state;
   const alive = new Set(Object.values(state.armies).flatMap((a) => a.regiments.map((r) => r.id)));
@@ -131,8 +149,7 @@ export function rewardVictors(
   if (winners.some((r) => r.general && !alive.has(r.id))) return next;
   const lead = next.armies[leadArmyId];
   if (!lead || hasGeneral(lead)) return next;
-  if (generalCount(next, lead.owner) >= generalCap(next, lead.owner)) return next;
-  if (rng.next() >= GENERALS.grantChance * share) return next;
+  if (rng.next() >= grantChance(next, lead.owner, odds)) return next;
   if (lead.regiments.length >= ARMY_RULES.maxRegiments) {
     return addLog(next, `A leader stood out ${place}, but the army had no room for a general.`, { kind: "battle", factions: [lead.owner] });
   }

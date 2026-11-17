@@ -12,7 +12,7 @@ import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize, UNITS, type UnitType } from "@/data/units.js";
 import { canMove, refreshMovement, regimentUpkeep } from "@/systems/armies.js";
 import { resolveBattle, routLosses, type Battlefield } from "@/systems/combat.js";
-import { generalCap, generalCount, leadershipOf, replenishBodyguards, rewardChance, rewardVictors, strikeGenerals } from "@/systems/generals.js";
+import { generalCap, generalCount, grantChance, leadershipOf, replenishBodyguards, rewardChance, rewardVictors, strikeGenerals } from "@/systems/generals.js";
 import { canRetrain } from "@/systems/recruitment.js";
 import { brokenRules } from "./invariants.js";
 
@@ -128,17 +128,46 @@ describe("gaining and losing generals", () => {
     assert.equal(generalCount(rewardVictors(capped, dice(0), "a", [], "", 1), "rome"), cap);
   });
 
-  it("the smaller the beaten enemy, the smaller the chance", () => {
-    assert.equal(rewardChance(500, 500), 1);
-    assert.equal(rewardChance(1000, 500), 1);
-    assert.equal(rewardChance(100, 1000), 0.1);
+  it("the weaker the beaten enemy, the smaller the chance, with a floor, and nothing for stragglers", () => {
+    assert.equal(rewardChance(1), 1);
+    assert.equal(rewardChance(2), 1);
+    assert.equal(rewardChance(0.4), 0.4);
+    assert.equal(rewardChance(GENERALS.minFoe / 2), 0);
     const { state } = standoff(line(), line());
-    // A tenth the size: a roll that wins at full odds misses here, and a lower one still lands.
-    const roll = GENERALS.grantChance * 0.5;
-    assert.equal(generalCount(rewardVictors(state, dice(roll), "a", [], "", 1), "rome"), 1);
-    assert.equal(generalCount(rewardVictors(state, dice(roll), "a", [], "", 0.1), "rome"), 0);
-    assert.equal(generalCount(rewardVictors(state, dice(roll / 10), "a", [], "", 0.1), "rome"), 1);
-    assert.equal(rewardVictors(state, dice(0), "a", [], "", 0), state);
+    const full = GENERALS.grantChance; // no generals yet: every slot free
+    assert.equal(grantChance(state, "rome", 1), full);
+    assert.ok(Math.abs(grantChance(state, "rome", 0.5) - full * (GENERALS.grantFloor + (1 - GENERALS.grantFloor) * 0.5)) < 1e-9);
+    assert.ok(grantChance(state, "rome", GENERALS.minFoe) >= full * GENERALS.grantFloor, "even a small real force has the floor");
+    assert.equal(grantChance(state, "rome", GENERALS.minFoe / 2), 0);
+    // A weak enemy: a roll that wins at even odds misses here, and a lower one still lands.
+    const weak = grantChance(state, "rome", 0.2);
+    assert.equal(generalCount(rewardVictors(state, dice(weak + 0.01), "a", [], "", 0.2), "rome"), 0);
+    assert.equal(generalCount(rewardVictors(state, dice(weak - 0.01), "a", [], "", 0.2), "rome"), 1);
+    assert.equal(rewardVictors(state, dice(0), "a", [], "", GENERALS.minFoe / 2), state);
+  });
+
+  it("a win against the odds makes a general, for certain at the worst odds", () => {
+    const { state } = standoff(line(), line());
+    assert.ok(grantChance(state, "rome", 1.2) > grantChance(state, "rome", 1));
+    assert.equal(grantChance(state, "rome", GENERALS.underdogFullAt), 1);
+    assert.equal(grantChance(state, "rome", 3), 1);
+    assert.equal(generalCount(rewardVictors(state, dice(0.999), "a", [], "", GENERALS.underdogFullAt), "rome"), 1);
+  });
+
+  it("is likelier the more of the faction's general slots are free", () => {
+    const { state } = standoff(line(), line());
+    const cap = generalCap(state, "rome");
+    const withGenerals = (n: number): GameState => ({
+      ...state,
+      armies: {
+        ...state.armies,
+        ...Object.fromEntries(Array.from({ length: n }, (_, i) => [`g${i}`, { id: `g${i}`, owner: "rome", tile: `far${i}`, regiments: [general(["wary"])], destination: null }])),
+      },
+    });
+    const half = Math.floor(cap / 2);
+    assert.ok(Math.abs(grantChance(withGenerals(half), "rome", 1) - GENERALS.grantChance * ((cap - half) / cap)) < 1e-9);
+    assert.equal(grantChance(withGenerals(cap), "rome", 1), 0);
+    assert.equal(grantChance(withGenerals(cap), "rome", 3), 0, "not even against the odds, at the cap");
   });
 
   it("a winning general may learn a trait he doesn't have", () => {
