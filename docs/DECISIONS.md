@@ -1060,10 +1060,7 @@ in detail, and `npm run levers` covers the economy.
 - Territory can straddle a sea crossing (cosmetic).
 - The test suite plays whole games and checks invariants; there are no unit
   tests of single rules yet, and no automated browser checks.
-- **Moving the capital** (not started). A faction chooses to move its capital to another of
-  its cities: the capital's bonuses (supplies, order, the centre that distance is measured
-  from) go with it. Needs a cost or a wait so it isn't moved every turn, and an AI rule for
-  when to do it.
+- **Moving the capital**: proposed in `docs/proposals/moving-the-capital.md`.
 - A faction whose last city is besieged earns nothing but still pays upkeep, and can fall
   in debt (Thrace, −8, in one compare game at the 1.25 growth curve). `npm test` would
   fail on it as an AI in debt. Fix: skip fallen factions in the debt check, or keep upkeep
