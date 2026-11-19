@@ -38,7 +38,7 @@ import {
   upkeepFor,
 } from "@/systems/armies.js";
 import { canHire, canTopUp, topUpPlan } from "@/systems/mercenaries.js";
-import { cityStats, factionIncome, mineableTiles, regionOwner, tradeRoutes } from "@/systems/cities.js";
+import { canMoveCapital, cityStats, factionIncome, mineableTiles, regionOwner, tradeRoutes } from "@/systems/cities.js";
 import { SCOUT } from "@/data/scouts.js";
 import { reachableScoutTiles, scoutsOf } from "@/systems/scouts.js";
 import { WATCHTOWER } from "@/data/watchtowers.js";
@@ -47,7 +47,7 @@ import { battlefieldAt, battleSides, battleStrength } from "@/systems/combat.js"
 import { canBesiege } from "@/systems/siege.js";
 import { buildingAvailable, canBuild, nextLevel } from "@/systems/buildings.js";
 import { unsettledCities } from "@/systems/conquest.js";
-import { orderTarget } from "@/systems/order.js";
+import { capitalMoveEffect, orderTarget } from "@/systems/order.js";
 import { bestTier, canRetrain, canTrain, canTrainScout, trainableUnits, unitUnlocked } from "@/systems/recruitment.js";
 import { BUILDING_EFFECTS, type BuildingType } from "@/data/buildings.js";
 import { fogged, visibleTiles } from "@/systems/vision.js";
@@ -61,7 +61,8 @@ import { costToTarget } from "@/systems/pathfinding.js";
  * It returns ordinary Actions, the same ones the human player sends, so the
  * AI can never break the rules. In order of priority it will:
  *
- *   0. Raise taxes when in debt (and lower them once recovered), and merge
+ *   0. Move its capital where it raises order the most, if by enough.
+ *      Raise taxes when in debt (and lower them once recovered), and merge
  *      damaged regiments of the same type.
  *   1. Attack wherever the odds are good, marching up to the target first if
  *      it's in reach this turn, and counting every army that would join in.
@@ -95,6 +96,7 @@ export function nextAction(ctx: GameContext, real: GameState, factionId: Faction
   const plan = assess(ctx, seen, factionId);
   return (
     settleAction(ctx, seen, factionId) ??
+    capitalAction(ctx, seen, factionId) ??
     taxAction(ctx, seen, factionId, plan) ??
     mergeAction(seen, factionId) ??
     attackAction(ctx, real, seen, factionId, plan, visible) ??
@@ -129,6 +131,21 @@ function settleAction(ctx: GameContext, state: GameState, factionId: FactionId):
   return { type: "settleCity", cityId: city.id, choice };
 }
 
+/**
+ * Moves the capital to the city that would raise the faction's order the
+ * most, added up over all its cities, once that's at least AI.capitalMoveGain.
+ * Moving is free; it comes before anything else that turn moves, and a move
+ * is only worth making once, so the capital doesn't go back and forth.
+ */
+function capitalAction(ctx: GameContext, state: GameState, factionId: FactionId): Action | null {
+  let best: { cityId: string; gain: number } | null = null;
+  for (const city of citiesOf(state, factionId)) {
+    if (!canMoveCapital(state, factionId, city.id).ok) continue;
+    const gain = capitalMoveEffect(ctx, state, factionId, city.id).reduce((sum, e) => sum + e.moved - e.now, 0);
+    if (gain >= AI.capitalMoveGain && (!best || gain > best.gain)) best = { cityId: city.id, gain };
+  }
+  return best ? { type: "moveCapital", cityId: best.cityId } : null;
+}
 
 /**
  * The tax rate the AI wants for a city, or null to leave it as it is. In

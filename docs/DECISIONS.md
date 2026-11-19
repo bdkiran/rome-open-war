@@ -707,13 +707,37 @@ so.
     empires, and soft: −1 per 2 tiles beyond 10, at most −20. Some factions pay from
     turn 1 (Corduba is 26 tiles from Carthago, −8); accepted.
   - **No foreign-culture malus** (it would make cultures more than a look).
-  - **A fallen capital passes to the largest remaining city**, which gets a capital's
-    stores and order; before, a faction that lost its capital had none. Moving it by
-    choice is in the backlog.
+  - **A fallen capital passes to the largest remaining city**; before, a faction that
+    lost its capital had none.
+  - **Moving the capital by choice is free, at any time** (`moveCapital`, the player's
+    call): no gold, no cooldown, no wait. Order moves only 10 a turn toward its target,
+    so hopping the capital about gains little. The proposal's restrictions (owned 20
+    turns, Content, not besieged) went with the price; only an undecided city's fate
+    blocks it. The AI moves when a seat raises its cities' summed order targets by
+    `AI.capitalMoveGain` (20), the biggest gain first, before anything else that turn,
+    so it can't flip back and forth. Garrisons hold most AI cities' targets at 100, so
+    moves are rare.
+  - **Stores depend only on the city's level**: the capital's extra turn of supplies
+    went, so moving the capital (or losing it) never refills or trims a city's stores.
+    Capitals hold out a turn less than before.
   - **Revolt:** rebel militia (1 regiment per 2,000 people, 1–5) attack the garrison. If
-    they win, the city goes back to its former owner if alive (no fate to choose),
-    otherwise the owner keeps an empty city. No rebel faction: victory and elimination
-    stay unchanged, and a fallen faction never returns.
+    they win, the city always goes to the **Rebels** (`data/rebels.ts`), never back to
+    its former owner: a revolt should cost you a fight to retake it. Going home to a
+    former owner, and the owner keeping an empty city the rebels had won, were both
+    dropped.
+  - **Rebels** are one faction entry (grey) that's never `alive`, so the turn order,
+    victory and elimination skip them unchanged, and a fallen faction never returns.
+    Their cities are frozen (no growth, gold, building or training) and raise a militia
+    regiment every 3 turns, up to the revolt's size, so a rebel city isn't a free city
+    for whoever walks in first. They never march out or sally, because that would need
+    an AI of their own. Retaking one gives the usual fate choice with **no conquest
+    malus**. The AI targets rebel cities like any other and never counts them as a
+    threat.
+  - **Measured** (8 seeds, 100 turns, against the code before, open / garrisoned):
+    - AI capital moves by choice: 3 / 1 a game at a gain of 20, against 27 / 28 at 10 and 0 / 0 at 40. Moves after a fall: 12 / 11 (9 / 10 before).
+    - Restless city-turns 3% / 3%, never in Unrest, still no revolts.
+    - Treasury +4% / +9%, factions fallen 4 / 5 (5 / 4 before). AI income −34% / +2%: noise, since the ranges overlap and the 10 and 40 runs gave −3% and −10%.
+    - No invalid orders, stuck turns or debt.
   - **The AI** never taxes a city into unrest, taxes low where normal taxes would cause
     it, and keeps up to 4 regiments for order (`AI.orderGarrisonMax`): past that it
     lowers taxes rather than parking an army.
@@ -1060,7 +1084,6 @@ in detail, and `npm run levers` covers the economy.
 - Territory can straddle a sea crossing (cosmetic).
 - The test suite plays whole games and checks invariants; there are no unit
   tests of single rules yet, and no automated browser checks.
-- **Moving the capital**: proposed in `docs/proposals/moving-the-capital.md`.
 - A faction whose last city is besieged earns nothing but still pays upkeep, and can fall
   in debt (Thrace, −8, in one compare game at the 1.25 growth curve). `npm test` would
   fail on it as an AI in debt. Fix: skip fallen factions in the debt check, or keep upkeep

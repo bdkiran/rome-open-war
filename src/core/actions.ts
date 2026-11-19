@@ -37,6 +37,7 @@ import {
 import { canHire, canTopUp, hire, topUp } from "@/systems/mercenaries.js";
 import { canMoveScout, dismissScout, moveScout } from "@/systems/scouts.js";
 import { canSettle, settleCity, unsettledCities } from "@/systems/conquest.js";
+import { canMoveCapital, setCapital } from "@/systems/cities.js";
 import type { SettlementChoice } from "@/data/conquest.js";
 import type { BuildingType } from "@/data/buildings.js";
 import { endTurn } from "@/systems/turn.js";
@@ -87,6 +88,8 @@ export type Action =
   | { type: "dismissScout"; scoutId: ScoutId }
   /** Sets a city's tax rate. */
   | { type: "setTaxRate"; cityId: CityId; rate: TaxRate }
+  /** Makes one of the faction's cities its capital. Free, and as often as it likes. */
+  | { type: "moveCapital"; cityId: CityId }
   /**
    * An army puts an enemy city under siege. With `via`, the chosen regiments
    * (or the whole army) first march to that tile, which must be next to the city.
@@ -192,6 +195,12 @@ function perform(ctx: GameContext, state: GameState, factionId: FactionId, actio
       const check = canRetrain(state, factionId, action.cityId, action.regimentIds);
       if (!check.ok) return check;
       return { ok: true, state: queueRetraining(state, factionId, action.cityId, action.regimentIds) };
+    }
+
+    case "moveCapital": {
+      const check = canMoveCapital(state, factionId, action.cityId);
+      if (!check.ok) return check;
+      return { ok: true, state: setCapital(state, factionId, action.cityId) };
     }
 
     case "settleCity": {

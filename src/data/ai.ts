@@ -16,6 +16,11 @@ export const AI = {
   /** Regiments every city keeps at home, at minimum. */
   baseGarrison: 2,
   capitalGarrison: 3,
+  /**
+   * The AI moves its capital (free, at any time) to the city that would raise
+   * the order targets of all its cities, added up, by at least this much.
+   */
+  capitalMoveGain: 20,
   /** Enemy armies within this many tiles of a city count as a threat to it. */
   threatRadius: 6,
   /** Garrison regiments to keep per enemy regiment nearby (the city bonus covers the rest). */

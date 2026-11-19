@@ -3,6 +3,7 @@ import { citiesOf, type Army, type GameState, type Regiment } from "@/core/state
 import { ECONOMY } from "@/data/economy.js";
 import { GAME_SETUP, STARTING_ARMIES, VICTORY, type VictoryPreset } from "@/data/gameSetup.js";
 import type { Scenario, ScenarioFaction } from "@/data/scenarios/types.js";
+import { REBELS } from "@/data/rebels.js";
 import { TERRAIN } from "@/data/terrain.js";
 import { ARMY_RULES, UNITS, regimentSize } from "@/data/units.js";
 import type { GameMap } from "@/map/mapEngine.js";
@@ -25,7 +26,11 @@ export function createGame(
 
   let state: GameState = {
     turn: 1,
-    factions: factions.map(({ cities: _cities, ...f }) => ({ ...f, alive: true, gold: ECONOMY.startingGold })),
+    factions: [
+      ...factions.map(({ cities: _cities, ...f }) => ({ ...f, alive: true, gold: ECONOMY.startingGold })),
+      // The rebels hold no city at the start, and never take a turn.
+      { id: REBELS.id, name: REBELS.name, shortName: REBELS.shortName, color: REBELS.color, culture: REBELS.culture, controller: "ai", alive: false, gold: 0 },
+    ],
     currentFactionIndex: 0,
     tiles: map.tiles,
     territory: {},

@@ -110,7 +110,7 @@ simulate({
   seed,
   onRound: (s) => {
     for (const city of Object.values(s.cities)) {
-      if (s.factions.find((f) => f.id === city.owner)?.controller === "ai") taxTurns[city.taxRate]++;
+      if (city.owner !== "rebels" && s.factions.find((f) => f.id === city.owner)?.controller === "ai") taxTurns[city.taxRate]++;
     }
     for (const entry of s.log) {
       if (seen.has(entry.id)) continue;

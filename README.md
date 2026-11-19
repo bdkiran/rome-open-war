@@ -364,18 +364,34 @@ A city still under 10 at the end of its owner's turn **revolts**: rebel
 militia rise, one regiment per 2,000 people (at least 1, at most 5), and
 attack the garrison, which keeps the city's defense bonus. If the garrison
 holds, the rebels who fell are gone from the city and order is back at 30. If
-it's beaten (or there's none), it's destroyed, and the city goes back to its
-former owner if that faction still stands, at order 50 and with no fate to
-choose; otherwise you keep an empty city at order 30. You're warned the turn
-before ("close to revolt").
+it's beaten (or there's none), it's destroyed, and the city goes over to the
+**Rebels**, with the surviving rebels as its garrison. You're warned the turn
+before ("close to revolt"). Losing your last city this way puts you out of the
+game.
+
+**Rebels** (grey) hold every city that revolted. They take no turns: their
+cities don't grow, pay or build, and their militia never march out or sally.
+Every 3 turns after its revolt, a rebel city raises another regiment of
+militia, up to the size of its revolt. Anyone may attack, besiege or starve a
+rebel city. Whoever takes one chooses its fate as usual, but pays **no conquest
+malus**. Rebels aren't a faction in the race: they never win, they're left off
+the scoreboard, and a key city they hold counts for no one.
 
 Only the owner sees a city's order. The city panel shows it ("Order 42 ·
 Restless", the target and its causes in the tooltip), the money breakdown
 shows its effect on gold, and a raised fist on the name plate marks a city
 that's Restless (yellow) or in Unrest (red).
 
+**Moving the capital.** **Make capital**, under the tax rate of any of your
+other cities, makes it your capital. It's free, and you can do it whenever you
+like, as often as you like (not in a city whose fate you haven't decided). The
++10 goes with it, and distance is measured from the new seat; the tooltip
+shows what that does to the order targets of your cities. The AI moves its
+capital too, when a city would raise its cities' order targets by 20 or more
+in all.
+
 **A fallen capital.** When a faction's capital is taken, its largest
-remaining city becomes its capital, with a capital's stores and order.
+remaining city becomes its capital.
 
 ## Armies
 
@@ -642,7 +658,7 @@ A besieged city earns no gold, doesn't grow and can't train or build. The
 turn a siege is laid costs it nothing more. From the first full turn it suffers
 **attrition**: its garrison loses 5% of its soldiers and the city 1% of its
 people each turn. Every city holds supplies: 3 turns at level 1, 4 at level 2
-and 5 at level 3, and a turn more for a capital. Each full turn under siege
+and 5 at level 3, the capital included. Each full turn under siege
 uses one, and **when they run out the city surrenders**: its garrison is destroyed and the besieger's strongest army
 next to it marches in. The siege holds as long as the besieger ends its turn
 with an army next to the city; otherwise it's lifted. It's also **broken at

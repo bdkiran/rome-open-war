@@ -5,10 +5,13 @@ import type { GameContext } from "@/core/context.js";
 import { createGame } from "@/core/setup.js";
 import { armyAt, citiesOf, type City, type GameState } from "@/core/state.js";
 import { ORDER } from "@/data/order.js";
+import { REBELS } from "@/data/rebels.js";
 import { ROMAN_WORLD } from "@/data/scenarios/romanWorld.js";
 import { regimentSize } from "@/data/units.js";
 import { captureCity, cityStats } from "@/systems/cities.js";
 import { canTrain } from "@/systems/recruitment.js";
+import { rebelRegiments } from "@/systems/rebels.js";
+import { brokenRules } from "./invariants.js";
 import { conquestMalus, distanceMalus, garrisonOrder, orderTarget, processOrder, revolt, soldiersForOrder } from "@/systems/order.js";
 
 function newGame(): { ctx: GameContext; state: GameState } {
@@ -133,29 +136,23 @@ describe("a revolt", () => {
     const change = { order: 5, taxRate: "high" as const, conqueredOn: start.turn, formerOwner: "samnites", besiegedBy: "samnites" };
     const state = withCity(emptied(start, capua), capua, change);
     assert.ok(orderTarget(ctx, state, state.cities[capua.id]).total < ORDER.revoltBelow);
-    assert.equal(processOrder(ctx, state, "rome").cities[capua.id].owner, "samnites");
+    assert.equal(processOrder(ctx, state, "rome").cities[capua.id].owner, REBELS.id);
   });
 
-  it("hands an empty city back to its former owner", () => {
+  it("in an empty city hands it to the rebels, even with a former owner standing", () => {
     const { state: start } = newGame();
     const capua = byName(start, "Capua");
-    const state = withCity(emptied(start, capua), capua, { order: 5, conqueredOn: start.turn, formerOwner: "samnites" });
+    const state = withCity(emptied(start, capua), capua, { order: 5, population: 9_000, conqueredOn: start.turn, formerOwner: "samnites" });
     const after = revolt(state, state.cities[capua.id]);
     const city = after.cities[capua.id];
-    assert.equal(city.owner, "samnites");
-    assert.equal(city.order, ORDER.afterReturn);
+    assert.equal(city.owner, REBELS.id);
     assert.equal(city.unsettled, false, "no fate to choose");
-    assert.equal(city.conqueredOn, null, "and no conquest malus");
-    assert.equal(city.formerOwner, "rome");
-  });
-
-  it("leaves the owner an empty city when there's no one to go back to", () => {
-    const { state: start } = newGame();
-    const capua = byName(start, "Capua");
-    const state = withCity(emptied(start, capua), capua, { order: 5, formerOwner: null });
-    const after = revolt(state, state.cities[capua.id]);
-    assert.equal(after.cities[capua.id].owner, "rome");
-    assert.equal(after.cities[capua.id].order, ORDER.afterRevolt);
+    assert.equal(city.formerOwner, "rome", "it remembers whom it revolted from");
+    assert.equal(city.conqueredOn, start.turn, "the revolt turn, for raising militia");
+    const garrison = armyAt(after, capua.tile);
+    assert.equal(garrison?.owner, REBELS.id);
+    assert.equal(garrison?.regiments.length, rebelRegiments(9_000), "every rebel holds the city");
+    assert.deepEqual(brokenRules(after), []);
   });
 
   it("is put down by a strong garrison, and the rebels who fell are gone", () => {
@@ -170,13 +167,17 @@ describe("a revolt", () => {
     assert.equal(armyAt(after, capua.tile)?.owner, "rome");
   });
 
-  it("by a garrison that loses destroys it, and the city goes back", () => {
+  it("by a garrison that loses destroys it, and the surviving rebels hold the city", () => {
     const { state: start } = newGame();
     const capua = byName(start, "Capua");
     const state = withCity(garrisoned(start, capua, 1), capua, { order: 5, population: 20_000, conqueredOn: start.turn, formerOwner: "samnites" });
     const after = revolt(state, state.cities[capua.id]);
-    assert.equal(armyAt(after, capua.tile), undefined, "one regiment can't hold against five");
-    assert.equal(after.cities[capua.id].owner, "samnites");
+    assert.equal(after.cities[capua.id].owner, REBELS.id);
+    const garrison = armyAt(after, capua.tile);
+    assert.equal(garrison?.owner, REBELS.id, "one regiment can't hold against five");
+    const soldiers = garrison!.regiments.reduce((n, r) => n + r.soldiers, 0);
+    assert.ok(soldiers < 5 * regimentSize("militia"), "the rebels' losses stay lost");
+    assert.deepEqual(brokenRules(after), []);
   });
 });
 

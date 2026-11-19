@@ -82,7 +82,10 @@ interface GameMetrics {
   revolts: number;
   revoltsPutDown: number;
   revoltsReturned: number;
+  revoltsToRebels: number;
   capitalsMoved: number;
+  capitalsChosen: number;
+  rebelCities: number;
   restlessTurns: number;
   unrestTurns: number;
   highTaxTurns: number;
@@ -143,7 +146,10 @@ const ROWS: { key: keyof GameMetrics; label: string }[] = [
   { key: "revolts", label: "Revolts" },
   { key: "revoltsPutDown", label: "...put down by the garrison" },
   { key: "revoltsReturned", label: "...handing the city back" },
+  { key: "revoltsToRebels", label: "...going over to the rebels" },
   { key: "capitalsMoved", label: "Capitals moved after a fall" },
+  { key: "capitalsChosen", label: "Capitals moved by choice" },
+  { key: "rebelCities", label: "Rebel cities at the end" },
   { key: "restlessTurns", label: "AI city-turns Restless, %" },
   { key: "unrestTurns", label: "AI city-turns in Unrest, %" },
   { key: "highTaxTurns", label: "AI city-turns on high taxes, %" },
@@ -183,7 +189,7 @@ async function runWorker(): Promise<void> {
   const tradeRoutes: (s: GameState, city: object) => Route[] = (await load("src/systems/cities.js")).tradeRoutes ?? (() => []);
   const routeTurns = { all: 0, cut: 0 };
   // Versions before public order have no order: those rows show 0.
-  const order = { revolts: 0, putDown: 0, returned: 0, capitals: 0, cityTurns: 0, restless: 0, unrest: 0, high: 0, low: 0 };
+  const order = { revolts: 0, putDown: 0, returned: 0, toRebels: 0, capitals: 0, chosen: 0, cityTurns: 0, restless: 0, unrest: 0, high: 0, low: 0 };
   const garrisons: number[] = [];
   const conqueredGarrisons: number[] = [];
   const takenOn = new Map<string, number>();
@@ -236,7 +242,8 @@ async function runWorker(): Promise<void> {
         if (entry.text.includes(" revolted against ")) order.revolts++;
         if (entry.text.includes("The garrison put it down")) order.putDown++;
         if (entry.text.includes(" and returned to ")) order.returned++;
-        if (entry.text.includes(" capital moves to ")) order.capitals++;
+        if (entry.text.includes(" and declared for no one")) order.toRebels++;
+        if (entry.text.includes(" capital moves to ")) action.type === "moveCapital" ? order.chosen++ : order.capitals++;
       }
       const was = generalsIn(before);
       const now = generalsIn(after);
@@ -291,7 +298,8 @@ async function runWorker(): Promise<void> {
   });
   const state: GameState = result.state;
 
-  const ai = state.factions.filter((f) => f.controller === "ai");
+  // The rebels (versions with them) are no AI faction: they take no turns.
+  const ai = state.factions.filter((f) => f.controller === "ai" && f.id !== "rebels");
   const aliveAi = ai.filter((f) => f.alive);
   const aiIds = new Set(ai.map((f) => f.id));
   const cities = Object.values(state.cities);
@@ -314,7 +322,7 @@ async function runWorker(): Promise<void> {
     invalid: result.invalid.length,
     stuck: result.stuck.length,
     aiInDebt: ai.filter((f) => f.gold < 0).length,
-    factionsFallen: state.factions.filter((f) => !f.alive).length,
+    factionsFallen: state.factions.filter((f) => !f.alive && f.id !== "rebels").length,
     citiesChangedHands: cities.filter((c) => firstOwners && firstOwners[c.id] !== c.owner).length,
     battles: state.nextBattleNumber - 1,
     level1: level(1),
@@ -378,7 +386,10 @@ async function runWorker(): Promise<void> {
     revolts: order.revolts,
     revoltsPutDown: order.putDown,
     revoltsReturned: order.returned,
+    revoltsToRebels: order.toRebels,
     capitalsMoved: order.capitals,
+    capitalsChosen: order.chosen,
+    rebelCities: cities.filter((c) => c.owner === "rebels").length,
     restlessTurns: percent(order.restless, order.cityTurns),
     unrestTurns: percent(order.unrest, order.cityTurns),
     highTaxTurns: percent(order.high, order.cityTurns),

@@ -37,8 +37,9 @@ import { canRetrain, canTrain, canTrainScout, retrainCost, trainableOptions, uni
 import { besiegeTargets, maxSupplies } from "@/systems/siege.js";
 import { SIEGE } from "@/data/siege.js";
 import { ORDER, ORDER_BAND_NAMES, orderBand } from "@/data/order.js";
-import { orderTarget } from "@/systems/order.js";
-import { cityStats, mineableTiles, plainsTiles, tradeRoutes, type CityStats, type TradeRoute } from "@/systems/cities.js";
+import { capitalMoveEffect, orderTarget } from "@/systems/order.js";
+import { isRebels } from "@/data/rebels.js";
+import { canMoveCapital, cityStats, mineableTiles, plainsTiles, tradeRoutes, type CityStats, type TradeRoute } from "@/systems/cities.js";
 import { canBuildWatchtower, towerOwner, towerSighter } from "@/systems/watchtowers.js";
 import { SCOUT } from "@/data/scouts.js";
 import { VISION } from "@/data/vision.js";
@@ -204,6 +205,7 @@ function citySection(input: InfoPanelInput, city: City): string {
       ${cityDetails(input, city)}`;
   if (mine) {
     html += taxToggle(city, input.playerTurn);
+    html += capitalButton(input, city);
     html += underWay(city);
     if (input.playerTurn) html += cityScreenButtons();
   }
@@ -233,10 +235,35 @@ export function renderCityScreen(input: InfoPanelInput): string {
         <aside class="city-screen-facts settlement">
           ${cityDetails(input, city)}
           ${taxToggle(city, input.playerTurn)}
+          ${capitalButton(input, city)}
         </aside>
         <section class="city-screen-main">${cityTabs(input, city)}</section>
       </div>
     </div>`;
+}
+
+/**
+ * "Make capital", for the player's other cities: free, at any time. The
+ * tooltip says what it does to order across the faction, or why it's blocked.
+ */
+function capitalButton(input: InfoPanelInput, city: City): string {
+  if (city.isCapital || !input.humanId) return "";
+  const check = canMoveCapital(input.state, input.humanId, city.id);
+  const enabled = check.ok && input.playerTurn;
+  const title = check.ok ? capitalMoveSummary(input, city) : check.reason;
+  return `<button type="button" class="secondary make-capital" data-make-capital="${city.id}" ${enabled ? "" : "disabled"} title="${escapeHtml(title)}">Make capital</button>`;
+}
+
+/** "Order targets: +8 in 4 cities, −6 in 3." */
+function capitalMoveSummary(input: InfoPanelInput, city: City): string {
+  const effects = capitalMoveEffect(input.ctx, input.state, city.owner, city.id);
+  const cities = (n: number) => `${n} ${n === 1 ? "city" : "cities"}`;
+  const ups = effects.filter((e) => e.moved > e.now);
+  const downs = effects.filter((e) => e.moved < e.now);
+  const up = ups.reduce((sum, e) => sum + e.moved - e.now, 0);
+  const down = downs.reduce((sum, e) => sum + e.now - e.moved, 0);
+  const parts = [ups.length ? `+${up} in ${cities(ups.length)}` : "", downs.length ? `−${down} in ${cities(downs.length)}` : ""].filter(Boolean);
+  return parts.length ? `Order targets: ${parts.join(", ")}.` : "No change to order.";
 }
 
 /** The city's name, level and whether it's a capital. */
@@ -279,20 +306,24 @@ function cityDetails(input: InfoPanelInput, city: City): string {
   const stats = cityStats(state, city);
   const mine = city.owner === humanId;
   const besieged = Boolean(city.besiegedBy);
+  // A rebel city is frozen: it pays no one and doesn't grow.
+  const rebel = isRebels(city.owner);
 
-  const growth = besieged
-    ? "None while besieged"
-    : `${formatPercent(stats.growthRate)} <span class="muted">(${signed(stats.growth)})</span>`;
+  const growth = rebel
+    ? "None"
+    : besieged
+      ? "None while besieged"
+      : `${formatPercent(stats.growthRate)} <span class="muted">(${signed(stats.growth)})</span>`;
 
   return `
       ${ownerLine(owner?.name ?? "Unknown", owner?.color ?? "#000")}
       <dl class="settlement-details">
-        <dt>Income</dt><dd>${besieged ? "None" : `+${stats.gold}`}</dd>
+        <dt>Income</dt><dd>${besieged || rebel ? "None" : `+${stats.gold}`}</dd>
         <dt>Population</dt><dd>${formatNumber(city.population)}</dd>
         <dt>Growth</dt><dd>${growth}</dd>
         <dt>Capacity</dt><dd${stats.limitedByLevel ? ` class="limited" title="Its ${escapeHtml(BUILDINGS.government.levels[city.buildings.government - 1].name)} limits it to ${formatNumber(stats.capacity)}; its land could hold ${formatNumber(stats.landCapacity)}. Raise its government to let it grow."` : ""}>${formatNumber(stats.capacity)}${stats.limitedByLevel ? " &#9888;" : ""}</dd>
         <dt>Supplies</dt><dd>${city.supplies}/${maxSupplies(city)} turns</dd>
-        <dt>Taxes</dt><dd>${TAX_RATES[city.taxRate].name}</dd>
+        <dt>Taxes</dt><dd>${rebel ? "—" : TAX_RATES[city.taxRate].name}</dd>
         ${mine ? orderFact(input, city) : ""}
         <dt>Defense</dt><dd>+${Math.round(cityDefense(city) * 100)}%</dd>
         <dt>Walls</dt><dd>${city.buildings.walls ? escapeHtml(BUILDINGS.walls.levels[city.buildings.walls - 1].name) : "None"}</dd>

@@ -19,9 +19,9 @@ import { besiegedCity, SHUT_IN, siegeWorksPerTurn } from "@/systems/armies.js";
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
 import { applyLosses } from "@/systems/combat.js";
 
-
-export function maxSupplies(city: { isCapital: boolean; buildings: { government: number } }): number {
-  return SIEGE.supplyTurnsByLevel[city.buildings.government] + (city.isCapital ? SIEGE.capitalExtraTurns : 0);
+/** Full turns of stores a city holds: set by its level alone. */
+export function maxSupplies(city: { buildings: { government: number } }): number {
+  return SIEGE.supplyTurnsByLevel[city.buildings.government];
 }
 
 /** Turns a besieged city has left before it surrenders (its remaining supplies). */

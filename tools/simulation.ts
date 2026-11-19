@@ -25,6 +25,8 @@ export interface SimulationOptions {
   garrison?: boolean;
   /** Freeze every state, so any rule that mutates state instead of copying it throws. */
   freeze?: boolean;
+  /** Changes the starting state before play begins (for tests that need a particular situation). */
+  prepare?: (ctx: GameContext, state: GameState) => GameState;
   /** Called at the start of every round (each time the player's turn comes up). */
   onRound?: (state: GameState) => void;
   /** Called after each AI action that went through, with the state before and after it. */
@@ -58,6 +60,7 @@ export function simulate(options: SimulationOptions): SimulationResult {
   let state = createGame(ctx, map, scenario, { victory: options.victory });
   const player = state.factions.find((f) => f.controller === "human")!.id;
   if (options.garrison) state = garrisonCities(state, player);
+  if (options.prepare) state = options.prepare(ctx, state);
   state = keep(state);
 
   const result: Omit<SimulationResult, "state" | "ms" | "winner"> = {
