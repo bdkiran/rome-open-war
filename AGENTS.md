@@ -23,6 +23,9 @@ npm run levers -- [--turns 100] [--from 50] [--seed N]
 npm run compare -- [--base REF] [--seeds 4] [--turns 100] [--garrison]
                          # the same games (one per seed) with the current code
                          # and a git ref, side by side: medians and ranges
+npm run units -- [--tier 1|2|3] [--battles N]
+                         # units report: matchups, equal-gold odds, each
+                         # unit's worth in an army (gold, people, stack room)
 npm run army-model       # rebuilds models/knight.glb (the army figure and
                          # its culture kits) from models/source/
 ```
@@ -100,7 +103,7 @@ tests/         simulation.test.ts (whole games: invalid orders, debt, state
 tools/         build_europe_map.py (map generator), simulation.ts (plays a
                game in Node), simulate.ts (the balance report), compare.ts
                (several seeds, two versions side by side), economy.ts
-               (peacetime economy model), levers.ts (the levers report),
+               (peacetime economy model), levers.ts (the levers report), units.ts (the units report),
                buildArmyModel.ts (builds models/knight.glb)
 models/        .glb models listed in models/models.json (models/README.md);
                source/ holds the files they're built from
@@ -161,6 +164,7 @@ be swapped in through a scenario.
    spread across 1–3, treasuries not piling up, and factions still
    conquering each other.
    For taxes, conquest or the AI's economic choices, also `npm run levers`.
+   For unit stats or prices, also `npm run units`.
 4. For UI or map changes: check in a browser. Headless Chromium can run the
    3D map with `--use-gl=angle --use-angle=swiftshader
    --enable-unsafe-swiftshader`. The debug hook at the end of `src/main.ts`
