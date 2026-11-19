@@ -2,6 +2,8 @@ import { armiesOf, citiesOf, type GameState } from "@/core/state.js";
 import { CONSTRUCTION_QUEUE_SIZE } from "@/data/buildings.js";
 import { MAX_EXPERIENCE } from "@/data/experience.js";
 import { GENERALS } from "@/data/generals.js";
+import { ORDER } from "@/data/order.js";
+import { REBELS } from "@/data/rebels.js";
 import { SCOUT } from "@/data/scouts.js";
 import { SIEGE } from "@/data/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
@@ -15,6 +17,8 @@ export function brokenRules(state: GameState): string[] {
   const broken: string[] = [];
   const at = `turn ${state.turn}`;
   const alive = new Set(state.factions.filter((f) => f.alive).map((f) => f.id));
+  // The rebels are never alive, but may hold cities and their garrisons.
+  const holders = new Set([...alive, REBELS.id]);
 
   for (const road of state.roads) {
     if (road.tiles.some((t) => !road.cities.includes(state.regions[t]))) broken.push(`${at}: road ${road.cities.join("–")} leaves its cities' regions`);
@@ -26,7 +30,13 @@ export function brokenRules(state: GameState): string[] {
     if (other) broken.push(`${at}: ${army.id} and ${other} share tile ${army.tile}`);
     armyOnTile.set(army.tile, army.id);
 
-    if (!alive.has(army.owner)) broken.push(`${at}: ${army.id} belongs to fallen ${army.owner}`);
+    if (!holders.has(army.owner)) broken.push(`${at}: ${army.id} belongs to fallen ${army.owner}`);
+    if (army.owner === REBELS.id) {
+      const city = Object.values(state.cities).find((c) => c.tile === army.tile);
+      if (city?.owner !== REBELS.id) broken.push(`${at}: rebel ${army.id} stands outside a rebel city`);
+      else if (army.regiments.length > ORDER.rebels.maxRegiments) broken.push(`${at}: rebel ${city.name} holds ${army.regiments.length} regiments`);
+      if (army.regiments.some((r) => r.unit !== "militia")) broken.push(`${at}: rebel ${army.id} has more than militia`);
+    }
     if (!TERRAIN[state.tiles[army.tile].terrain].passable) broken.push(`${at}: ${army.id} stands on impassable ${army.tile}`);
     if (army.regiments.length === 0) broken.push(`${at}: ${army.id} has no regiments`);
     if (army.regiments.length > ARMY_RULES.maxRegiments) {
@@ -58,7 +68,10 @@ export function brokenRules(state: GameState): string[] {
   if (new Set(regimentIds).size !== regimentIds.length) broken.push(`${at}: a regiment is in two armies`);
 
   for (const city of Object.values(state.cities)) {
-    if (!alive.has(city.owner)) broken.push(`${at}: ${city.name} belongs to fallen ${city.owner}`);
+    if (!holders.has(city.owner)) broken.push(`${at}: ${city.name} belongs to fallen ${city.owner}`);
+    if (city.owner === REBELS.id && (city.unsettled || city.isCapital || city.recruitQueue.length > 0 || city.constructionQueue.length > 0)) {
+      broken.push(`${at}: rebel ${city.name} is unsettled, a capital, or has queues`);
+    }
     if (!(city.population > 0)) broken.push(`${at}: ${city.name} has ${city.population} people`);
     if (city.recruitQueue.length > ARMY_RULES.recruitQueueSize) broken.push(`${at}: ${city.name}'s recruitment queue overflows`);
     if (city.constructionQueue.length > CONSTRUCTION_QUEUE_SIZE) broken.push(`${at}: ${city.name}'s construction queue overflows`);
@@ -101,7 +114,7 @@ export function brokenRules(state: GameState): string[] {
   for (const faction of state.factions) {
     if (!Number.isInteger(faction.gold)) broken.push(`${at}: ${faction.id} has ${faction.gold} gold, not a whole number`);
     if (faction.alive && citiesOf(state, faction.id).length === 0) broken.push(`${at}: ${faction.id} is alive with no cities`);
-    if (!faction.alive && armiesOf(state, faction.id).length > 0) broken.push(`${at}: fallen ${faction.id} still has armies`);
+    if (!faction.alive && faction.id !== REBELS.id && armiesOf(state, faction.id).length > 0) broken.push(`${at}: fallen ${faction.id} still has armies`);
   }
   const { victory } = state;
   for (const id of victory.keyCities) if (!state.cities[id]) broken.push(`${at}: key city ${id} doesn't exist`);

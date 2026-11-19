@@ -26,10 +26,11 @@ const snapshotTurns = [25, 50, 75];
 const out: string[] = [];
 const summary = (state: GameState) =>
   state.factions
+    .filter((f) => f.id !== "rebels" || citiesOf(state, f.id).length > 0)
     .map((f) => {
       const soldiers = armiesOf(state, f.id).reduce((n, a) => n + armySoldiers(a), 0);
       const net = Math.round(factionIncome(state, f.id) - factionUpkeep(state, f.id));
-      const fallen = f.alive ? "" : " (fallen)";
+      const fallen = f.alive || f.id === "rebels" ? "" : " (fallen)";
       return `  ${f.shortName}${fallen}: ${citiesOf(state, f.id).length} cities, ${soldiers} soldiers, ${f.gold} gold, ${net >= 0 ? "+" : ""}${net}/turn`;
     })
     .join("\n");

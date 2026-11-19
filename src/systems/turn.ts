@@ -8,13 +8,14 @@ import { processRecruitment } from "@/systems/recruitment.js";
 import { processCities } from "@/systems/cities.js";
 import { processSieges } from "@/systems/siege.js";
 import { processOrder } from "@/systems/order.js";
+import { raiseRebelMilitia } from "@/systems/rebels.js";
 import { trackKeyCities } from "@/systems/victory.js";
 
 /**
  * Ends the current faction's turn: runs its end-of-turn processing, then
  * passes play to the next living faction. When play wraps back to the first
- * faction, the turn number goes up, and every territory's mercenaries
- * refill a little.
+ * faction, the turn number goes up, every territory's mercenaries
+ * refill a little, and rebel cities may raise militia.
  */
 export function endTurn(ctx: GameContext, state: GameState): GameState {
   const finished = endFactionTurn(ctx, state, currentFaction(state).id);
@@ -28,7 +29,8 @@ export function endTurn(ctx: GameContext, state: GameState): GameState {
     if (finished.factions[index].alive) break;
   }
 
-  const rounded: GameState = turn > finished.turn ? refillMercenaries(finished) : finished;
+  // A new round: mercenaries refill, and rebel cities raise militia.
+  const rounded: GameState = turn > finished.turn ? raiseRebelMilitia({ ...refillMercenaries(finished), turn }) : finished;
   const next: GameState = { ...rounded, currentFactionIndex: index, turn };
   return startFactionTurn(ctx, next, next.factions[index].id);
 }

@@ -51,10 +51,8 @@ export const ORDER = {
   revoltBelow: 10,
   /** Rebels: one militia regiment per so many people, at most `maxRegiments` (at least one). */
   rebels: { peoplePerRegiment: 2000, maxRegiments: 5 },
-  /** Order after a revolt the garrison put down, or one that left the city empty. */
+  /** Order after a revolt the garrison put down. */
   afterRevolt: 30,
-  /** Order of a city that revolts back to its former owner. */
-  afterReturn: 50,
 };
 
 /** The band a city's order puts it in. A city in Unrest below `revoltBelow` is about to revolt. */

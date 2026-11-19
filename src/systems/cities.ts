@@ -4,6 +4,7 @@ import {
   citiesOf,
   getFaction,
   updateFaction,
+  type Check,
   type City,
   type CityId,
   type FactionId,
@@ -15,6 +16,7 @@ import { ECONOMY, TAX_RATES } from "@/data/economy.js";
 import { GAME_SETUP } from "@/data/gameSetup.js";
 import { MERCENARIES } from "@/data/units.js";
 import { ORDER, orderBand } from "@/data/order.js";
+import { isRebels } from "@/data/rebels.js";
 import { TRADE } from "@/data/trade.js";
 import { maxSupplies } from "@/systems/siege.js";
 import { TERRAIN } from "@/data/terrain.js";
@@ -41,7 +43,7 @@ export function createCity(
     population: isCapital ? GAME_SETUP.capitalPopulation : GAME_SETUP.cityPopulation,
     foundedTurn: state.turn,
     isCapital,
-    supplies: maxSupplies({ isCapital, buildings: { government: isCapital ? 2 : 1 } }),
+    supplies: maxSupplies({ buildings: { government: isCapital ? 2 : 1 } }),
     besiegedBy: null,
     besiegedSince: null,
     siegeWorks: 0,
@@ -609,8 +611,8 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
         besiegedSince: null,
         siegeWorks: 0,
         taxRate: "normal",
-        // Its new owner starts with full stores, an ordinary city's (it's no longer a capital).
-        supplies: maxSupplies({ isCapital: false, buildings: city.buildings }),
+        // Its new owner starts with full stores.
+        supplies: maxSupplies(city),
         // Buildings stand; whatever was being built or trained is lost.
         constructionQueue: [],
         recruitQueue: [],
@@ -619,7 +621,8 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
         cutRoads: [],
         order: ORDER.afterCapture,
         formerOwner: city.owner,
-        conqueredOn: state.turn,
+        // Taking a city back from the rebels carries no conquest malus.
+        conqueredOn: isRebels(city.owner) ? null : state.turn,
       },
     },
   };
@@ -628,17 +631,42 @@ export function captureCity(state: GameState, cityId: CityId, newOwner: FactionI
 
 /**
  * Makes a faction's largest city its capital, when it has none (its capital
- * has just fallen). The new capital gets a capital's stores, unless it's
- * besieged: they're filled when the siege ends.
+ * has just fallen).
  */
 function moveCapital(state: GameState, factionId: FactionId): GameState {
   const cities = citiesOf(state, factionId);
   if (cities.length === 0 || cities.some((c) => c.isCapital)) return state;
   const seat = [...cities].sort((a, b) => b.population - a.population || cityNumber(a.id) - cityNumber(b.id))[0];
-  const supplies = seat.besiegedBy ? seat.supplies : maxSupplies({ isCapital: true, buildings: seat.buildings });
-  const next = { ...state, cities: { ...state.cities, [seat.id]: { ...seat, isCapital: true, supplies } } };
+  return setCapital(state, factionId, seat.id);
+}
+
+/** Whether a faction may make one of its cities its capital: any settled city of its own. Free, as often as it likes. */
+export function canMoveCapital(state: GameState, factionId: FactionId, cityId: CityId): Check {
+  const city = state.cities[cityId];
+  if (!city || city.owner !== factionId) return { ok: false, reason: "That city isn't yours." };
+  if (city.isCapital) return { ok: false, reason: `${city.name} is already your capital.` };
+  if (city.unsettled) return { ok: false, reason: `Decide ${city.name}'s fate first.` };
+  return { ok: true };
+}
+
+/**
+ * Makes a city its owner's capital, and the old capital (if any) an ordinary
+ * city. Only order (and the AI's garrison) follow the capital: stores depend
+ * on the city's level alone, so they don't change.
+ */
+export function setCapital(state: GameState, factionId: FactionId, cityId: CityId): GameState {
+  const cities = { ...state.cities };
+  for (const city of citiesOf(state, factionId)) {
+    if (city.isCapital) cities[city.id] = { ...city, isCapital: false };
+  }
+  const seat = cities[cityId];
+  cities[cityId] = { ...seat, isCapital: true };
   const name = getFaction(state, factionId)?.shortName ?? "Unknown";
-  return addLog(next, `${possessiveName(name)} capital moves to ${seat.name}.`, { kind: "city", factions: [factionId], major: true });
+  return addLog({ ...state, cities }, `${possessiveName(name)} capital moves to ${seat.name}.`, {
+    kind: "city",
+    factions: [factionId],
+    major: true,
+  });
 }
 
 /** "Rome" → "Rome's", "Samnites" → "Samnites'". */

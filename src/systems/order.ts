@@ -9,13 +9,15 @@
  */
 import type { GameContext } from "@/core/context.js";
 import { createRng } from "@/core/rng.js";
-import { addLog, armyAt, citiesOf, getFaction, type City, type FactionId, type GameState } from "@/core/state.js";
+import { addLog, armyAt, citiesOf, getFaction, type City, type CityId, type FactionId, type GameState } from "@/core/state.js";
 import type { TaxRate } from "@/data/economy.js";
 import { ORDER } from "@/data/order.js";
-import { regimentSize } from "@/data/units.js";
+import { REBELS } from "@/data/rebels.js";
+import { placeNewArmy } from "@/systems/armies.js";
 import { captureCity, eliminateIfDefeated } from "@/systems/cities.js";
 import { battlefieldAt, resolveBattle } from "@/systems/combat.js";
 import { reportFallen } from "@/systems/generals.js";
+import { rebelMilitia, rebelRegiments } from "@/systems/rebels.js";
 
 /** What makes up a city's order target, cause by cause. */
 export interface OrderTarget {
@@ -95,6 +97,29 @@ export function soldiersForOrder(ctx: GameContext, state: GameState, city: City,
   return Math.ceil((short * city.population) / (ORDER.garrisonPerPercent * 100));
 }
 
+/** A city's order target now, and with another of its owner's cities as the capital. */
+export interface CapitalMoveEffect {
+  city: City;
+  now: number;
+  moved: number;
+}
+
+/**
+ * What making `cityId` the capital would do to the order target of each of
+ * its owner's cities. For the AI's choice and the Make capital tooltip.
+ */
+export function capitalMoveEffect(ctx: GameContext, state: GameState, factionId: FactionId, cityId: CityId): CapitalMoveEffect[] {
+  const own = citiesOf(state, factionId);
+  const cities = { ...state.cities };
+  for (const city of own) cities[city.id] = { ...city, isCapital: city.id === cityId };
+  const moved: GameState = { ...state, cities };
+  return own.map((city) => ({
+    city,
+    now: orderTarget(ctx, state, city).total,
+    moved: orderTarget(ctx, moved, moved.cities[city.id]).total,
+  }));
+}
+
 /** A city's order one turn on: ORDER.step points closer to its target. */
 export function nextOrder(order: number, target: number): number {
   if (target > order) return Math.min(target, order + ORDER.step);
@@ -139,31 +164,25 @@ export function processOrder(ctx: GameContext, state: GameState, factionId: Fact
   return next;
 }
 
-/** Rebel militia regiments a city's people raise. */
-export function rebelRegiments(population: number): number {
-  const { peoplePerRegiment, maxRegiments } = ORDER.rebels;
-  return Math.max(1, Math.min(maxRegiments, Math.floor(population / peoplePerRegiment)));
-}
-
 /**
  * The people rise. Rebel militia attack the garrison, which keeps the city's
  * defense bonus. If it holds, the rebels who fell are gone from the city and
  * order is restored to ORDER.afterRevolt. If it's beaten (or there's none),
- * it's destroyed, and the city goes back to its former owner if that faction
- * still stands; if not, the owner keeps an empty city. Either way the rebels
- * have won, so the conquest malus is gone.
+ * it's destroyed, and the city goes over to the rebels (data/rebels.ts), with
+ * the surviving rebels as its garrison: its owner has to take it back.
  */
 export function revolt(state: GameState, city: City): GameState {
   const owner = city.owner;
   const ownerName = getFaction(state, owner)?.shortName ?? "Unknown";
-  const size = regimentSize("militia");
-  const rebels = Array.from({ length: rebelRegiments(city.population) }, () => ({ unit: "militia" as const, soldiers: size }));
-  const garrison = armyAt(state, city.tile);
   let next = state;
+  const raised = rebelMilitia(next, rebelRegiments(city.population));
+  next = raised.state;
+  let rebels = raised.regiments;
+  const garrison = armyAt(next, city.tile);
 
   if (garrison && garrison.owner === owner) {
-    const rng = createRng(state.rngState);
-    const result = resolveBattle(rebels, garrison.regiments, battlefieldAt(state, city.tile), rng);
+    const rng = createRng(next.rngState);
+    const result = resolveBattle(rebels, garrison.regiments, battlefieldAt(next, city.tile), rng);
     next = { ...next, rngState: rng.state };
     if (!result.attackerWins) {
       const kept = garrison.regiments.map((r, i) => ({ ...r, soldiers: result.defenderSoldiers[i] })).filter((r) => r.soldiers > 0);
@@ -183,27 +202,21 @@ export function revolt(state: GameState, city: City): GameState {
       });
     }
     // Beaten in its own city, the garrison fights to the death.
+    rebels = rebels.map((r, i) => ({ ...r, soldiers: result.attackerSoldiers[i] })).filter((r) => r.soldiers > 0);
     const armies = { ...next.armies };
     delete armies[garrison.id];
     next = reportFallen({ ...next, armies }, garrison.regiments, `at ${city.name}`, [owner]);
   }
 
-  const former = city.formerOwner ? getFaction(next, city.formerOwner) : undefined;
-  if (former?.alive) {
-    next = captureCity(next, city.id, former.id);
-    const returned = next.cities[city.id];
-    next = {
-      ...next,
-      cities: { ...next.cities, [city.id]: { ...returned, unsettled: false, order: ORDER.afterReturn, conqueredOn: null } },
-    };
-    next = addLog(next, `${city.name} revolted against ${ownerName} and returned to ${former.shortName}.`, {
-      kind: "city",
-      factions: [owner, former.id],
-      major: true,
-    });
-    return eliminateIfDefeated(next, owner);
-  }
-
-  next = { ...next, cities: { ...next.cities, [city.id]: { ...next.cities[city.id], order: ORDER.afterRevolt, conqueredOn: null } } };
-  return addLog(next, `${city.name} revolted against ${ownerName}. Its garrison is gone.`, { kind: "city", factions: [owner], major: true });
+  // The rebels hold the city: it's settled (they choose no fate), and its
+  // revolt turn (conqueredOn) counts the turns to their next militia.
+  next = captureCity(next, city.id, REBELS.id);
+  next = { ...next, cities: { ...next.cities, [city.id]: { ...next.cities[city.id], unsettled: false, order: ORDER.afterRevolt } } };
+  if (rebels.length > 0) next = placeNewArmy(next, REBELS.id, city.tile, rebels);
+  next = addLog(next, `${city.name} revolted against ${ownerName} and declared for no one.`, {
+    kind: "city",
+    factions: [owner],
+    major: true,
+  });
+  return eliminateIfDefeated(next, owner);
 }

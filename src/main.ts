@@ -803,6 +803,8 @@ function handlePanelClick(e: MouseEvent): void {
     refreshHighlights(state);
     renderInfo(state);
     requestRedraw();
+  } else if (target.dataset.makeCapital) {
+    dispatch({ type: "moveCapital", cityId: target.dataset.makeCapital });
   } else if (target.dataset.trainScout) {
     dispatch({ type: "trainScout", cityId: target.dataset.trainScout });
   } else if (target.dataset.pickScout) {

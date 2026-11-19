@@ -1,4 +1,5 @@
 import { GENERALS } from "@/data/generals.js";
+import { isRebels } from "@/data/rebels.js";
 import {
   armiesOf,
   armySoldiers,
@@ -69,7 +70,8 @@ export function updateTurnPanel(el: TurnPanelElements, state: GameState, humanId
   }
 
   el.factionList.replaceChildren(
-    ...state.factions.map((faction) => {
+    // The rebels are no faction in the race: they're left off the scoreboard.
+    ...state.factions.filter((faction) => !isRebels(faction.id)).map((faction) => {
       const item = document.createElement("li");
       item.classList.toggle("current", faction.id === current.id);
       item.classList.toggle("defeated", !faction.alive);
